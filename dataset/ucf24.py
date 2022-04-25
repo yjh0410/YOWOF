@@ -52,28 +52,17 @@ class UCF24(data.Dataset):
         print('loading data ...')
         # laod anno pkl file
         # pkl is dict value:
-        # 'labels': 
-        # 'gttubes': {'video_name_1': 
-        #                   {'action_label': [[frame_id, x1, y1, x2, y2], ...],
-        #                    'action_label': [[frame_id, x1, y1, x2, y2], ...],
-        #                    ...},
-        #             'video_name_2': 
-        #                   {'action_label': [[frame_id, x1, y1, x2, y2], ...],
-        #                    'action_label': [[frame_id, x1, y1, x2, y2], ...],
-        #                    ...},
-        #               ...
-        #               }
+        # 'labels': [label, ...]
+        # 'gttubes': {'video_name_1': {'action_label': [[frame_id, x1, y1, x2, y2], ...],
+        #                              ...},
+        #              ...}
         # 'nframes': {'video_name_1': nframes,
-        #             'video_name_2': nframes,
         #             ...}
         # 'train_videos': ['train_video_name_1', 
-        #                  'train_video_name_2',
         #                  ...]
         # 'test_videos': ['test_video_name_1', 
-        #                 'test_video_name_2',
         #                 ...]
         # 'resolution': {'video_name_1': resolution,
-        #                'video_name_2': resolution,
         #                ...}
         pkl_file = os.path.join(self.root, self.anno_file)
         with open(pkl_file, 'rb') as fid:
@@ -118,40 +107,68 @@ class UCF24(data.Dataset):
         return self.pull_item(index)
 
 
-    def load_image(self, img_id):
-        return
+    def load_single_image(self, video_name, frame_id):
+        # load an image
+        image_file = os.path.join(self.image_path, video_name, 
+                                    '{:0>5}.jpg'.format(frame_id))
+        image = cv2.imread(image_file)
+
+        return image
+
+
+    def load_video_clip(self, index):
+        video_name, frame = self.indices[index]
+        image_list = {}
+        for i in range(self.cfg['K']):
+            cur_fid = frame + i
+            # load an image
+            image_list[i] = self.load_single_image(video_name, cur_fid)
+
+        return image_list
 
 
     def pull_item(self, index):
         video_name, frame = self.indices[index]
-        image_list = []
-        for i in range(self.cfg['K']):
-            image_file = os.path.join(self.image_path, video_name, '{:0>5}.jpg'.format(frame + i))
-            image_list.append(cv2.imread(image_file))
-        orig_h, orig_w = self.resolution[video_name]
+        image_list = {}
         target_list = {}
-        for label, tubes in self.gttubes[video_name].items():
-            for t in tubes:
-                if frame not in t[:, 0]:
-                    continue
-                assert frame + self.cfg['K'] - 1 in t[:, 0]
-                t = t.copy()
-                mask = (t[:, 0] >= frame) * (t[:, 0] < frame + self.cfg['K'])
-                gt_boxes = t[mask, 1:5]
+        for i in range(self.cfg['K']):
+            cur_fid = frame + i
+            # load an image
+            image_file = os.path.join(self.image_path, video_name, 
+                                        '{:0>5}.jpg'.format(cur_fid))
+            image_list[i] = cv2.imread(image_file)
 
-                assert gt_boxes.shape[0] == self.cfg['K']
+            # load a target
+            cur_vid_gttube = self.gttubes[video_name]
+            cur_target_list = []
+            for label, tubes in cur_vid_gttube.items():
+                for tube in tubes:
+                    if cur_fid not in tube[:, 0]:
+                        continue
+                    else:
+                        tube = tube.copy()
+                        idx = (cur_fid == tube[:, 0])
+                        gt_boxes = tube[idx, 1:5][0]
+                        gt_label = label
+                        cur_target_list.append(
+                            np.array([*gt_boxes, gt_label, cur_fid]).astype(np.float32)
+                            )
 
-                if label not in target_list:
-                    target_list[label] = []
-                # gt_bbox[ilabel] ---> a list of numpy array, each one is K, x1, x2, y1, y2
-                target_list[label].append(gt_boxes)
+            target_list[i] = cur_target_list
 
+        # image_list = {0: image_1, 
+        #               1: image_2, 
+        #               ..., 
+        #               K: image_K]
+        # target_list = {0:[[x1, y1, x2, y2, cls, fid], 
+        #                     ...],
+        #                K:[[x1, y1, x2, y2, cls, fid], 
+        #                     ...]}
         return image_list, target_list
 
 
 if __name__ == '__main__':
-    dataset_config={'K': 7
-    }
+    dataset_config={'K': 3}
     img_size=224,
     data_dir='E:/python_work/spatial-temporal_action_detection/dataset/UCF24'
     anno_file='UCF101v2-GT.pkl'
@@ -172,17 +189,23 @@ if __name__ == '__main__':
         image_list, target_list = dataset[i]
 
         # vis images
-        for fi, img in enumerate(image_list):
-            img = img.copy()
-            for cls_id in target_list.keys():
-                tubes = target_list[cls_id]
-                for tube in tubes:
-                    gt_box = tube[fi]
-                    x1, y1, x2, y2 = gt_box
-                    cv2.rectangle(img,
-                                 (int(x1), int(y1)),
-                                 (int(x2), int(y2)),
-                                 (255, 0, 0))
-            cv2.imshow('image', img)
+        for idx in range(dataset_config['K']):
+            image = image_list[idx].copy()
+            target = target_list[idx]
+            for tgt in target:
+                x1, y1, x2, y2, cls_id, fid = tgt
+                label = UCF24_CLASSES[int(cls_id)]
+                # put the test on the bbox
+                cv2.putText(image, 
+                            label, 
+                            (int(x1), int(y1 - 5)), 
+                            0, 0.5, (255, 0, 0), 1, 
+                            lineType=cv2.LINE_AA)
+
+                cv2.rectangle(image,
+                                (int(x1), int(y1)),
+                                (int(x2), int(y2)),
+                                (255, 0, 0), 2)
+            cv2.imshow('image', image)
             cv2.waitKey(0)
 
