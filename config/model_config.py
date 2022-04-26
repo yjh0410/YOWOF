@@ -19,7 +19,7 @@ model_config = {
                          {'name': 'Resize'},
                          {'name': 'PadImage'}],
         # model
-        'backbone': 'resnet18-d',
+        'backbone': 'resnet50-d',
         'norm_type': 'FrozeBN',
         'stride': 16,
         'pretrained': None,
