@@ -150,10 +150,13 @@ class UCF24(data.Dataset):
                         idx = (cur_fid == tube[:, 0])
                         gt_boxes = tube[idx, 1:5][0]
                         gt_label = label
-                        cur_target_list.append(
-                            np.array([*gt_boxes, gt_label, cur_fid]).astype(np.float32)
-                            )
+                        cur_target_list.append([*gt_boxes, gt_label, cur_fid])
 
+            # check target
+            if len(cur_target_list) == 0:
+                cur_target_list.append([])
+            # to ndarray
+            cur_target_list = np.array(cur_target_list).reshape(-1, 6)
             target_list[i] = cur_target_list
 
         # image_list = {0: image_1, 

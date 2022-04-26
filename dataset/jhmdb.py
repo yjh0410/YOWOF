@@ -13,12 +13,12 @@ except:
 
 
 JHMDB_CLASSES = (
-    'Basketball',     'BasketballDunk',    'Biking',            'CliffDiving',
-    'CricketBowling', 'Diving',            'Fencing',           'FloorGymnastics', 
-    'GolfSwing',      'HorseRiding',       'IceDancing',        'LongJump',
-    'PoleVault',      'RopeClimbing',      'SalsaSpin',         'SkateBoarding',
-    'Skiing',         'Skijet',            'SoccerJuggling',    'Surfing',
-    'TennisSwing',    'TrampolineJumping', 'VolleyballSpiking', 'WalkingWithDog'
+    'brush_hair',   'catch',          'clap',        'climb_stairs',
+    'golf',         'jump',           'kick_ball',   'pick', 
+    'pour',         'pullup',         'push',        'run',
+    'shoot_ball',   'shoot_bow',      'shoot_gun',   'sit',
+    'stand',        'swing_baseball', 'throw',       'walk',
+    'wave'
 )
 
 
@@ -135,7 +135,7 @@ class JHMDB(data.Dataset):
             cur_fid = frame + i
             # load an image
             image_file = os.path.join(self.image_path, video_name, 
-                                        '{:0>5}.jpg'.format(cur_fid))
+                                        '{:0>5}.png'.format(cur_fid))
             image_list[i] = cv2.imread(image_file)
 
             # load a target
@@ -150,20 +150,23 @@ class JHMDB(data.Dataset):
                         idx = (cur_fid == tube[:, 0])
                         gt_boxes = tube[idx, 1:5][0]
                         gt_label = label
-                        cur_target_list.append(
-                            np.array([*gt_boxes, gt_label, cur_fid]).astype(np.float32)
-                            )
+                        cur_target_list.append([*gt_boxes, gt_label, cur_fid])
 
+            # check target
+            if len(cur_target_list) == 0:
+                cur_target_list.append([])
+            # to ndarray
+            cur_target_list = np.array(cur_target_list).reshape(-1, 6)
             target_list[i] = cur_target_list
 
         # image_list = {0: image_1, 
         #               1: image_2, 
         #               ..., 
         #               K: image_K]
-        # target_list = {0:[[x1, y1, x2, y2, cls, fid], 
-        #                     ...],
-        #                K:[[x1, y1, x2, y2, cls, fid], 
-        #                     ...]}
+        # target_list = {0: ndarray([[x1, y1, x2, y2, cls, fid], 
+        #                             ...]),
+        #                K: ndarray([[x1, y1, x2, y2, cls, fid], 
+        #                             ...]}
         return image_list, target_list
 
 
