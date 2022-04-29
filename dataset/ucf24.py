@@ -26,6 +26,7 @@ class UCF24(data.Dataset):
     def __init__(self, 
                  cfg,
                  img_size=224, 
+                 len_clip=1,
                  data_dir=None, 
                  anno_file=None,
                  split=None,
@@ -36,6 +37,7 @@ class UCF24(data.Dataset):
         super().__init__()
         self.cfg = cfg
         self.img_size = img_size
+        self.len_clip = len_clip
         self.root = data_dir
         self.image_path = os.path.join(self.root, 'rgb-images')
         self.flow_path = os.path.join(self.root, 'brox-images')
@@ -89,9 +91,9 @@ class UCF24(data.Dataset):
 
         for v in video_list:
             vtubes = sum(self.gttubes[v].values(), [])
-            for i in range(1, self.nframes[v] + 2 - self.cfg['K']):
-                flag_1 = tubelet_in_out_tubes(vtubes, i, self.cfg['K'])
-                flag_2 = tubelet_has_gt(vtubes, i, self.cfg['K'])
+            for i in range(1, self.nframes[v] + 2 - self.len_clip):
+                flag_1 = tubelet_in_out_tubes(vtubes, i, self.len_clip)
+                flag_2 = tubelet_has_gt(vtubes, i, self.len_clip)
                 if flag_1 and flag_2:
                     indices += [(v, i)]
         print('loading done !')
@@ -119,7 +121,7 @@ class UCF24(data.Dataset):
     def load_video_clip(self, index):
         video_name, frame = self.indices[index]
         image_list = {}
-        for i in range(self.cfg['K']):
+        for i in range(self.len_clip):
             cur_fid = frame + i
             # load an image
             image_list[i] = self.load_single_image(video_name, cur_fid)
@@ -131,7 +133,7 @@ class UCF24(data.Dataset):
         video_name, frame = self.indices[index]
         image_list = {}
         target_list = {}
-        for i in range(self.cfg['K']):
+        for i in range(self.len_clip):
             cur_fid = frame + i
             # load an image
             image_file = os.path.join(self.image_path, video_name, 
@@ -171,7 +173,8 @@ class UCF24(data.Dataset):
 
 
 if __name__ == '__main__':
-    dataset_config={'K': 3}
+    dataset_config=None
+    len_clip = 1
     img_size=224,
     data_dir='E:/python_work/spatial-temporal_action_detection/dataset/UCF24'
     anno_file='UCF101v2-GT.pkl'
@@ -181,6 +184,7 @@ if __name__ == '__main__':
 
     dataset = UCF24(cfg=dataset_config, 
                     img_size = img_size,
+                    len_clip = len_clip,
                     data_dir = data_dir,
                     anno_file = anno_file,
                     split = split,
@@ -192,7 +196,7 @@ if __name__ == '__main__':
         image_list, target_list = dataset[i]
 
         # vis images
-        for idx in range(dataset_config['K']):
+        for idx in range(len_clip):
             image = image_list[idx].copy()
             target = target_list[idx]
             for tgt in target:
