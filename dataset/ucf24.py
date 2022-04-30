@@ -161,6 +161,8 @@ class UCF24(data.Dataset):
             cur_target_list = np.array(cur_target_list).reshape(-1, 6)
             target_list[i] = cur_target_list
 
+        # augment
+        image_list, target_list = self.transform(image_list, target_list)
         # image_list = {0: image_1, 
         #               1: image_2, 
         #               ..., 
@@ -173,14 +175,32 @@ class UCF24(data.Dataset):
 
 
 if __name__ == '__main__':
+    from transforms import TrainTransforms, ValTransforms
     dataset_config=None
-    len_clip = 1
-    img_size=224,
+    len_clip = 7
     data_dir='E:/python_work/spatial-temporal_action_detection/dataset/UCF24'
     anno_file='UCF101v2-GT.pkl'
     split=1
     is_train=True,
-    transform=None
+
+    img_size=224
+    format = 'RGB'
+    pixel_mean=(123.675, 116.28, 103.53), 
+    pixel_std=(58.395, 57.12, 57.375),
+    trans_config = [{'name': 'DistortTransform',
+                     'hue': 0.1,
+                     'saturation': 1.5,
+                     'exposure': 1.5},
+                    {'name': 'RandomHorizontalFlip'},
+                    {'name': 'RandomShift', 'max_shift': 16},
+                    {'name': 'JitterCrop', 'jitter_ratio': 0.3},
+                    {'name': 'ToTensor'},
+                    {'name': 'Resize'},
+                    {'name': 'Normalize'}]
+
+    transform=TrainTransforms(trans_config=trans_config,
+                              img_size=img_size,
+                              format='RGB')
 
     dataset = UCF24(cfg=dataset_config, 
                     img_size = img_size,
@@ -193,11 +213,20 @@ if __name__ == '__main__':
                     debug=True)
 
     for i in range(100):
-        image_list, target_list = dataset[i]
+        image_list, target_list = dataset.pull_item(i)
 
         # vis images
         for idx in range(len_clip):
-            image = image_list[idx].copy()
+            image = image_list[idx]
+            # to numpy
+            image = image.permute(1, 2, 0).numpy()
+            # to BGR format
+            if format == 'RGB':
+                # denormalize
+                image = image * pixel_std + pixel_mean
+                image = image[:, :, (2, 1, 0)].astype(np.uint8)
+            image = image.copy()
+            
             target = target_list[idx]
             for tgt in target:
                 x1, y1, x2, y2, cls_id, fid = tgt

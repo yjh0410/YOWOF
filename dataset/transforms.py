@@ -112,10 +112,10 @@ class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, image, target=None, mask=None):
+    def __call__(self, image_list, target_list=None):
         for t in self.transforms:
-            image, target, mask = t(image, target, mask)
-        return image, target, mask
+            image_list, target_list = t(image_list, target_list)
+        return image_list, target_list
 
 
 # Convert ndarray to tensor
@@ -125,7 +125,7 @@ class ToTensor(object):
 
     def __call__(self, image_list, target_list=None):
         # check color format
-        out_images_list = []
+        out_images_list = {}
         out_target_list = {}
         for i in range(len(image_list)):
             image = image_list[i]
@@ -143,7 +143,7 @@ class ToTensor(object):
             else:
                 print('Unknown color format !!')
                 exit()
-            out_images_list.append(image)
+            out_images_list[i]=image
 
             if target_list is not None:
                 target = target_list[i]
@@ -179,8 +179,9 @@ class DistortTransform(object):
         dsat = self._rand_scale(self.saturation)
         dexp = self._rand_scale(self.exposure)
 
-        out_images_list = []
+        out_images_list = {}
         for i in range(len(image_list)):
+            image = image_list[i]
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
             image = np.asarray(image, dtype=np.float32) / 255.
             image[:, :, 1] *= dsat
@@ -196,7 +197,7 @@ class DistortTransform(object):
             image = (image * 255).clip(0, 255).astype(np.uint8)
             image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
             image = np.asarray(image, dtype=np.uint8)
-            out_images_list.append(image)
+            out_images_list[i] = image
 
         return out_images_list, target_list
 
@@ -265,7 +266,7 @@ class JitterCrop(object):
         sheight = oh - ptop - pbot
         output_size = (swidth, sheight)
 
-        out_images_list = []
+        out_images_list = {}
         out_target_list = {}
         # crop image
         for i in range(len(image_list)):
@@ -276,7 +277,7 @@ class JitterCrop(object):
                                     ptop=ptop, 
                                     pbot=pbot,
                                     output_size=output_size)
-            out_images_list.append(cropped_image)
+            out_images_list[i] = cropped_image
             # crop bbox
             if target_list is not None:
                 target = target_list[i]
@@ -293,7 +294,7 @@ class JitterCrop(object):
             else:
                 out_target_list=None
 
-        return cropped_image, out_target_list
+        return out_images_list, out_target_list
 
 
 # RandomHFlip
@@ -303,12 +304,12 @@ class RandomHorizontalFlip(object):
 
     def __call__(self, image_list, target_list=None):
         if random.random() < self.p:
-            out_images_list = []
+            out_images_list = {}
             out_target_list = {}
             for i in range(len(image_list)):
                 image = image_list[i]
                 orig_h, orig_w = image.shape[:2]
-                out_images_list.append(image[:, ::-1])
+                out_images_list[i] = image[:, ::-1]
 
                 if target_list is not None:
                     target = target_list[i]
@@ -346,7 +347,7 @@ class RandomShift(object):
                 new_y = shift_y
                 orig_y = 0
 
-            out_images_list = []
+            out_images_list = {}
             out_target_list = {}
             for i in range(len(image_list)):
                 image = image_list[i]
@@ -357,7 +358,7 @@ class RandomShift(object):
                 new_image[new_y:new_y + new_h, new_x:new_x + new_w, :] = image[
                                                                     orig_y:orig_y + new_h,
                                                                     orig_x:orig_x + new_w, :]
-                out_images_list.append(new_image)
+                out_images_list[i] = new_image
                 
                 target = target_list[i]
                 boxes = target[:, :4].copy()
@@ -381,10 +382,10 @@ class Normalize(object):
 
     def __call__(self, image_list, target_list=None):
         # normalize image
-        out_images_list = []
+        out_images_list = {}
         for i in range(len(image_list)):
             image = image_list[i]
-            out_images_list.append(F.normalize(image, mean=self.pixel_mean, std=self.pixel_std))
+            out_images_list[i] = F.normalize(image, mean=self.pixel_mean, std=self.pixel_std)
 
         return out_images_list, target_list
 
@@ -396,14 +397,14 @@ class Resize(object):
 
     def __call__(self, image_list, target_list=None):
         # Resize an image into a square image
-        out_images_list = []
+        out_images_list = {}
         out_target_list = {}
         
         orig_h, orig_w = image_list[0].shape[1:]
         for i in range(len(image_list)):
             image = image_list[i]
-            resized_image = cv2.resize(image, size=[self.img_size, self.img_size])
-            out_images_list.append(resized_image)
+            resized_image = F.resize(image, size=[self.img_size, self.img_size])
+            out_images_list[i] = resized_image
 
             # rescale bboxes
             if target_list is not None:
@@ -413,7 +414,7 @@ class Resize(object):
                 labels = target[:, 4:].clone()
                 boxes[:, [0, 2]] = boxes[:, [0, 2]] / orig_w * self.img_size
                 boxes[:, [1, 3]] = boxes[:, [1, 3]] / orig_h * self.img_size
-                out_target_list[i] = np.concatenate([boxes, labels], axis=1)
+                out_target_list[i] = torch.cat([boxes, labels], dim=1)
 
         return out_images_list, out_target_list
 
@@ -422,19 +423,15 @@ class Resize(object):
 class TrainTransforms(object):
     def __init__(self, 
                  trans_config=None,
-                 min_size=800, 
-                 max_size=1333, 
-                 random_size=None, 
-                 pixel_mean=(0.485, 0.456, 0.406), 
-                 pixel_std=(0.229, 0.224, 0.225),
+                 img_size=320, 
+                 pixel_mean=(123.675, 116.28, 103.53), 
+                 pixel_std=(58.395, 57.12, 57.375),
                  format='RGB'):
         self.trans_config = trans_config
-        self.min_size = min_size
-        self.max_size = max_size
+        self.img_size = img_size
         self.pixel_mean = pixel_mean
         self.pixel_std = pixel_std
         self.format = format
-        self.random_size =random_size
         self.transforms = Compose(self.build_transforms(trans_config))
 
 
@@ -454,51 +451,35 @@ class TrainTransforms(object):
             elif t['name'] == 'ToTensor':
                 transform.append(ToTensor(format=self.format))
             elif t['name'] == 'Resize':
-                transform.append(Resize(min_size=self.min_size, 
-                                        max_size=self.max_size, 
-                                        random_size=self.random_size))
+                transform.append(Resize(img_size=self.img_size))
             elif t['name'] == 'Normalize':
                 transform.append(Normalize(pixel_mean=self.pixel_mean,
                                            pixel_std=self.pixel_std))
-            elif t['name'] == 'PadImage':
-                transform.append(PadImage(max_size=self.max_size))
         
         return transform
 
 
-    def __call__(self, image, target, mask=None):
-        return self.transforms(image, target, mask)
+    def __call__(self, image, target):
+        return self.transforms(image, target)
 
 
 # ValTransform
 class ValTransforms(object):
     def __init__(self, 
-                 min_size=800, 
-                 max_size=1333, 
-                 pixel_mean=(0.485, 0.456, 0.406), 
-                 pixel_std=(0.229, 0.224, 0.225),
-                 format='RGB',
-                 padding=False):
-        self.min_size = min_size
-        self.max_size = max_size
+                 img_size=320, 
+                 pixel_mean=(123.675, 116.28, 103.53), 
+                 pixel_std=(58.395, 57.12, 57.375),
+                 format='RGB'):
+        self.img_size = img_size
         self.pixel_mean = pixel_mean
         self.pixel_std = pixel_std
         self.format = format
-        self.padding = padding
-        if not padding:
-            self.transforms = Compose([
-                ToTensor(),
-                Resize(min_size=min_size, max_size=max_size),
-                Normalize(pixel_mean, pixel_std)
-            ])
-        else:
-            self.transforms = Compose([
-                ToTensor(),
-                Resize(min_size=min_size, max_size=max_size),
-                Normalize(pixel_mean, pixel_std),
-                PadImage(max_size=max_size)
-            ])
+        self.transforms = Compose([
+            ToTensor(),
+            Resize(img_size=img_size),
+            Normalize(pixel_mean, pixel_std)
+        ])
 
 
-    def __call__(self, image, target=None, mask=None):
-        return self.transforms(image, target, mask)
+    def __call__(self, image, target=None):
+        return self.transforms(image, target)
