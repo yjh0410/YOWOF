@@ -27,30 +27,6 @@ class Criterion(object):
             self.matcher = UniformMatcher(match_times=cfg['topk'])
 
 
-    def loss_labels(self, pred_cls, tgt_cls, num_boxes):
-        """
-            pred_cls: (Tensor) [N, C]
-            tgt_cls:  (Tensor) [N, C]
-        """
-        # cls loss: [V, C]
-        loss_cls = sigmoid_focal_loss(pred_cls, tgt_cls, self.alpha, self.gamma, reduction='none')
-
-        return loss_cls.sum() / num_boxes
-
-
-    def loss_bboxes(self, pred_box, tgt_box, num_boxes):
-        """
-            pred_box: (Tensor) [N, 4]
-            tgt_box:  (Tensor) [N, 4]
-        """
-        # giou
-        pred_giou = generalized_box_iou(pred_box, tgt_box)  # [N, M]
-        # giou loss
-        loss_reg = 1. - torch.diag(pred_giou)
-
-        return loss_reg.sum() / num_boxes
-
-
     def __call__(self, outputs, targets, anchor_boxes=None):
         """
             outputs['cls_preds']: List[Tensor] -> [[B, M, C], ...]
@@ -66,7 +42,9 @@ class Criterion(object):
         cls_preds = outputs['cls_preds']
         bs = len(targets)
         # calculate loss of per frame
-        all_frames_losses = []
+        all_frames_loss_labels = []
+        all_frames_loss_bboxes = []
+        all_frames_num_fgs = 0.
         for fid, (cls_pred, box_pred) in enumerate(zip(cls_preds, box_preds)):
             # List [B, Ni, 6], Ni is the number of gt in this frame
             tgt_this_frame = [{
@@ -137,18 +115,20 @@ class Criterion(object):
             if is_dist_avail_and_initialized():
                 torch.distributed.all_reduce(num_foreground)
             num_foreground = torch.clamp(num_foreground / get_world_size(), min=1).item()
+            all_frames_num_fgs += num_foreground
 
             # cls loss
             masks = outputs['mask']
             valid_idxs = (gt_cls >= 0) & masks
-            loss_labels = sigmoid_focal_loss(
+            cur_frame_loss_labels = sigmoid_focal_loss(
                                 cls_pred[valid_idxs], 
                                 gt_cls_target[valid_idxs], 
                                 self.alpha, 
                                 self.gamma, 
                                 reduction='none'
                                 )
-            loss_labels = loss_labels.sum() / num_foreground
+            cur_frame_loss_labels = cur_frame_loss_labels.sum()
+            all_frames_loss_labels.append(cur_frame_loss_labels)
 
             # box loss
             tgt_boxes = torch.cat([t['boxes'][i]
@@ -160,22 +140,23 @@ class Criterion(object):
                                 matched_pred_box, 
                                 tgt_boxes)  # [N, M]
             # giou loss
-            loss_bboxes = 1. - torch.diag(gious)
-            loss_bboxes = loss_bboxes.sum() / num_foreground
+            cur_frame_loss_bboxes = 1. - torch.diag(gious)
+            cur_frame_loss_bboxes = cur_frame_loss_bboxes.sum()
+            all_frames_loss_bboxes.append(cur_frame_loss_bboxes)
 
-            # total loss
-            losses = self.loss_cls_weight * loss_labels + \
-                     self.loss_reg_weight * loss_bboxes
+        # all frames loss
+        loss_labels = sum(all_frames_loss_labels) / all_frames_num_fgs
+        loss_bboxes = sum(all_frames_loss_bboxes) / all_frames_num_fgs
+        losses = self.loss_cls_weight * loss_labels + \
+                 self.loss_reg_weight * loss_bboxes
 
-            loss_dict = dict(
-                    loss_labels = loss_labels,
-                    loss_bboxes = loss_bboxes,
-                    losses = losses
-            )
+        loss_dict = dict(
+                loss_labels = loss_labels,
+                loss_bboxes = loss_bboxes,
+                losses = losses
+        )
 
-            all_frames_losses.append(loss_dict)
-
-        return all_frames_losses
+        return loss_dict
 
     
 if __name__ == "__main__":

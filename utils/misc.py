@@ -1,6 +1,90 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
+import numpy as np
+import os
+import math
+from copy import deepcopy
+
+from dataset.ucf24 import UCF24
+from dataset.jhmdb import JHMDB
+from dataset.transforms import TrainTransforms, ValTransforms
+
+
+def build_dataset(d_cfg, m_cfg, args, device, is_train=False):
+    """
+        d_cfg: dataset config
+        m_cfg: model config
+    """
+    # transform
+    trans_config = m_cfg['transforms']
+    print('==============================')
+    print('TrainTransforms: {}'.format(trans_config))
+    train_transform = TrainTransforms(trans_config=trans_config,
+                                      img_size=m_cfg['train_size'],
+                                      pixel_mean=m_cfg['pixel_mean'],
+                                      pixel_std=m_cfg['pixel_std'],
+                                      format=m_cfg['format'])
+    val_transform = ValTransforms(img_size=m_cfg['test_size'],
+                                  pixel_mean=m_cfg['pixel_mean'],
+                                  pixel_std=m_cfg['pixel_std'],
+                                  format=m_cfg['format'])
+    # dataset
+    
+    if args.dataset == 'ucf24':
+        num_classes = 24
+        # dataset
+        dataset = UCF24(cfg=d_cfg,
+                        img_size=m_cfg['train_size'],
+                        len_clip=m_cfg['len_clip'],
+                        is_train=is_train,
+                        transform=train_transform,
+                        debug=False)
+        # evaluator
+        evaluator = None
+
+    elif args.dataset == 'jhmdb':
+        num_classes = 21
+        # dataset
+        dataset = JHMDB(cfg=d_cfg,
+                        img_size=m_cfg['train_size'],
+                        len_clip=m_cfg['len_clip'],
+                        is_train=is_train,
+                        transform=train_transform,
+                        debug=False)
+        # evaluator
+        evaluator = None
+    
+    else:
+        print('unknow dataset !! Only support UCF24 and JHMDB !!')
+        exit(0)
+
+    print('==============================')
+    print('Training model on:', args.dataset)
+    print('The dataset size:', len(dataset))
+
+    return dataset, evaluator, num_classes
+
+
+def build_dataloader(args, dataset, batch_size, collate_fn=None):
+    # distributed
+    if args.distributed:
+        sampler = torch.utils.data.distributed.DistributedSampler(dataset)
+    else:
+        sampler = torch.utils.data.RandomSampler(dataset)
+
+    batch_sampler_train = torch.utils.data.BatchSampler(sampler, 
+                                                        batch_size, 
+                                                        drop_last=True)
+
+    dataloader = torch.utils.data.DataLoader(dataset, 
+                                             batch_sampler=batch_sampler_train,
+                                             collate_fn=collate_fn, 
+                                             num_workers=args.num_workers)
+    
+    return dataloader
+    
 
 def sigmoid_focal_loss(logits, targets, alpha=0.25, gamma=2.0, reduction='none'):
     p = torch.sigmoid(logits)

@@ -27,9 +27,6 @@ class JHMDB(data.Dataset):
                  cfg,
                  img_size=224, 
                  len_clip=1,
-                 data_dir=None, 
-                 anno_file=None,
-                 split=None,
                  is_train=False,
                  transform=None,
                  debug=False
@@ -38,14 +35,17 @@ class JHMDB(data.Dataset):
         self.cfg = cfg
         self.img_size = img_size
         self.len_clip = len_clip
-        self.root = data_dir
+        self.root = cfg['data_root']
+        self.anno_file = cfg['anno_file']
         self.image_path = os.path.join(self.root, 'Frames')
         self.flow_path = os.path.join(self.root, 'FlowBrox04')
-        self.anno_file = anno_file
         self.transform = transform
-        self.split = split
         self.is_train = is_train
         self.debug = debug
+        if is_train:
+            self.split = cfg['train_split']
+        else:
+            self.split = cfg['test_split']
 
         self.load_datas()
 
@@ -176,13 +176,15 @@ class JHMDB(data.Dataset):
 
 if __name__ == '__main__':
     from transforms import TrainTransforms, ValTransforms
-    dataset_config=None
+    dataset_config={
+        # dataset
+        'data_root': 'E:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
+        'anno_file': 'JHMDB-GT.pkl',
+        'train_split': 1,
+        'test_split': 1,
+    }
     len_clip = 7
-    data_dir='E:/python_work/spatial-temporal_action_detection/dataset/JHMDB'
-    anno_file='JHMDB-GT.pkl'
-    split=1
     is_train=True,
-    transform=None
 
     img_size=224
     format = 'RGB'
@@ -207,9 +209,6 @@ if __name__ == '__main__':
     dataset = JHMDB(cfg=dataset_config, 
                     img_size = img_size,
                     len_clip = len_clip,
-                    data_dir = data_dir,
-                    anno_file = anno_file,
-                    split = split,
                     is_train = is_train,
                     transform = transform,
                     debug=True)
