@@ -121,9 +121,9 @@ def train():
     min_lr = base_lr * d_cfg['min_lr_ratio']
     optimizer = build_optimizer(model=model_without_ddp,
                                 base_lr=base_lr,
-                                name=d_cfg['optimizer'],
-                                momentum=d_cfg['momentum'],
-                                weight_decay=d_cfg['weight_decay'])
+                                name=m_cfg['optimizer'],
+                                momentum=m_cfg['momentum'],
+                                weight_decay=m_cfg['weight_decay'])
     
     # warmup scheduler
     wp_iter = len(dataloader) * d_cfg['wp_epoch']

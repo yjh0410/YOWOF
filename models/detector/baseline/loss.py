@@ -45,11 +45,12 @@ class Criterion(object):
         all_frames_loss_labels = []
         all_frames_loss_bboxes = []
         all_frames_num_fgs = 0.
+        # Matching frame by frame
         for fid, (cls_pred, box_pred) in enumerate(zip(cls_preds, box_preds)):
-            # List [B, Ni, 6], Ni is the number of gt in this frame
+            # collect groundtruths of this frame
             tgt_this_frame = [{
-                'boxes': t[fid][:, :4],
-                'labels': t[fid][:, 4],
+                'boxes': t[fid][:, :4],  # [Ni, 4]
+                'labels': t[fid][:, 4],  # [Ni,]
             } for t in targets]
 
             # copy pred data
@@ -72,13 +73,13 @@ class Criterion(object):
             for i in range(bs):
                 src_idx, tgt_idx = indices[i]
                 # iou between predbox and tgt box
-                iou, _ = box_iou(box_pred_copy[i, ...], (targets[i]['boxes']).clone())
+                iou, _ = box_iou(box_pred_copy[i, ...], (tgt_this_frame[i]['boxes']).clone())
                 if iou.numel() == 0:
                     max_iou = iou.new_full((iou.size(0),), 0)
                 else:
                     max_iou = iou.max(dim=1)[0]
                 # iou between anchorbox and tgt box
-                a_iou, _ = box_iou(anchor_boxes_copy[i], (targets[i]['boxes']).clone())
+                a_iou, _ = box_iou(anchor_boxes_copy[i], (tgt_this_frame[i]['boxes']).clone())
                 if a_iou.numel() == 0:
                     pos_iou = a_iou.new_full((0,), 0)
                 else:
@@ -132,7 +133,7 @@ class Criterion(object):
 
             # box loss
             tgt_boxes = torch.cat([t['boxes'][i]
-                                        for t, (_, i) in zip(targets, indices)], dim=0).to(self.device)
+                                        for t, (_, i) in zip(tgt_this_frame, indices)], dim=0).to(self.device)
             tgt_boxes = tgt_boxes[~pos_ignore_idx]
             matched_pred_box = box_pred.reshape(-1, 4)[src_idx[~pos_ignore_idx]]
             # giou

@@ -1,4 +1,4 @@
-from .dilated_encoder import DilatedEncoder
+from .spp import SPPBlockCSP
 
 
 def build_neck(cfg, in_dim, out_dim):
@@ -6,11 +6,12 @@ def build_neck(cfg, in_dim, out_dim):
     print('==============================')
     print('Neck: {}'.format(model))
     # build neck
-    if model == 'dilated_encoder':
-        neck = DilatedEncoder(in_dim, 
-                              out_dim, 
-                              expand_ratio=cfg['expand_ratio'], 
-                              dilation_list=cfg['dilation_list'],
-                              act_type=cfg['act_type'])
+    if model == 'spp_block':
+        neck = SPPBlockCSP(in_dim, 
+                           out_dim, 
+                           expand_ratio=cfg['expand_ratio'], 
+                           pooling_size=cfg['pooling_size'],
+                           act_type=cfg['neck_act'],
+                           norm_type=cfg['neck_norm'])
 
     return neck

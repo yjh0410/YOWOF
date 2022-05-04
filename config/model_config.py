@@ -26,17 +26,17 @@ model_config = {
         'stride': 32,
         'pretrained': None,
         # neck
-        'neck': 'dilated_encoder',
-        'dilation_list': [1, 2, 3, 4],
-        'expand_ratio': 0.25,
-        'act_type': 'relu',
+        'neck': 'spp_block',
+        'pooling_size': [5, 9, 13],
+        'expand_ratio': 0.5,
+        'neck_act': 'relu',
         'neck_norm': 'BN',
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'act_type': 'relu',
         'num_cls_head': 2,
-        'num_reg_head': 4,
+        'num_reg_head': 2,
         # post process
         'conf_thresh': 0.05,
         'train_nms_thresh': 0.6,
@@ -50,7 +50,15 @@ model_config = {
         'iou_t': 0.15,
         'igt': 0.7,
         'ctr_clamp': 32,
-
+        # loss
+        'alpha': 0.25,
+        'gamma': 2.0,
+        'loss_cls_weight': 1.0,
+        'loss_reg_weight': 1.0,
+        # optimizer
+        'optimizer': 'sgd',
+        'weight_decay': 1e-4,
+        'momentum': 0.9,
     },
     
     'yowof18': {

@@ -33,7 +33,9 @@ class Criterion(object):
             tgt_cls:  (Tensor) [N, C]
         """
         # cls loss: [V, C]
-        loss_cls = sigmoid_focal_loss(pred_cls, tgt_cls, self.alpha, self.gamma, reduction='none')
+        loss_cls = sigmoid_focal_loss(pred_cls, tgt_cls, 
+                                      self.alpha, self.gamma, 
+                                      reduction='none')
 
         return loss_cls.sum() / num_boxes
 

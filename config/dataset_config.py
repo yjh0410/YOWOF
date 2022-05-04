@@ -8,15 +8,6 @@ dataset_config = {
         'anno_file': 'UCF101v2-GT.pkl',
         'train_split': 1,
         'test_split': 1,
-        # loss
-        'alpha': 0.25,
-        'gamma': 2.0,
-        'loss_cls_weight': 1.0,
-        'loss_reg_weight': 1.0,
-        # optimizer
-        'optimizer': 'sgd',
-        'weight_decay': 1e-4,
-        'momentum': 0.9,
         # train config
         'max_epoch': 12,
         'batch_size': 32,
@@ -35,15 +26,6 @@ dataset_config = {
         'anno_file': 'JHMDB-GT.pkl',
         'train_split': 1,
         'test_split': 1,
-        # loss
-        'alpha': 0.25,
-        'gamma': 2.0,
-        'loss_cls_weight': 1.0,
-        'loss_reg_weight': 1.0,
-        # optimizer
-        'optimizer': 'sgd',
-        'weight_decay': 1e-4,
-        'momentum': 0.9,
         # train config
         'max_epoch': 12,
         'batch_size': 32,
