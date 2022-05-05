@@ -16,11 +16,10 @@ def build_model(args,
     if args.version == 'baseline':
         model = Baseline(cfg=cfg,
                          device=device, 
-                         img_size=args.img_size,
                          num_classes=num_classes, 
                          trainable=trainable,
-                         conf_thresh=args.conf_thresh,
-                         nms_thresh=args.nms_thresh,
+                         conf_thresh=cfg['conf_thresh'],
+                         nms_thresh=cfg['train_nms_thresh'] if trainable else cfg['test_nms_thresh'],
                          topk=args.topk)
 
     elif 'yowof' in args.version:

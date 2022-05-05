@@ -4,15 +4,14 @@ import torch.nn.functional as F
 
 import numpy as np
 import os
-import math
-from copy import deepcopy
+import cv2
 
 from dataset.ucf24 import UCF24
 from dataset.jhmdb import JHMDB
 from dataset.transforms import TrainTransforms, ValTransforms
 
 
-def build_dataset(d_cfg, m_cfg, args, device, is_train=False):
+def build_dataset(d_cfg, m_cfg, args, is_train=False):
     """
         d_cfg: dataset config
         m_cfg: model config
@@ -142,14 +141,24 @@ def load_weight(device, model, path_to_ckpt):
 
 class CollateFunc(object):
     def __call__(self, batch):
-        targets = []
-        images = []
+        batch_target_clips = []
+        batch_video_clips = []
 
-        for sample in batch:
-            image = sample[0]
-            target = sample[1]
+        len_clip = len(batch[0][0])
+        for fid in range(len_clip):
+            cur_fid_video_clip = []
+            cur_fid_target_clip = []
+            for sample in batch:
+                cur_fid_video_clip.append(sample[0][fid])
+                cur_fid_target_clip.append(sample[1][fid])
+            cur_fid_video_clip = torch.stack(cur_fid_video_clip, dim=0)  # [B, C, H, W]
+            batch_video_clips.append(cur_fid_video_clip)
+            batch_target_clips.append(cur_fid_target_clip)
 
-            images.append(image)
-            targets.append(target)
-
-        return images, targets
+        # batch_clip_images: List[Tensor] -> [Tensor[B, C, H, W],
+        #                                     ..., 
+        #                                     Tensor[B, C, H, W]]
+        # batch_clip_targets: List[List] -> [List[B, N, 6],
+        #                                    ...,
+        #                                    List[B, N, 6]]
+        return batch_video_clips, batch_target_clips

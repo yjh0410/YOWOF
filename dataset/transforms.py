@@ -125,8 +125,8 @@ class ToTensor(object):
 
     def __call__(self, image_list, target_list=None):
         # check color format
-        out_images_list = {}
-        out_target_list = {}
+        out_images_list = []
+        out_target_list = []
         for i in range(len(image_list)):
             image = image_list[i]
             # modify color format
@@ -143,12 +143,12 @@ class ToTensor(object):
             else:
                 print('Unknown color format !!')
                 exit()
-            out_images_list[i]=image
+            out_images_list.append(image)
 
             if target_list is not None:
                 target = target_list[i]
                 target = torch.as_tensor(target)
-                out_target_list[i] = target
+                out_target_list.append(target)
 
         return out_images_list, out_target_list
 
@@ -179,7 +179,7 @@ class DistortTransform(object):
         dsat = self._rand_scale(self.saturation)
         dexp = self._rand_scale(self.exposure)
 
-        out_images_list = {}
+        out_images_list = []
         for i in range(len(image_list)):
             image = image_list[i]
             image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -197,7 +197,7 @@ class DistortTransform(object):
             image = (image * 255).clip(0, 255).astype(np.uint8)
             image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
             image = np.asarray(image, dtype=np.uint8)
-            out_images_list[i] = image
+            out_images_list.append(image)
 
         return out_images_list, target_list
 
@@ -224,6 +224,7 @@ class JitterCrop(object):
     def __init__(self, jitter_ratio):
         super().__init__()
         self.jitter_ratio = jitter_ratio
+
 
     def crop(self, image, pleft, pright, ptop, pbot, output_size):
         oh, ow = image.shape[:2]
@@ -266,8 +267,8 @@ class JitterCrop(object):
         sheight = oh - ptop - pbot
         output_size = (swidth, sheight)
 
-        out_images_list = {}
-        out_target_list = {}
+        out_images_list = []
+        out_target_list = []
         # crop image
         for i in range(len(image_list)):
             image = image_list[i]
@@ -277,7 +278,7 @@ class JitterCrop(object):
                                     ptop=ptop, 
                                     pbot=pbot,
                                     output_size=output_size)
-            out_images_list[i] = cropped_image
+            out_images_list.append(cropped_image)
             # crop bbox
             if target_list is not None:
                 target = target_list[i]
@@ -290,7 +291,7 @@ class JitterCrop(object):
 
                 bboxes[..., [0, 2]] = np.clip(bboxes[..., [0, 2]], 0, swidth - 1)
                 bboxes[..., [1, 3]] = np.clip(bboxes[..., [1, 3]], 0, sheight - 1)
-                out_target_list[i] = np.concatenate([bboxes, labels], axis=1)
+                out_target_list.append(np.concatenate([bboxes, labels], axis=1))
             else:
                 out_target_list=None
 
@@ -304,19 +305,19 @@ class RandomHorizontalFlip(object):
 
     def __call__(self, image_list, target_list=None):
         if random.random() < self.p:
-            out_images_list = {}
-            out_target_list = {}
+            out_images_list = []
+            out_target_list = []
             for i in range(len(image_list)):
                 image = image_list[i]
                 orig_h, orig_w = image.shape[:2]
-                out_images_list[i] = image[:, ::-1]
+                out_images_list.append(image[:, ::-1])
 
                 if target_list is not None:
                     target = target_list[i]
                     boxes = target[:, :4].copy()
                     labels = target[:, 4:].copy()
                     boxes[..., [0, 2]] = orig_w - boxes[..., [2, 0]]
-                    out_target_list[i] = np.concatenate([boxes, labels], axis=1)
+                    out_target_list.append(np.concatenate([boxes, labels], axis=1))
                 else:
                     out_target_list = None
             return out_images_list, out_target_list
@@ -347,8 +348,8 @@ class RandomShift(object):
                 new_y = shift_y
                 orig_y = 0
 
-            out_images_list = {}
-            out_target_list = {}
+            out_images_list = []
+            out_target_list = []
             for i in range(len(image_list)):
                 image = image_list[i]
                 new_image = np.zeros_like(image)
@@ -358,7 +359,7 @@ class RandomShift(object):
                 new_image[new_y:new_y + new_h, new_x:new_x + new_w, :] = image[
                                                                     orig_y:orig_y + new_h,
                                                                     orig_x:orig_x + new_w, :]
-                out_images_list[i] = new_image
+                out_images_list.append(new_image)
                 
                 target = target_list[i]
                 boxes = target[:, :4].copy()
@@ -367,7 +368,7 @@ class RandomShift(object):
                 boxes[..., [1, 3]] += shift_y
                 boxes[..., [0, 2]] = boxes[..., [0, 2]].clip(0, img_w)
                 boxes[..., [1, 3]] = boxes[..., [1, 3]].clip(0, img_h)
-                out_target_list[i] = np.concatenate([boxes, labels], axis=1)
+                out_target_list.append(np.concatenate([boxes, labels], axis=1))
 
             return out_images_list, out_target_list
 
@@ -382,10 +383,10 @@ class Normalize(object):
 
     def __call__(self, image_list, target_list=None):
         # normalize image
-        out_images_list = {}
+        out_images_list = []
         for i in range(len(image_list)):
             image = image_list[i]
-            out_images_list[i] = F.normalize(image, mean=self.pixel_mean, std=self.pixel_std)
+            out_images_list.append(F.normalize(image, mean=self.pixel_mean, std=self.pixel_std))
 
         return out_images_list, target_list
 
@@ -397,14 +398,14 @@ class Resize(object):
 
     def __call__(self, image_list, target_list=None):
         # Resize an image into a square image
-        out_images_list = {}
-        out_target_list = {}
+        out_images_list = []
+        out_target_list = []
         
         orig_h, orig_w = image_list[0].shape[1:]
         for i in range(len(image_list)):
             image = image_list[i]
             resized_image = F.resize(image, size=[self.img_size, self.img_size])
-            out_images_list[i] = resized_image
+            out_images_list.append(resized_image)
 
             # rescale bboxes
             if target_list is not None:
@@ -414,7 +415,7 @@ class Resize(object):
                 labels = target[:, 4:].clone()
                 boxes[:, [0, 2]] = boxes[:, [0, 2]] / orig_w * self.img_size
                 boxes[:, [1, 3]] = boxes[:, [1, 3]] / orig_h * self.img_size
-                out_target_list[i] = torch.cat([boxes, labels], dim=1)
+                out_target_list.append(torch.cat([boxes, labels], dim=1))
 
         return out_images_list, out_target_list
 

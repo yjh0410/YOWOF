@@ -131,14 +131,14 @@ class JHMDB(data.Dataset):
 
     def pull_item(self, index):
         video_name, frame = self.indices[index]
-        image_list = {}
-        target_list = {}
+        image_list = []
+        target_list = []
         for i in range(self.len_clip):
             cur_fid = frame + i
             # load an image
             image_file = os.path.join(self.image_path, video_name, 
                                         '{:0>5}.png'.format(cur_fid))
-            image_list[i] = cv2.imread(image_file)
+            image_list.append(cv2.imread(image_file))
 
             # load a target
             cur_vid_gttube = self.gttubes[video_name]
@@ -159,18 +159,18 @@ class JHMDB(data.Dataset):
                 cur_target_list.append([])
             # to ndarray
             cur_target_list = np.array(cur_target_list).reshape(-1, 6)
-            target_list[i] = cur_target_list
+            target_list.append(cur_target_list)
 
         # augment
         image_list, target_list = self.transform(image_list, target_list)
-        # image_list = {0: image_1, 
-        #               1: image_2, 
+        # image_list = [image_1, 
+        #               image_2, 
         #               ..., 
-        #               K: image_K]
-        # target_list = {0: ndarray([[x1, y1, x2, y2, cls, fid], 
+        #               image_K]
+        # target_list = [ndarray([[x1, y1, x2, y2, cls, fid], 
         #                             ...]),
-        #                K: ndarray([[x1, y1, x2, y2, cls, fid], 
-        #                             ...]}
+        #                ndarray([[x1, y1, x2, y2, cls, fid], 
+        #                             ...]]
         return image_list, target_list
 
 

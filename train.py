@@ -2,6 +2,7 @@ from __future__ import division
 
 import os
 import math
+import time
 import argparse
 from copy import deepcopy
 
@@ -12,11 +13,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from utils import distributed_utils
 from utils.com_flops_params import FLOPs_and_Params
-from utils.misc import CollateFunc, build_dataset, build_dataloader
+from utils.misc import CollateFunc, build_dataset, build_dataloader, get_total_grad_norm
 from utils.solver.optimizer import build_optimizer
 from utils.solver.warmup_schedule import build_warmup
-
-from engine import train_with_warmup, train_one_epoch, val_one_epoch
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
@@ -29,12 +28,16 @@ def parse_args():
                         help='use cuda.')
     parser.add_argument('--num_workers', default=4, type=int, 
                         help='Number of workers used in dataloading')
+    parser.add_argument('--grad_clip_norm', type=float, default=-1.,
+                        help='grad clip.')
     parser.add_argument('--tfboard', action='store_true', default=False,
                         help='use tensorboard')
     parser.add_argument('--save_folder', default='weights/', type=str, 
                         help='path to save weight')
     parser.add_argument('--eval_epoch', default=10, type=int, 
                         help='after eval epoch, the model is evaluated on val dataset.')
+    parser.add_argument('--vis_data', action='store_true', default=False,
+                        help='use tensorboard')
 
     # model
     parser.add_argument('-v', '--version', default='baseline', type=str,
@@ -89,7 +92,7 @@ def train():
     m_cfg = build_model_config(args)
 
     # dataset and evaluator
-    dataset, evaluator, num_classes = build_dataset(d_cfg, m_cfg, args, device, is_train=True)
+    dataset, evaluator, num_classes = build_dataset(d_cfg, m_cfg, args, is_train=True)
 
     # dataloader
     batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()
@@ -118,76 +121,147 @@ def train():
 
     # optimizer
     base_lr = d_cfg['base_lr'] * batch_size
-    min_lr = base_lr * d_cfg['min_lr_ratio']
     optimizer = build_optimizer(model=model_without_ddp,
                                 base_lr=base_lr,
+                                bk_lr_ratio=d_cfg['bk_lr_ratio'],
                                 name=m_cfg['optimizer'],
                                 momentum=m_cfg['momentum'],
                                 weight_decay=m_cfg['weight_decay'])
-    
+
+    # lr scheduler
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer=optimizer, milestones=d_cfg['lr_epoch'])
+
     # warmup scheduler
-    wp_iter = len(dataloader) * d_cfg['wp_epoch']
     warmup_scheduler = build_warmup(name=d_cfg['warmup'],
                                     base_lr=base_lr,
-                                    wp_iter=wp_iter,
+                                    wp_iter=d_cfg['wp_iter'],
                                     warmup_factor=d_cfg['warmup_factor'])
 
+    # training configuration
+    max_epoch = d_cfg['max_epoch']
+    epoch_size = len(dataloader)
+    best_map = -1.
+    warmup = True
 
-    # start training loop
-    best_map = -1.0
-    lr_schedule=True
-    total_epochs = d_cfg['wp_epoch'] + d_cfg['max_epoch']
-    for epoch in range(total_epochs):
+    t0 = time.time()
+    for epoch in range(max_epoch):
         if args.distributed:
             dataloader.batch_sampler.sampler.set_epoch(epoch)            
 
         # train one epoch
-        if epoch < d_cfg['wp_epoch']:
-            # warmup training loop
-            train_with_warmup(epoch=epoch,
-                              total_epochs=total_epochs,
-                              device=device, 
-                              model=model, 
-                              dataloader=dataloader, 
-                              optimizer=optimizer, 
-                              warmup_scheduler=warmup_scheduler)
+        for iter_i, (video_clips, targets) in enumerate(dataloader):
+            ni = iter_i + epoch * epoch_size
+            # warmup
+            if ni < d_cfg['wp_iter'] and warmup:
+                warmup_scheduler.warmup(ni, optimizer)
 
-        else:
-            if epoch == d_cfg['wp_epoch']:
-                print('Warmup is Over !!!')
-                warmup_scheduler.set_lr(optimizer, base_lr)
+            elif ni == d_cfg['wp_iter'] and warmup:
+                # warmup is over
+                print('Warmup is over')
+                warmup = False
+                warmup_scheduler.set_lr(optimizer, lr=base_lr, base_lr=base_lr)
+
+            # to device
+            video_clips = [video_clip.to(device) for video_clip in video_clips]
+
+            # inference
+            loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
+            losses = loss_dict['losses']
+
+            # reduce            
+            loss_dict_reduced = distributed_utils.reduce_dict(loss_dict)
+
+            # check loss
+            if torch.isnan(losses):
+                print('loss is NAN !!')
+                continue
+
+            # Backward and Optimize
+            losses.backward()
+            if args.grad_clip_norm > 0.:
+                total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
+            else:
+                total_norm = get_total_grad_norm(model.parameters())
+            optimizer.step()
+            optimizer.zero_grad()
+
+            # display
+            if distributed_utils.is_main_process() and iter_i % 10 == 0:
+                t1 = time.time()
+                cur_lr = [param_group['lr']  for param_group in optimizer.param_groups]
+                cur_lr_dict = {'lr': cur_lr[0], 'lr_bk': cur_lr[1]}
+                log = dict(
+                    lr=round(cur_lr_dict['lr'], 6),
+                    lr_bk=round(cur_lr_dict['lr_bk'], 6)
+                )
+                # basic infor
+                log =  '[Epoch: {}/{}]'.format(epoch+1, max_epoch)
+                log += '[Iter: {}/{}]'.format(iter_i, epoch_size)
+                log += '[lr: {:.6f}][lr_bk: {:.6f}]'.format(cur_lr_dict['lr'], cur_lr_dict['lr_bk'])
+                # loss infor
+                for k in loss_dict_reduced.keys():
+                    log += '[{}: {:.2f}]'.format(k, loss_dict[k])
+
+                # other infor
+                log += '[time: {:.2f}]'.format(t1 - t0)
+                log += '[gnorm: {:.2f}]'.format(total_norm)
+                log += '[size: {}]'.format(m_cfg['train_size'])
+
+                # print log infor
+                print(log, flush=True)
                 
-            # use cos lr decay
-            T_max = total_epochs - d_cfg['no_cos_decay']
-            if epoch > T_max:
-                print('Cosine annealing is over !!')
-                lr_schedule = False
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = min_lr
+                t0 = time.time()
 
-            if lr_schedule:
-                tmp_lr = min_lr + 0.5*(base_lr - min_lr)*(1 + math.cos(math.pi*epoch / T_max))
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = tmp_lr
-
-            # train one epoch
-            train_one_epoch(epoch=epoch,
-                            total_epochs=total_epochs,
-                            device=device,
-                            model=model, 
-                            dataloader=dataloader, 
-                            optimizer=optimizer)
+        lr_scheduler.step()
         
         # evaluation
-        if (epoch % args.eval_epoch) == 0 or (epoch == total_epochs - 1):
-            best_map = val_one_epoch(
-                            args=args, 
-                            model=model_without_ddp, 
-                            evaluator=evaluator,
-                            optimizer=optimizer,
-                            epoch=epoch,
-                            best_map=best_map,
-                            path_to_save=path_to_save)
+        if (epoch + 1) % args.eval_epoch == 0 or (epoch + 1) == max_epoch:
+            # check evaluator
+            if distributed_utils.is_main_process():
+                if evaluator is None:
+                    print('No evaluator ... save model and go on training.')
+                    print('Saving state, epoch: {}'.format(epoch + 1))
+                    weight_name = '{}_epoch_{}.pth'.format(args.version, epoch + 1)
+                    checkpoint_path = os.path.join(path_to_save, weight_name)
+                    torch.save({'model': model_without_ddp.state_dict(),
+                                'optimizer': optimizer.state_dict(),
+                                'lr_scheduler': lr_scheduler.state_dict(),
+                                'epoch': epoch,
+                                'args': args}, 
+                                checkpoint_path)                      
+                    
+                else:
+                    print('eval ...')
+                    # set eval mode
+                    model_without_ddp.trainable = False
+                    model_without_ddp.eval()
+
+                    # evaluate
+                    evaluator.evaluate(model_without_ddp)
+
+                    cur_map = evaluator.map
+                    if cur_map > best_map:
+                        # update best-map
+                        best_map = cur_map
+                        # save model
+                        print('Saving state, epoch:', epoch + 1)
+                        weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_map*100)
+                        checkpoint_path = os.path.join(path_to_save, weight_name)
+                        torch.save({'model': model_without_ddp.state_dict(),
+                                    'optimizer': optimizer.state_dict(),
+                                    'lr_scheduler': lr_scheduler.state_dict(),
+                                    'epoch': epoch,
+                                    'args': args}, 
+                                    checkpoint_path)                      
+
+                    # set train mode.
+                    model_without_ddp.trainable = True
+                    model_without_ddp.train()
+        
+            if args.distributed:
+                # wait for all processes to synchronize
+                dist.barrier()
 
 
 if __name__ == '__main__':

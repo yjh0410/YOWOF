@@ -3,7 +3,7 @@ from torch import optim
 
 def build_optimizer(model,
                     base_lr=0.0,
-                    backbone_lr=0.0,
+                    bk_lr_ratio=0.0,
                     name='sgd',
                     momentum=0.,
                     weight_decay=0.):
@@ -12,16 +12,13 @@ def build_optimizer(model,
     print('--momentum: {}'.format(momentum))
     print('--weight_decay: {}'.format(weight_decay))
 
-    if base_lr == backbone_lr:
-        param_dicts = model.parameters()
-    else:
-        param_dicts = [
-            {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-            {
-                "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
-                "lr": backbone_lr,
-            },
-        ]
+    param_dicts = [
+        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+        {
+            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+            "lr": base_lr * bk_lr_ratio,
+        },
+    ]
 
     if name == 'sgd':
         optimizer = optim.SGD(param_dicts, 

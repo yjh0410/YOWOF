@@ -15,6 +15,6 @@ def build_dataset_config(args):
     print('==============================')
     print('Build Dataset: {} '.format(args.version.upper()))
     
-    d_cfg = dataset_config[args.version]
+    d_cfg = dataset_config[args.dataset]
 
     return d_cfg

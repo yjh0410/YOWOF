@@ -18,7 +18,6 @@ class YOWOF(nn.Module):
     def __init__(self, 
                  cfg,
                  device, 
-                 img_size = 320,
                  num_classes = 20, 
                  conf_thresh = 0.05,
                  nms_thresh = 0.6,
@@ -27,7 +26,6 @@ class YOWOF(nn.Module):
         super(YOWOF, self).__init__()
         self.cfg = cfg
         self.device = device
-        self.img_size = img_size
         self.stride = cfg['stride']
         self.num_classes = num_classes
         self.trainable = trainable
@@ -59,11 +57,6 @@ class YOWOF(nn.Module):
         self.obj_pred = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
         self.cls_pred = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
         self.reg_pred = nn.Conv2d(cfg['head_dim'], 4 * self.num_anchors, kernel_size=3, padding=1)
-
-        # anchor box
-        self.anchor_boxes = self.generate_anchors(
-            [img_size//self.stride, img_size//self.stride]) # [M, 4]
-                        
 
         if trainable:
             # init bias
@@ -362,6 +355,11 @@ class YOWOF(nn.Module):
         """
             x: List[Tensor] -> [[B,C,H,W], ...], len(x) = len_clip.
         """
+        # generate anchor box
+        img_size = x[0].shape[-1]
+        self.anchor_boxes = self.generate_anchors(
+            [img_size//self.stride, img_size//self.stride]) # [M, 4]
+                        
         if not self.trainable:
             return self.inference(x)
         else:

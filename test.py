@@ -5,36 +5,39 @@ import time
 import numpy as np
 import torch
 
-from dataset.voc import VOC_CLASSES, VOCDetection
-from dataset.coco import coco_class_index, coco_class_labels, COCODataset
+from dataset.ucf24 import UCF24, UCF24_CLASSES
+from dataset.jhmdb import JHMDB, JHMDB_CLASSES
 from dataset.transforms import ValTransforms
-from utils.misc import load_weight, TestTimeAugmentation
+from utils.misc import load_weight
+from utils.vis_tools import vis_video_clip, vis_video_frame
 
-from config import build_config
+from config import build_dataset_config, build_model_config
 from models.detector import build_model
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Object Detection Benchmark')
+    parser = argparse.ArgumentParser(description='YOWOF')
 
     # basic
-    parser.add_argument('--min_size', default=800, type=int,
-                        help='the min size of input image')
-    parser.add_argument('--max_size', default=1333, type=int,
-                        help='the min size of input image')
+    parser.add_argument('-size', '--img_size', default=320, type=int,
+                        help='the size of input frame')
     parser.add_argument('--show', action='store_true', default=False,
                         help='show the visulization results.')
     parser.add_argument('--cuda', action='store_true', default=False, 
                         help='use cuda.')
     parser.add_argument('--save_folder', default='det_results/', type=str,
                         help='Dir to save results')
+    parser.add_argument('-vs', '--visual_threshold', default=0.35, type=float,
+                        help='Final confidence threshold')
+    parser.add_argument('-inf', '--inference', default='clip', type=str,
+                        help='clip: infer with video clip; stream: infer with a video stream.')
 
     # model
-    parser.add_argument('-v', '--version', default='yolof50', type=str,
-                        help='build yolof')
+    parser.add_argument('-v', '--version', default='baseline', type=str,
+                        help='build yowof')
     parser.add_argument('--weight', default='weight/',
                         type=str, help='Trained state_dict file path to open')
-    parser.add_argument('--topk', default=100, type=int,
+    parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
 
     # dataset
@@ -42,121 +45,125 @@ def parse_args():
                         help='data root')
     parser.add_argument('-d', '--dataset', default='coco',
                         help='coco, voc.')
-    # TTA
-    parser.add_argument('-tta', '--test_aug', action='store_true', default=False,
-                        help='use test augmentation.')
 
     return parser.parse_args()
 
 
-
-def plot_bbox_labels(img, bbox, label=None, cls_color=None, text_scale=0.4):
-    x1, y1, x2, y2 = bbox
-    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-    t_size = cv2.getTextSize(label, 0, fontScale=1, thickness=2)[0]
-    # plot bbox
-    cv2.rectangle(img, (x1, y1), (x2, y2), cls_color, 2)
+def rescale_bboxes(bboxes, orig_size):
+    orig_w, orig_h = orig_size[0], orig_size[1]
+    rescale_bboxes = bboxes * orig_size    
+    rescale_bboxes[..., [0, 2]] = np.clip(
+        rescale_bboxes[..., [0, 2]], a_min=0., a_max=orig_w
+        )
+    rescale_bboxes[..., [1, 3]] = np.clip(
+        rescale_bboxes[..., [1, 3]], a_min=0., a_max=orig_h
+        )
     
-    if label is not None:
-        # plot title bbox
-        cv2.rectangle(img, (x1, y1-t_size[1]), (int(x1 + t_size[0] * text_scale), y1), cls_color, -1)
-        # put the test on the title bbox
-        cv2.putText(img, label, (int(x1), int(y1 - 5)), 0, text_scale, (0, 0, 0), 1, lineType=cv2.LINE_AA)
-
-    return img
+    return rescale_bboxes
 
 
-def visualize(img, 
-              bboxes, 
-              scores, 
-              cls_inds, 
-              vis_thresh, 
-              class_colors, 
-              class_names, 
-              class_indexs=None, 
-              dataset_name='voc'):
-    ts = 0.4
-    for i, bbox in enumerate(bboxes):
-        if scores[i] > vis_thresh:
-            cls_id = int(cls_inds[i])
-            if dataset_name == 'coco':
-                cls_color = class_colors[cls_id]
-                cls_id = class_indexs[cls_id]
+def rescale_bboxes_list(bboxes_list, orig_size):
+    orig_w, orig_h = orig_size[0], orig_size[1]
+    rescale_bboxes_list = []
+    for bboxes in bboxes_list:
+        rescale_bboxes = bboxes * orig_size    
+        rescale_bboxes[..., [0, 2]] = np.clip(
+            rescale_bboxes[..., [0, 2]], a_min=0., a_max=orig_w
+            )
+        rescale_bboxes[..., [1, 3]] = np.clip(
+            rescale_bboxes[..., [1, 3]], a_min=0., a_max=orig_h
+            )
+        rescale_bboxes_list.append(rescale_bboxes)
+    
+    return rescale_bboxes_list
+
+
+def inference_with_video_stream(args, net, device, transform=None, class_names=None):
+    # inference
+    num_videos = dataset.num_videos
+    for index in range(num_videos):
+        print('Testing video {:d}/{:d}....'.format(index+1, num_videos))
+        video_name = dataset.load_video(index)
+        video_path = os.path.join(dataset.image_path, video_name)
+        num_frames = len(os.listdir(video_path))
+
+        initialization = True
+        frame_count = 0
+        init_video_clip = []
+        scores_list = []
+        labels_list = []
+        bboxes_list = []
+        for fid in range(1, num_frames + 1):
+            image_file = os.path.join(video_path, '{:0>5}.jpg'.format(fid))
+            cur_frame = cv2.imread(image_file)
+            orig_h, orig_w = cur_frame.shape[:2]
+            orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
+            frame_count += 1
+
+            if initialization:
+                if frame_count < net.len_clip:
+                    init_video_clip.append(cur_frame)
+                    continue
+                else:
+                    xs, _ = transform(init_video_clip)
+                    xs = [x.unsqueeze(0).to(device) for x in xs] 
+                    init_scores, init_labels, init_bboxes = net(xs)
+
+                    # rescale
+                    init_bboxes = rescale_bboxes_list(init_bboxes, orig_size)
+
+                    scores_list.extend(init_scores)
+                    labels_list.extend(init_labels)
+                    bboxes_list.extend(init_bboxes)
+                    initialization = False
+                    
             else:
-                cls_color = class_colors[cls_id]
+                xs, _ = transform([cur_frame])
+                xs = [x.unsqueeze(0).to(device) for x in xs] 
+
+                t0 = time.time()
+                cur_score, cur_label, cur_bboxes = net(xs[0])
+                t1 = time.time()
                 
-            if len(class_names) > 1:
-                mess = '%s: %.2f' % (class_names[cls_id], scores[i])
-            else:
-                cls_color = [255, 0, 0]
-                mess = None
-            img = plot_bbox_labels(img, bbox, mess, cls_color, text_scale=ts)
+                # rescale
+                cur_bboxes = rescale_bboxes(cur_bboxes, orig_size)
 
-    return img
-        
+                scores_list.append(cur_score)
+                labels_list.append(cur_label)
+                bboxes_list.append(cur_bboxes)
+                # vis current detection results
+                vis_results = vis_video_frame(
+                    cur_frame, cur_score, cur_label, cur_bboxes, 
+                    args.vis_threshold, class_names
+                )
 
-def test(args,
-         net, 
-         device, 
-         dataset,
-         transform=None,
-         vis_thresh=0.4, 
-         class_colors=None, 
-         class_names=None, 
-         class_indexs=None, 
-         show=False,
-         test_aug=None, 
-         dataset_name='coco'):
-    num_images = len(dataset)
-    save_path = os.path.join('det_results/', args.dataset, args.version)
-    os.makedirs(save_path, exist_ok=True)
 
-    for index in range(num_images):
-        print('Testing image {:d}/{:d}....'.format(index+1, num_images))
-        image, _ = dataset.pull_image(index)
+def inference_with_video_clip(args, net, device, dataset, transform=None, class_names=None):
+    # inference
+    for index in range(len(dataset)):
+        print('Testing video clip {:d}/{:d}....'.format(index+1, len(dataset)))
+        video_clip, _ = dataset[index]
 
-        orig_h, orig_w, _ = image.shape
+        orig_h, orig_w, _ = video_clip[0].shape
         orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
 
         # prepare
-        x = transform(image)[0]
-        x = x.unsqueeze(0).to(device)
+        xs, _ = transform(video_clip)
+        xs = [x.unsqueeze(0).to(device) for x in xs] 
 
         t0 = time.time()
         # inference
-        if test_aug is not None:
-            # test augmentation:
-            bboxes, scores, cls_inds = test_aug(x, net)
-        else:
-            bboxes, scores, cls_inds = net(x)
+        scores_list, labels_list, bboxes_list = net(xs)
         print("detection time used ", time.time() - t0, "s")
         
         # rescale
-        if transform.padding:
-            # The input image is padded with 0 on the short side, aligning with the long side.
-            bboxes *= max(orig_h, orig_w)
-        else:
-            # the input image is not padded.
-            bboxes *= orig_size
-        bboxes[..., [0, 2]] = np.clip(bboxes[..., [0, 2]], a_min=0., a_max=orig_w)
-        bboxes[..., [1, 3]] = np.clip(bboxes[..., [1, 3]], a_min=0., a_max=orig_h)
+        bboxes_list = rescale_bboxes_list(bboxes_list, orig_size)
 
         # vis detection
-        img_processed = visualize(
-                            img=image,
-                            bboxes=bboxes,
-                            scores=scores,
-                            cls_inds=cls_inds,
-                            vis_thresh=vis_thresh,
-                            class_colors=class_colors,
-                            class_names=class_names,
-                            class_indexs=class_indexs,
-                            dataset_name=dataset_name)
-        if show:
-            cv2.imshow('detection', img_processed)
-            cv2.waitKey(0)
-        # save result
-        cv2.imwrite(os.path.join(save_path, str(index).zfill(6) +'.jpg'), img_processed)
+        vis_results = vis_video_clip(
+            video_clip, scores_list, labels_list, rescale_bboxes_list, 
+            args.vis_threshold, class_names
+        )
 
 
 if __name__ == '__main__':
@@ -168,26 +175,32 @@ if __name__ == '__main__':
     else:
         device = torch.device("cpu")
 
-    # dataset
-    if args.dataset == 'voc':
-        data_dir = os.path.join(args.root, 'VOCdevkit')
-        class_names = VOC_CLASSES
-        class_indexs = None
-        num_classes = 20
-        dataset = VOCDetection(
-                        data_dir=data_dir,
-                        image_sets=[('2007', 'test')],
-                        transform=None)
+    # config
+    d_cfg = build_dataset_config(args)
+    m_cfg = build_model_config(args)
 
-    elif args.dataset == 'coco':
-        data_dir = os.path.join(args.root, 'COCO')
-        class_names = coco_class_labels
-        class_indexs = coco_class_index
-        num_classes = 80
-        dataset = COCODataset(
-                    data_dir=data_dir,
-                    image_set='val2017',
-                    transform=None)
+    # dataset
+    if args.dataset == 'ucf24':
+        num_classes = 24
+        class_names = UCF24_CLASSES
+        # dataset
+        dataset = UCF24(cfg=d_cfg,
+                        img_size=m_cfg['train_size'],
+                        len_clip=m_cfg['len_clip'],
+                        is_train=False,
+                        transform=None,
+                        debug=False)
+
+    elif args.dataset == 'jhmdb':
+        num_classes = 24
+        class_names = UCF24_CLASSES
+        # dataset
+        dataset = JHMDB(cfg=d_cfg,
+                        img_size=m_cfg['train_size'],
+                        len_clip=m_cfg['len_clip'],
+                        is_train=False,
+                        transform=None,
+                        debug=False)
     
     else:
         print('unknow dataset !! Only support voc and coco !!')
@@ -198,12 +211,9 @@ if __name__ == '__main__':
                      np.random.randint(255),
                      np.random.randint(255)) for _ in range(num_classes)]
 
-    # config
-    cfg = build_config(args)
-
     # build model
     model = build_model(args=args, 
-                        cfg=cfg,
+                        cfg=m_cfg,
                         device=device, 
                         num_classes=num_classes, 
                         trainable=False)
@@ -213,16 +223,11 @@ if __name__ == '__main__':
                         model=model, 
                         path_to_ckpt=args.weight)
 
-    # TTA
-    test_aug = TestTimeAugmentation(num_classes=num_classes) if args.test_aug else None
-
     # transform
-    transform = ValTransforms(min_size=cfg['test_min_size'], 
-                              max_size=cfg['test_max_size'],
-                              pixel_mean=cfg['pixel_mean'],
-                              pixel_std=cfg['pixel_std'],
-                              format=cfg['format'],
-                              padding=cfg['val_padding'])
+    transform = ValTransforms(img_size=args.img_size,
+                              pixel_mean=m_cfg['pixel_mean'],
+                              pixel_std=m_cfg['pixel_std'],
+                              format=m_cfg['format'])
 
     # run
     test(args=args,
@@ -230,10 +235,8 @@ if __name__ == '__main__':
         device=device, 
         dataset=dataset,
         transform=transform,
-        vis_thresh=cfg['test_score_thresh'],
+        vis_thresh=args.visual_threshold,
         class_colors=class_colors,
         class_names=class_names,
-        class_indexs=class_indexs,
         show=args.show,
-        test_aug=test_aug,
         dataset_name=args.dataset)

@@ -2,6 +2,7 @@
 
 import numpy as np
 import math
+import queue
 import torch
 import torch.nn as nn
 from ...backbone import build_backbone
@@ -18,19 +19,17 @@ class Baseline(nn.Module):
     def __init__(self, 
                  cfg,
                  device, 
-                 img_size = 320,
                  num_classes = 20, 
                  conf_thresh = 0.05,
                  nms_thresh = 0.6,
                  topk = 1000,
                  trainable = False):
         super(Baseline, self).__init__()
-        assert cfg['len_clip'] == 1,\
-             'The <len_clip> should be 1 since Baseline is a frame-level model.'
         self.cfg = cfg
         self.device = device
-        self.img_size = img_size
+        self.fmp_size = None
         self.stride = cfg['stride']
+        self.len_clip = cfg['len_clip']
         self.num_classes = num_classes
         self.trainable = trainable
         self.conf_thresh = conf_thresh
@@ -39,6 +38,7 @@ class Baseline(nn.Module):
         self.num_anchors = len(cfg['anchor_size'])
         self.anchor_size = torch.as_tensor(cfg['anchor_size'])
         self.stream_infernce = False
+        self.initialization = False
 
         # backbone
         self.backbone, bk_dim = build_backbone(model_name=cfg['backbone'], 
@@ -62,10 +62,6 @@ class Baseline(nn.Module):
         self.cls_pred = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
         self.reg_pred = nn.Conv2d(cfg['head_dim'], 4 * self.num_anchors, kernel_size=3, padding=1)
 
-        # anchor box
-        self.anchor_boxes = self.generate_anchors(
-            [img_size//self.stride, img_size//self.stride]) # [M, 4]
-                        
 
         if trainable:
             # init bias
@@ -350,34 +346,53 @@ class Baseline(nn.Module):
                 all_frames_bboxes
                 ) = self.inference_video_clip(x)
             # set stream_inference to True
-            self.stream_infernce = True
             return (all_frames_scores, 
                     all_frames_labels, 
                     all_frames_bboxes
                     )
         else:
-            # After init stage, model process the input frame
-            scores, labels, bboxes = self.inference_single_frame(x)
+            self.scores_list = []
+            self.bboxes_list = []
+            self.labels_list = []
+
+            if self.initialization:
+                # Init stage, detector process a video clip
+                (
+                    init_scores, 
+                    init_labels, 
+                    init_bboxes
+                    ) = self.inference_video_clip(x)
+                self.initialization = False
+                return init_scores, init_labels, init_bboxes
+            else:
+                # After init stage, detector process current frame
+                cur_scores, cur_labels, cur_bboxes = self.inference_single_frame(x)
+                return cur_scores, cur_labels, cur_bboxes
 
 
-    def forward(self, x):
+    def forward(self, video_clips, targets=None, vis_data=False):
         """
-            x: List[Tensor] -> [[B,C,H,W], ...], len(x) = len_clip.
+            video_clips: List[Tensor] -> [Tensor[B, C, H, W], ..., Tensor[B, C, H, W]].
         """
+        # generate anchor box
+        img_size = video_clips[0].shape[-1]
+        self.anchor_boxes = self.generate_anchors(
+            [img_size//self.stride, img_size//self.stride]) # [M, 4]
+                        
         if not self.trainable:
-            return self.inference(x)
+            return self.inference(video_clips)
         else:
             box_preds = []
             cls_preds = []
-            for i in range(len(x)):
+            for i in range(len(video_clips)):
                 # backbone
-                feat = self.backbone(x[i])
+                feat = self.backbone(video_clips[i])
 
                 # neck
                 feat = self.neck(feat)
 
                 # head
-                cls_feats, reg_feats = self.head(x)
+                cls_feats, reg_feats = self.head(feat)
 
                 obj_pred = self.obj_pred(reg_feats)
                 cls_pred = self.cls_pred(cls_feats)
@@ -406,7 +421,16 @@ class Baseline(nn.Module):
                 cls_preds.append(normalized_cls_pred)
                 box_preds.append(box_pred)
 
-            outputs = {'cls_preds': cls_preds,
-                       'box_preds': box_preds}
-                        
-            return outputs
+            outputs = {"cls_preds": cls_preds,
+                       "box_preds": box_preds,
+                       'strides': self.stride}
+
+            # loss
+            loss_dict = self.criterion(outputs=outputs, 
+                                       targets=targets, 
+                                       anchor_boxes=self.anchor_boxes,
+                                       video_clips=video_clips,
+                                       vis_data=vis_data
+                                       )
+
+            return loss_dict 

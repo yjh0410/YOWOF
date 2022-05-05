@@ -6,7 +6,7 @@ model_config = {
         # input
         'train_size': 320,
         'test_size': 320,
-        'len_clip': 1,
+        'len_clip': 3,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -19,6 +19,7 @@ model_config = {
                          {'name': 'JitterCrop', 'jitter_ratio': 0.3},
                          {'name': 'ToTensor'},
                          {'name': 'Resize'},
+                         {'name': 'Normalize'},
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
@@ -34,16 +35,20 @@ model_config = {
         # head
         'head_dim': 256,
         'head_norm': 'BN',
-        'act_type': 'relu',
-        'num_cls_head': 2,
-        'num_reg_head': 2,
+        'head_act': 'relu',
+        'num_cls_heads': 2,
+        'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
         'train_nms_thresh': 0.6,
         'test_nms_thresh': 0.45,
         'test_score_thresh': 0.35,
         # anchor box
-        'anchor_size': [8, 16, 32, 64, 128],
+        'anchor_size': [[8, 8], 
+                        [16, 16],
+                        [32, 32], 
+                        [64, 64], 
+                        [128, 128]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
@@ -77,6 +82,7 @@ model_config = {
                          {'name': 'JitterCrop', 'jitter_ratio': 0.3},
                          {'name': 'ToTensor'},
                          {'name': 'Resize'},
+                         {'name': 'Normalize'},
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
@@ -84,24 +90,28 @@ model_config = {
         'stride': 32,
         'pretrained': None,
         # neck
-        'neck': 'dilated_encoder',
-        'dilation_list': [1, 2, 3, 4],
-        'expand_ratio': 0.25,
-        'act_type': 'relu',
+        'neck': 'spp_block',
+        'pooling_size': [5, 9, 13],
+        'expand_ratio': 0.5,
+        'neck_act': 'relu',
         'neck_norm': 'BN',
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'act_type': 'relu',
-        'num_cls_head': 2,
-        'num_reg_head': 4,
+        'num_cls_heads': 2,
+        'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
         'train_nms_thresh': 0.6,
         'test_nms_thresh': 0.45,
         'test_score_thresh': 0.35,
         # anchor box
-        'anchor_size': [8, 16, 32, 64, 128],
+        'anchor_size': [[8, 8], 
+                        [16, 16],
+                        [32, 32], 
+                        [64, 64], 
+                        [128, 128]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
@@ -127,6 +137,7 @@ model_config = {
                          {'name': 'JitterCrop', 'jitter_ratio': 0.3},
                          {'name': 'ToTensor'},
                          {'name': 'Resize'},
+                         {'name': 'Normalize'},
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50',
@@ -134,24 +145,28 @@ model_config = {
         'stride': 32,
         'pretrained': None,
         # neck
-        'neck': 'dilated_encoder',
-        'dilation_list': [1, 2, 3, 4],
-        'expand_ratio': 0.25,
-        'act_type': 'relu',
+        'neck': 'spp_block',
+        'pooling_size': [5, 9, 13],
+        'expand_ratio': 0.5,
+        'neck_act': 'relu',
         'neck_norm': 'BN',
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'act_type': 'relu',
-        'num_cls_head': 2,
-        'num_reg_head': 4,
+        'num_cls_heads': 2,
+        'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
         'train_nms_thresh': 0.6,
         'test_nms_thresh': 0.45,
         'test_score_thresh': 0.35,
         # anchor box
-        'anchor_size': [8, 16, 32, 64, 128],
+        'anchor_size': [[8, 8], 
+                        [16, 16],
+                        [32, 32], 
+                        [64, 64], 
+                        [128, 128]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
@@ -177,6 +192,7 @@ model_config = {
                          {'name': 'JitterCrop', 'jitter_ratio': 0.3},
                          {'name': 'ToTensor'},
                          {'name': 'Resize'},
+                         {'name': 'Normalize'},
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50-d',
@@ -184,17 +200,17 @@ model_config = {
         'stride': 16,
         'pretrained': None,
         # neck
-        'neck': 'dilated_encoder',
-        'dilation_list': [2, 4, 6, 8],
-        'expand_ratio': 0.25,
-        'act_type': 'relu',
+        'neck': 'spp_block',
+        'pooling_size': [5, 9, 13],
+        'expand_ratio': 0.5,
+        'neck_act': 'relu',
         'neck_norm': 'BN',
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'act_type': 'relu',
-        'num_cls_head': 2,
-        'num_reg_head': 4,
+        'num_cls_heads': 2,
+        'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
         'train_nms_thresh': 0.6,
