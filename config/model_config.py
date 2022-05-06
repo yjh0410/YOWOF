@@ -6,7 +6,7 @@ model_config = {
         # input
         'train_size': 320,
         'test_size': 320,
-        'len_clip': 3,
+        'len_clip': 1,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -40,9 +40,7 @@ model_config = {
         'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
-        'train_nms_thresh': 0.6,
-        'test_nms_thresh': 0.45,
-        'test_score_thresh': 0.35,
+        'nms_thresh': 0.6,
         # anchor box
         'anchor_size': [[8, 8], 
                         [16, 16],
@@ -103,9 +101,7 @@ model_config = {
         'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
-        'train_nms_thresh': 0.6,
-        'test_nms_thresh': 0.45,
-        'test_score_thresh': 0.35,
+        'nms_thresh': 0.6,
         # anchor box
         'anchor_size': [[8, 8], 
                         [16, 16],
@@ -158,9 +154,7 @@ model_config = {
         'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
-        'train_nms_thresh': 0.6,
-        'test_nms_thresh': 0.45,
-        'test_score_thresh': 0.35,
+        'nms_thresh': 0.6,
         # anchor box
         'anchor_size': [[8, 8], 
                         [16, 16],
@@ -213,9 +207,7 @@ model_config = {
         'num_reg_heads': 2,
         # post process
         'conf_thresh': 0.05,
-        'train_nms_thresh': 0.6,
-        'test_nms_thresh': 0.45,
-        'test_score_thresh': 0.35,
+        'nms_thresh': 0.6,
         # anchor box
         'anchor_size': [8, 16, 32, 64, 128, 256],
         # matcher

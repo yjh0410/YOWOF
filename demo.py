@@ -4,247 +4,186 @@ import os
 import time
 import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
 
-from config.yolof_config import yolof_config
-from dataset.coco import coco_class_index, coco_class_labels, COCODataset
+from dataset.ucf24 import UCF24_CLASSES
 from dataset.transforms import ValTransforms
-from utils.misc import load_weight
+from utils.misc import load_weight, rescale_bboxes, rescale_bboxes_list
+from utils.vis_tools import vis_video_clip, vis_video_frame
 
+from config import build_model_config
 from models.detector import build_model
 
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Object Detection Benchmark Demo')
+    parser = argparse.ArgumentParser(description='YOWOF')
 
     # basic
-    parser.add_argument('--min_size', default=800, type=int,
-                        help='the min size of input image')
-    parser.add_argument('--max_size', default=1333, type=int,
-                        help='the min size of input image')
-    parser.add_argument('--mode', default='image',
-                        type=str, help='Use the data from image, video or camera')
-    parser.add_argument('--cuda', action='store_true', default=False,
-                        help='Use cuda')
-    parser.add_argument('--path_to_img', default='data/demo/images/',
-                        type=str, help='The path to image files')
-    parser.add_argument('--path_to_vid', default='data/demo/videos/',
-                        type=str, help='The path to video files')
-    parser.add_argument('--path_to_save', default='det_results/images/',
-                        type=str, help='The path to save the detection results')
-    parser.add_argument('--path_to_saveVid', default='data/videos/result.avi',
-                        type=str, help='The path to save the detection results video')
+    parser.add_argument('-size', '--img_size', default=320, type=int,
+                        help='the size of input frame')
+    parser.add_argument('--show', action='store_true', default=False,
+                        help='show the visulization results.')
+    parser.add_argument('--cuda', action='store_true', default=False, 
+                        help='use cuda.')
+    parser.add_argument('--save_folder', default='det_results/', type=str,
+                        help='Dir to save results')
+    parser.add_argument('-vs', '--vis_thresh', default=0.35, type=float,
+                        help='threshold for visualization')
+    parser.add_argument('-path', '--path_to_video', default='data/demo/videos/', type=str,
+                        help='path to video.')
 
     # model
-    parser.add_argument('-v', '--version', default='yolof50', type=str,
-                        help='build yolof')
+    parser.add_argument('-v', '--version', default='baseline', type=str,
+                        help='build yowof')
     parser.add_argument('--weight', default='weight/',
                         type=str, help='Trained state_dict file path to open')
-    parser.add_argument('--topk', default=100, type=int,
+    parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
-    
+
+    # dataset
+    parser.add_argument('--root', default='/mnt/share/ssd2/dataset',
+                        help='data root')
+    parser.add_argument('-d', '--dataset', default='coco',
+                        help='coco, voc.')
+
     return parser.parse_args()
                     
 
-def plot_bbox_labels(img, bbox, label, cls_color, test_scale=0.4):
-    x1, y1, x2, y2 = bbox
-    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-    t_size = cv2.getTextSize(label, 0, fontScale=1, thickness=2)[0]
-    # plot bbox
-    cv2.rectangle(img, (x1, y1), (x2, y2), cls_color, 2)
-    # plot title bbox
-    cv2.rectangle(img, (x1, y1-t_size[1]), (int(x1 + t_size[0] * test_scale), y1), cls_color, -1)
-    # put the test on the title bbox
-    cv2.putText(img, label, (int(x1), int(y1 - 5)), 0, test_scale, (0, 0, 0), 1, lineType=cv2.LINE_AA)
-
-    return img
-
-
-def visualize(img, bboxes, scores, cls_inds, class_colors, vis_thresh=0.3):
-    ts = 0.4
-    for i, bbox in enumerate(bboxes):
-        if scores[i] > vis_thresh:
-            cls_color = class_colors[int(cls_inds[i])]
-            cls_id = coco_class_index[int(cls_inds[i])]
-            mess = '%s: %.2f' % (coco_class_labels[cls_id], scores[i])
-            img = plot_bbox_labels(img, bbox, mess, cls_color, test_scale=ts)
-
-    return img
-
-
-def detect(net, 
-           device, 
-           transform, 
-           vis_thresh, 
-           mode='image', 
-           path_to_img=None, 
-           path_to_vid=None, 
-           path_to_save=None):
-    # class color
-    np.random.seed(0)
-    class_colors = [(np.random.randint(255),
-                     np.random.randint(255),
-                     np.random.randint(255)) for _ in range(80)]
-    save_path = os.path.join(path_to_save, mode)
+def detect(args, model, device, transform=None, class_names=None):
+    # path to save 
+    save_path = os.path.join(args.save_folder, args.version, 'demo')
     os.makedirs(save_path, exist_ok=True)
 
-    # ------------------------- Camera ----------------------------
-    if mode == 'camera':
-        print('use camera !!!')
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        while True:
-            ret, frame = cap.read()
-            if ret:
-                if cv2.waitKey(1) == ord('q'):
-                    break
-                orig_h, orig_w, _ = frame.shape
-                orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
+    video = cv2.VideoCapture(args.path_to_video)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    save_size = (640, 480)
+    save_name = os.path.join(save_path, 'detection.avi')
+    fps = 15.0
+    out = cv2.VideoWriter(save_name, fourcc, fps, save_size)
+    frame_index = 0
 
-                # prepare
-                x = transform(frame)[0]
-                x = x.unsqueeze(0).to(device)
-                # inference
-                t0 = time.time()
-                bboxes, scores, cls_inds = net(x)
-                t1 = time.time()
-                print("detection time used ", t1-t0, "s")
-
-                # rescale
-                if transform.padding:
-                    # The input image is padded with 0 on the short side, aligning with the long side.
-                    bboxes *= max(orig_h, orig_w)
-                else:
-                    # the input image is not padded.
-                    bboxes *= orig_size
-                bboxes[..., [0, 2]] = np.clip(bboxes[..., [0, 2]], a_min=0., a_max=orig_w)
-                bboxes[..., [1, 3]] = np.clip(bboxes[..., [1, 3]], a_min=0., a_max=orig_h)
-
-                frame_processed = visualize(img=frame, 
-                                            bboxes=bboxes,
-                                            scores=scores, 
-                                            cls_inds=cls_inds,
-                                            class_colors=class_colors,
-                                            vis_thresh=vis_thresh)
-                cv2.imshow('detection result', frame_processed)
-                cv2.waitKey(1)
-            else:
-                break
-        cap.release()
-        cv2.destroyAllWindows()
-
-    # ------------------------- Image ----------------------------
-    elif mode == 'image':
-        for i, img_id in enumerate(os.listdir(path_to_img)):
-            image = cv2.imread(path_to_img + '/' + img_id, cv2.IMREAD_COLOR)
-            orig_h, orig_w, _ = image.shape
-            orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
-
+    while(True):
+        ret, frame = video.read()
+        
+        if ret:
             # prepare
-            x = transform(image)[0]
-            x = x.unsqueeze(0).to(device)
-            # inference
-            t0 = time.time()
-            bboxes, scores, cls_inds = net(x)
-            t1 = time.time()
-            print("detection time used ", t1-t0, "s")
+            orig_h, orig_w = frame.shape[:2]
+            orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
+            initialization = True
+            init_video_clip = []
+            scores_list = []
+            labels_list = []
+            bboxes_list = []
 
-            # rescale
-            if transform.padding:
-                # The input image is padded with 0 on the short side, aligning with the long side.
-                bboxes *= max(orig_h, orig_w)
-            else:
-                # the input image is not padded.
-                bboxes *= orig_size
-            bboxes[..., [0, 2]] = np.clip(bboxes[..., [0, 2]], a_min=0., a_max=orig_w)
-            bboxes[..., [1, 3]] = np.clip(bboxes[..., [1, 3]], a_min=0., a_max=orig_h)
-
-            img_processed = visualize(img=image, 
-                                      bboxes=bboxes,
-                                      scores=scores, 
-                                      cls_inds=cls_inds,
-                                      class_colors=class_colors,
-                                      vis_thresh=vis_thresh)
-
-            cv2.imshow('detection', img_processed)
-            cv2.imwrite(os.path.join(save_path, str(i).zfill(6)+'.jpg'), img_processed)
-            cv2.waitKey(0)
-
-    # ------------------------- Video ---------------------------
-    elif mode == 'video':
-        video = cv2.VideoCapture(path_to_vid)
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        save_size = (640, 480)
-        save_path = os.path.join(save_path, 'det.avi')
-        fps = 15.0
-        out = cv2.VideoWriter(save_path, fourcc, fps, save_size)
-
-        while(True):
-            ret, frame = video.read()
-            
-            if ret:
-                # ------------------------- Detection ---------------------------
-                orig_h, orig_w, _ = frame.shape
-                orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
-
-                # prepare
-                x = transform(frame)[0]
-                x = x.unsqueeze(0).to(device)
-                # inference
-                t0 = time.time()
-                bboxes, scores, cls_inds = net(x)
-                t1 = time.time()
-                print("detection time used ", t1-t0, "s")
-
-                # rescale
-                if transform.padding:
-                    # The input image is padded with 0 on the short side, aligning with the long side.
-                    bboxes *= max(orig_h, orig_w)
+            if initialization:
+                if frame_index < model.len_clip:
+                    init_video_clip.append(frame)
                 else:
-                    # the input image is not padded.
-                    bboxes *= orig_size
-                bboxes[..., [0, 2]] = np.clip(bboxes[..., [0, 2]], a_min=0., a_max=orig_w)
-                bboxes[..., [1, 3]] = np.clip(bboxes[..., [1, 3]], a_min=0., a_max=orig_h)
+                    # preprocess
+                    xs, _ = transform(init_video_clip)
 
-                frame_processed = visualize(img=frame, 
-                                            bboxes=bboxes,
-                                            scores=scores, 
-                                            cls_inds=cls_inds,
-                                            class_colors=class_colors,
-                                            vis_thresh=vis_thresh)
+                    # to device
+                    xs = [x.unsqueeze(0).to(device) for x in xs] 
 
-                frame_processed_resize = cv2.resize(frame_processed, save_size)
-                out.write(frame_processed_resize)
-                cv2.imshow('detection', frame_processed)
-                cv2.waitKey(1)
+                    # inference with an init video clip
+                    init_scores, init_labels, init_bboxes = model(xs)
+
+                    # rescale
+                    init_bboxes = rescale_bboxes_list(init_bboxes, orig_size)
+
+                    # store init predictions
+                    scores_list.extend(init_scores)
+                    labels_list.extend(init_labels)
+                    bboxes_list.extend(init_bboxes)
+
+                    initialization = False
+                    del init_video_clip
+
+                    # vis init detection
+                    vis_results = vis_video_clip(
+                        init_video_clip, scores_list, labels_list, bboxes_list, 
+                        args.vis_thresh, class_names, splice=False
+                    )
+
+                    # write each frame to video
+                    for frame in vis_results:
+                        resized_frame = cv2.resize(frame, save_size)
+                        out.write(resized_frame)
+                        cv2.imshow('detection', frame)
+                        cv2.waitKey(1)
+                
+                # count frame
+                frame_index += 1
             else:
-                break
-        video.release()
-        out.release()
-        cv2.destroyAllWindows()
+                # preprocess
+                xs, _ = transform([frame])
+
+                # to device
+                xs = [x.unsqueeze(0).to(device) for x in xs] 
+
+                # inference with the current frame
+                t0 = time.time()
+                cur_score, cur_label, cur_bboxes = model(xs[0])
+                t1 = time.time()
+
+                print('inference time: {:.3f}'.format(t1 - t0))
+                
+                # rescale
+                cur_bboxes = rescale_bboxes(cur_bboxes, orig_size)
+
+                # store current predictions
+                scores_list.append(cur_score)
+                labels_list.append(cur_label)
+                bboxes_list.append(cur_bboxes)
+
+                # vis current detection results
+                vis_results = vis_video_frame(
+                    frame, cur_score, cur_label, cur_bboxes, 
+                    args.vis_thresh, class_names
+                )
+
+                # write cur frame to video
+                resized_frame = cv2.resize(vis_results, save_size)
+                out.write(resized_frame)
+                cv2.imshow('detection', vis_results)
+                cv2.waitKey(1)
+
+                # count frame
+                frame_index += 1
+
+        else:
+            break
+
+    video.release()
+    out.release()
+    cv2.destroyAllWindows()
 
 
-def run():
+if __name__ == '__main__':
     args = parse_args()
+
+    np.random.seed(0)
+    num_classes = 24
+    class_names = UCF24_CLASSES
+    class_colors = [(np.random.randint(255),
+                     np.random.randint(255),
+                     np.random.randint(255)) for _ in range(num_classes)]
+
     # cuda
     if args.cuda:
         print('use cuda')
-        cudnn.benchmark = True
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
 
-    np.random.seed(0)
-
-    # YOLOF config
-    print('Model: ', args.version)
-    cfg = yolof_config[args.version]
+    # config
+    m_cfg = build_model_config(args)
 
     # build model
     model = build_model(args=args, 
-                        cfg=cfg,
+                        cfg=m_cfg,
                         device=device, 
-                        num_classes=80, 
+                        num_classes=num_classes, 
                         trainable=False)
 
     # load trained weight
@@ -252,25 +191,12 @@ def run():
                         model=model, 
                         path_to_ckpt=args.weight)
 
-
     # transform
-    transform = ValTransforms(min_size=cfg['test_min_size'], 
-                              max_size=cfg['test_max_size'],
-                              pixel_mean=cfg['pixel_mean'],
-                              pixel_std=cfg['pixel_std'],
-                              format=cfg['format'],
-                              padding=cfg['val_padding'])
+    transform = ValTransforms(img_size=args.img_size,
+                              pixel_mean=m_cfg['pixel_mean'],
+                              pixel_std=m_cfg['pixel_std'],
+                              format=m_cfg['format'])
 
     # run
-    detect(net=model, 
-            device=device,
-            transform=transform,
-            mode=args.mode,
-            path_to_img=args.path_to_img,
-            path_to_vid=args.path_to_vid,
-            path_to_save=args.path_to_save,
-            vis_thresh=cfg['test_score_thresh'])
-
-
-if __name__ == '__main__':
-    run()
+    detect(args=args, net=model, device=device,
+            transform=transform, class_names=class_names)

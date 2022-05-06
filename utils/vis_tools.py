@@ -72,7 +72,8 @@ def vis_video_clip(video_clip,
                    labels_list, 
                    bboxes_list, 
                    vis_thresh, 
-                   class_names):
+                   class_names,
+                   splice=True):
     vis_results = []
     for fid in range(len(video_clip)):
         cur_frame = video_clip[fid]
@@ -84,7 +85,12 @@ def vis_video_clip(video_clip,
             cur_frame, cur_score, cur_label, cur_bboxes, vis_thresh, class_names
         )
         vis_results.append(cur_result)
-        cv2.imshow('cur_result', cur_result)
-        cv2.waitKey(0)
 
-    return vis_results
+    if splice:
+        vis_results = np.concatenate(vis_results, axis=1)
+        cv2.imshow('video clip results', vis_results)
+        cv2.waitKey(0)
+        return vis_results
+    else:
+        return vis_results
+
