@@ -12,6 +12,7 @@ def build_neck(cfg, in_dim, out_dim):
                            expand_ratio=cfg['expand_ratio'], 
                            pooling_size=cfg['pooling_size'],
                            act_type=cfg['neck_act'],
-                           norm_type=cfg['neck_norm'])
+                           norm_type=cfg['neck_norm'],
+                           depthwise=cfg['neck_depthwise'])
 
     return neck

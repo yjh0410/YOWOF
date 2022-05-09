@@ -10,7 +10,8 @@ class DecoupledHead(nn.Module):
                  num_cls_heads=4,
                  num_reg_heads=4,
                  act_type='relu',
-                 norm_type=''):
+                 norm_type='',
+                 depthwise=False):
         super().__init__()
 
         print('==============================')
@@ -19,12 +20,14 @@ class DecoupledHead(nn.Module):
                                             head_dim, 
                                             k=3, p=1, s=1, 
                                             act_type=act_type, 
-                                            norm_type=norm_type) for _ in range(num_cls_heads)])
+                                            norm_type=norm_type,
+                                            depthwise=depthwise) for _ in range(num_cls_heads)])
         self.reg_feats = nn.Sequential(*[Conv(head_dim, 
                                             head_dim, 
                                             k=3, p=1, s=1, 
                                             act_type=act_type, 
-                                            norm_type=norm_type) for _ in range(num_reg_heads)])
+                                            norm_type=norm_type,
+                                            depthwise=depthwise) for _ in range(num_reg_heads)])
 
         self._init_weight()
 
