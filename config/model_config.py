@@ -71,8 +71,8 @@ model_config = {
         'img_size': 320,
         'len_clip': 7,
         'format': 'RGB',
-        'pixel_mean': [0.485, 0.456, 0.406],
-        'pixel_std': [0.229, 0.224, 0.225],
+        'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
+        'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
         'transforms': [{'name': 'DistortTransform',
                          'hue': 0.1,
                          'saturation': 1.5,
@@ -126,8 +126,8 @@ model_config = {
         'img_size': 320,
         'len_clip': 7,
         'format': 'RGB',
-        'pixel_mean': [0.485, 0.456, 0.406],
-        'pixel_std': [0.229, 0.224, 0.225],
+        'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
+        'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
         'transforms': [{'name': 'DistortTransform',
                          'hue': 0.1,
                          'saturation': 1.5,
@@ -181,8 +181,8 @@ model_config = {
         'img_size': 320,
         'len_clip': 7,
         'format': 'RGB',
-        'pixel_mean': [0.485, 0.456, 0.406],
-        'pixel_std': [0.229, 0.224, 0.225],
+        'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
+        'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
         'transforms': [{'name': 'DistortTransform',
                          'hue': 0.1,
                          'saturation': 1.5,
@@ -236,8 +236,8 @@ model_config = {
         'img_size': 320,
         'len_clip': 7,
         'format': 'RGB',
-        'pixel_mean': [0.485, 0.456, 0.406],
-        'pixel_std': [0.229, 0.224, 0.225],
+        'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
+        'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
         'transforms': [{'name': 'DistortTransform',
                          'hue': 0.1,
                          'saturation': 1.5,
