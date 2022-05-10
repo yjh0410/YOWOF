@@ -31,6 +31,8 @@ def parse_args():
                         help='threshold for visualization')
     parser.add_argument('-inf', '--inference', default='clip', type=str,
                         help='clip: infer with video clip; stream: infer with a video stream.')
+    parser.add_argument('-if', '--img_format', default='jpg', type=str,
+                        help='format of image.')
 
     # model
     parser.add_argument('-v', '--version', default='baseline', type=str,
@@ -49,8 +51,8 @@ def parse_args():
     return parser.parse_args()
 
 
-
-def inference_with_video_stream(args, net, device, transform=None, class_names=None):
+@torch.no_grad()
+def inference_with_video_stream(args, model, device, transform=None, class_names=None, class_colors=None):
     # path to save 
     save_path = os.path.join(
         args.save_folder, args.version, 
@@ -67,7 +69,7 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
         num_frames = len(os.listdir(video_path))
 
         # prepare
-        initialization = True
+        model.initialization = True
         frame_count = 0
         init_video_clip = []
         scores_list = []
@@ -76,14 +78,17 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
 
         # inference with video stream
         for fid in range(1, num_frames + 1):
-            image_file = os.path.join(video_path, '{:0>5}.jpg'.format(fid))
+            image_file = os.path.join(video_path, '{:0>5}.{}'.format(fid, args.img_format))
             cur_frame = cv2.imread(image_file)
+            
+            assert cur_frame is not None
+
             orig_h, orig_w = cur_frame.shape[:2]
-            orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
+            orig_size = [orig_w, orig_h]
             frame_count += 1
 
-            if initialization:
-                if frame_count < net.len_clip:
+            if model.initialization:
+                if frame_count <= model.len_clip:
                     init_video_clip.append(cur_frame)
                 else:
                     # preprocess
@@ -93,7 +98,7 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
                     xs = [x.unsqueeze(0).to(device) for x in xs] 
 
                     # inference with an init video clip
-                    init_scores, init_labels, init_bboxes = net(xs)
+                    init_scores, init_labels, init_bboxes = model(xs)
 
                     # rescale
                     init_bboxes = rescale_bboxes_list(init_bboxes, orig_size)
@@ -103,19 +108,19 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
                     labels_list.extend(init_labels)
                     bboxes_list.extend(init_bboxes)
 
-                    initialization = False
-                    del init_video_clip
-
                     # vis init detection
                     vis_results = vis_video_clip(
                         init_video_clip, scores_list, labels_list, bboxes_list, 
-                        args.vis_thresh, class_names
+                        args.vis_thresh, class_names, class_colors
                     )
 
                     # save result
                     cv2.imwrite(os.path.join(save_path, video_name,
                         'init_video_clip.jpg'), vis_results)
                     
+                    model.initialization = False
+                    del init_video_clip
+
             else:
                 # preprocess
                 xs, _ = transform([cur_frame])
@@ -125,7 +130,7 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
 
                 # inference with the current frame
                 t0 = time.time()
-                cur_score, cur_label, cur_bboxes = net(xs[0])
+                cur_score, cur_label, cur_bboxes = model(xs[0])
                 t1 = time.time()
 
                 print('inference time: {:.3f}'.format(t1 - t0))
@@ -141,8 +146,11 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
                 # vis current detection results
                 vis_results = vis_video_frame(
                     cur_frame, cur_score, cur_label, cur_bboxes, 
-                    args.vis_thresh, class_names
+                    args.vis_thresh, class_names, class_colors
                 )
+
+                cv2.imshow('current frame', vis_results)
+                cv2.waitKey(0)
 
                 # save result
                 cv2.imwrite(os.path.join(save_path, 
@@ -151,7 +159,8 @@ def inference_with_video_stream(args, net, device, transform=None, class_names=N
         del scores_list, labels_list, bboxes_list
 
 
-def inference_with_video_clip(args, net, device, dataset, transform=None, class_names=None):
+@torch.no_grad()
+def inference_with_video_clip(args, model, device, dataset, transform=None, class_names=None, class_colors=None):
     # path to save 
     save_path = os.path.join(
         args.save_folder, args.dataset, 
@@ -164,7 +173,7 @@ def inference_with_video_clip(args, net, device, dataset, transform=None, class_
         video_clip, _ = dataset[index]
 
         orig_h, orig_w, _ = video_clip[0].shape
-        orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
+        orig_size = [orig_w, orig_h]
 
         # prepare
         xs, _ = transform(video_clip)
@@ -172,7 +181,7 @@ def inference_with_video_clip(args, net, device, dataset, transform=None, class_
 
         t0 = time.time()
         # inference
-        scores_list, labels_list, bboxes_list = net(xs)
+        scores_list, labels_list, bboxes_list = model(xs)
         print("inference time ", time.time() - t0, "s")
         
         # rescale
@@ -181,7 +190,7 @@ def inference_with_video_clip(args, net, device, dataset, transform=None, class_
         # vis detection
         vis_results = vis_video_clip(
             video_clip, scores_list, labels_list, bboxes_list, 
-            args.vis_thresh, class_names
+            args.vis_thresh, class_names, class_colors
         )
 
         # save result
@@ -209,7 +218,7 @@ if __name__ == '__main__':
         class_names = UCF24_CLASSES
         # dataset
         dataset = UCF24(cfg=d_cfg,
-                        img_size=m_cfg['train_size'],
+                        img_size=args.img_size,
                         len_clip=m_cfg['len_clip'],
                         is_train=False,
                         transform=None,
@@ -220,7 +229,7 @@ if __name__ == '__main__':
         class_names = JHMDB_CLASSES
         # dataset
         dataset = JHMDB(cfg=d_cfg,
-                        img_size=m_cfg['train_size'],
+                        img_size=args.img_size,
                         len_clip=m_cfg['len_clip'],
                         is_train=False,
                         transform=None,
@@ -230,7 +239,7 @@ if __name__ == '__main__':
         print('unknow dataset !! Only support voc and coco !!')
         exit(0)
 
-    np.random.seed(0)
+    np.random.seed(100)
     class_colors = [(np.random.randint(255),
                      np.random.randint(255),
                      np.random.randint(255)) for _ in range(num_classes)]
@@ -256,9 +265,9 @@ if __name__ == '__main__':
     # run
     if args.inference == 'clip':
         inference_with_video_clip(
-            args=args, net=model, device=device, dataset=dataset,
-            transform=transform, class_names=class_names)
+            args=args, model=model, device=device, dataset=dataset, transform=transform, 
+            class_names=class_names, class_colors=class_colors)
     elif args.inference == 'stream':
         inference_with_video_stream(
-            args=args, net=model, device=device,
-            transform=transform, class_names=class_names)
+            args=args, model=model, device=device, transform=transform, 
+            class_names=class_names, class_colors=class_colors)

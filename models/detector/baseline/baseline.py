@@ -210,6 +210,7 @@ class Baseline(nn.Module):
         all_frames_scores = []
         all_frames_labels = []
         all_frames_bboxes = []
+        img_size = x[0].shape[-1]
         for i in range(len(x)):
             # backbone
             feat = self.backbone(x[i])
@@ -218,7 +219,7 @@ class Baseline(nn.Module):
             feat = self.neck(feat)
 
             # head
-            cls_feats, reg_feats = self.head(x)
+            cls_feats, reg_feats = self.head(feat)
 
             obj_pred = self.obj_pred(reg_feats)
             cls_pred = self.cls_pred(cls_feats)
@@ -258,7 +259,7 @@ class Baseline(nn.Module):
             # decode box
             bboxes = self.decode_boxes(anchor_boxes[None], reg_pred[None])[0] # [N, 4]
             # normalize box
-            bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
+            bboxes = torch.clamp(bboxes / img_size, 0., 1.)
             
             # to cpu
             scores = scores.cpu().numpy()
@@ -276,6 +277,7 @@ class Baseline(nn.Module):
 
 
     def inference_single_frame(self, x):
+        img_size = x.shape[-1]
         # backbone
         feat = self.backbone(x)
 
@@ -283,7 +285,7 @@ class Baseline(nn.Module):
         feat = self.neck(feat)
 
         # head
-        cls_feats, reg_feats = self.head(x)
+        cls_feats, reg_feats = self.head(feat)
 
         obj_pred = self.obj_pred(reg_feats)
         cls_pred = self.cls_pred(cls_feats)
@@ -323,7 +325,7 @@ class Baseline(nn.Module):
         # decode box
         bboxes = self.decode_boxes(anchor_boxes[None], reg_pred[None])[0] # [N, 4]
         # normalize box
-        bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
+        bboxes = torch.clamp(bboxes / img_size, 0., 1.)
         
         # to cpu
         scores = scores.cpu().numpy()

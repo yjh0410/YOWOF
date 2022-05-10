@@ -141,29 +141,27 @@ def load_weight(device, model, path_to_ckpt):
 
 def rescale_bboxes(bboxes, orig_size):
     orig_w, orig_h = orig_size[0], orig_size[1]
-    rescale_bboxes = bboxes * orig_size    
-    rescale_bboxes[..., [0, 2]] = np.clip(
-        rescale_bboxes[..., [0, 2]], a_min=0., a_max=orig_w
+    bboxes[..., [0, 2]] = np.clip(
+        bboxes[..., [0, 2]] * orig_w, a_min=0., a_max=orig_w
         )
-    rescale_bboxes[..., [1, 3]] = np.clip(
-        rescale_bboxes[..., [1, 3]], a_min=0., a_max=orig_h
+    bboxes[..., [1, 3]] = np.clip(
+        bboxes[..., [1, 3]] * orig_h, a_min=0., a_max=orig_h
         )
     
-    return rescale_bboxes
+    return bboxes
 
 
 def rescale_bboxes_list(bboxes_list, orig_size):
     orig_w, orig_h = orig_size[0], orig_size[1]
     rescale_bboxes_list = []
     for bboxes in bboxes_list:
-        rescale_bboxes = bboxes * orig_size    
-        rescale_bboxes[..., [0, 2]] = np.clip(
-            rescale_bboxes[..., [0, 2]], a_min=0., a_max=orig_w
+        bboxes[..., [0, 2]] = np.clip(
+            bboxes[..., [0, 2]] * orig_w, a_min=0., a_max=orig_w
             )
-        rescale_bboxes[..., [1, 3]] = np.clip(
-            rescale_bboxes[..., [1, 3]], a_min=0., a_max=orig_h
+        bboxes[..., [1, 3]] = np.clip(
+            bboxes[..., [1, 3]] * orig_h, a_min=0., a_max=orig_h
             )
-        rescale_bboxes_list.append(rescale_bboxes)
+        rescale_bboxes_list.append(bboxes)
     
     return rescale_bboxes_list
 

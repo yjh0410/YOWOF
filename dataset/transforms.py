@@ -149,6 +149,8 @@ class ToTensor(object):
                 target = target_list[i]
                 target = torch.as_tensor(target)
                 out_target_list.append(target)
+            else:
+                out_target_list = None
 
         return out_images_list, out_target_list
 
@@ -361,14 +363,17 @@ class RandomShift(object):
                                                                     orig_x:orig_x + new_w, :]
                 out_images_list.append(new_image)
                 
-                target = target_list[i]
-                boxes = target[:, :4].copy()
-                labels = target[:, 4:].copy()
-                boxes[..., [0, 2]] += shift_x
-                boxes[..., [1, 3]] += shift_y
-                boxes[..., [0, 2]] = boxes[..., [0, 2]].clip(0, img_w)
-                boxes[..., [1, 3]] = boxes[..., [1, 3]].clip(0, img_h)
-                out_target_list.append(np.concatenate([boxes, labels], axis=1))
+                if target_list is not None:
+                    target = target_list[i]
+                    boxes = target[:, :4].copy()
+                    labels = target[:, 4:].copy()
+                    boxes[..., [0, 2]] += shift_x
+                    boxes[..., [1, 3]] += shift_y
+                    boxes[..., [0, 2]] = boxes[..., [0, 2]].clip(0, img_w)
+                    boxes[..., [1, 3]] = boxes[..., [1, 3]].clip(0, img_h)
+                    out_target_list.append(np.concatenate([boxes, labels], axis=1))
+                else:
+                    out_target_list = None
 
             return out_images_list, out_target_list
 
@@ -416,6 +421,8 @@ class Resize(object):
                 boxes[:, [0, 2]] = boxes[:, [0, 2]] / orig_w * self.img_size
                 boxes[:, [1, 3]] = boxes[:, [1, 3]] / orig_h * self.img_size
                 out_target_list.append(torch.cat([boxes, labels], dim=1))
+            else:
+                out_target_list = None
 
         return out_images_list, out_target_list
 

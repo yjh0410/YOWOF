@@ -49,19 +49,19 @@ def plot_bbox_labels(img, bbox, label=None, cls_color=None, text_scale=0.4):
     return img
 
 
-def vis_video_frame(frame, bboxes, scores, labels, vis_thresh, class_names):
+def vis_video_frame(frame, scores, labels, bboxes, vis_thresh, class_names, class_colors):
     ts = 0.4
     for i, bbox in enumerate(bboxes):
         if scores[i] > vis_thresh:
             label = int(labels[i])
-            # To DO: define color for each instance
-            cls_color = None
+            cls_color = class_colors[label]
                 
             if len(class_names) > 1:
                 mess = '%s: %.2f' % (class_names[label], scores[i])
             else:
                 cls_color = [255, 0, 0]
                 mess = None
+                # visualize bbox
             frame = plot_bbox_labels(frame, bbox, mess, cls_color, text_scale=ts)
 
     return frame
@@ -73,6 +73,7 @@ def vis_video_clip(video_clip,
                    bboxes_list, 
                    vis_thresh, 
                    class_names,
+                   class_colors,
                    splice=True):
     vis_results = []
     for fid in range(len(video_clip)):
@@ -82,12 +83,13 @@ def vis_video_clip(video_clip,
         cur_bboxes = bboxes_list[fid]
         # vis cur frame
         cur_result = vis_video_frame(
-            cur_frame, cur_score, cur_label, cur_bboxes, vis_thresh, class_names
+            cur_frame, cur_score, cur_label, cur_bboxes, vis_thresh, class_names, class_colors
         )
         vis_results.append(cur_result)
 
     if splice:
         vis_results = np.concatenate(vis_results, axis=1)
+        vis_results = vis_results.copy()
         cv2.imshow('video clip results', vis_results)
         cv2.waitKey(0)
         return vis_results

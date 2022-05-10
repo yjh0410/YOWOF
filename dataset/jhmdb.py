@@ -85,7 +85,8 @@ class JHMDB(data.Dataset):
         else:
             # get test video list
             video_list = self.test_videos[self.split - 1]
-
+        self.num_videos = len(video_list)
+        
         if self.debug:
             video_list = video_list[:100]
 
@@ -129,6 +130,16 @@ class JHMDB(data.Dataset):
         return image_list
 
 
+    def load_video(self, index):
+        if self.is_train:
+            video_list = self.train_videos[self.split - 1]
+        else:
+            # get test video list
+            video_list = self.test_videos[self.split - 1]
+        
+        return video_list[index] # video name
+
+
     def pull_item(self, index):
         video_name, frame = self.indices[index]
         image_list = []
@@ -162,7 +173,8 @@ class JHMDB(data.Dataset):
             target_list.append(cur_target_list)
 
         # augment
-        image_list, target_list = self.transform(image_list, target_list)
+        if self.transform:
+            image_list, target_list = self.transform(image_list, target_list)
         # image_list = [image_1, 
         #               image_2, 
         #               ..., 
