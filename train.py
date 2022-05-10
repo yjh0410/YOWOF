@@ -34,7 +34,7 @@ def parse_args():
                         help='use tensorboard')
     parser.add_argument('--save_folder', default='weights/', type=str, 
                         help='path to save weight')
-    parser.add_argument('--eval_epoch', default=10, type=int, 
+    parser.add_argument('--eval_epoch', default=2, type=int, 
                         help='after eval epoch, the model is evaluated on val dataset.')
     parser.add_argument('--vis_data', action='store_true', default=False,
                         help='use tensorboard')
