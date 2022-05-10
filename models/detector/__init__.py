@@ -52,8 +52,10 @@ def build_model(args,
                 shape_model = tuple(model_state_dict[k].shape)
                 shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
                 if shape_model != shape_checkpoint:
+                    print(k)
                     checkpoint_state_dict.pop(k)
             else:
+                checkpoint_state_dict.pop(k)
                 print(k)
 
         model.load_state_dict(checkpoint_state_dict, strict=False)
