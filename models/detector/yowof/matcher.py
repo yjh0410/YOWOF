@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch import nn
 from utils.box_ops import *
 
 
@@ -22,8 +21,7 @@ class UniformMatcher(object):
             pred_boxes: (Tensor)   [B, num_queries, 4]
             anchor_boxes: (Tensor) [num_queries, 4]
             targets: (Dict) dict{'boxes': [...], 
-                                 'labels': [...], 
-                                 'orig_size': ...}
+                                 'labels': [...]}
         """
 
         bs, num_queries = pred_boxes.shape[:2]

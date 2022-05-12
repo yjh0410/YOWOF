@@ -2,7 +2,6 @@
 
 import numpy as np
 import math
-import queue
 import torch
 import torch.nn as nn
 from ...backbone import build_backbone
