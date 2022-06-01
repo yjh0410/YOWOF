@@ -68,7 +68,8 @@ model_config = {
 
     'yowof-r18': {
         # input
-        'img_size': 320,
+        'train_size': 320,
+        'test_size': 320,
         'len_clip': 7,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
