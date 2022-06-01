@@ -1,6 +1,6 @@
 python train.py \
         --cuda \
-        -d jhmdb \
+        -d ucf24 \
         -v baseline \
         --num_workers 4 \
         -p ./weights/pretrained/yolof-rt-R18/yolof-rt-R18_29.2.pth
