@@ -33,7 +33,7 @@ model_config = {
         'neck_act': 'relu',
         'neck_norm': 'BN',
         'neck_depthwise': False,
-        # post process
+        # head
         'head_dim': 256,
         'head_norm': 'BN',
         'head_act': 'relu',
@@ -100,7 +100,7 @@ model_config = {
         # head
         'head_dim': 256,
         'head_norm': 'BN',
-        'act_type': 'relu',
+        'head_act': 'relu',
         'num_cls_heads': 2,
         'num_reg_heads': 2,
         'head_depthwise': False,
@@ -119,6 +119,15 @@ model_config = {
         'iou_t': 0.15,
         'igt': 0.7,
         'ctr_clamp': 32,
+        # loss
+        'alpha': 0.25,
+        'gamma': 2.0,
+        'loss_cls_weight': 1.0,
+        'loss_reg_weight': 1.0,
+        # optimizer
+        'optimizer': 'sgd',
+        'weight_decay': 1e-4,
+        'momentum': 0.9,
 
     },
 
