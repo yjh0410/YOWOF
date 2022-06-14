@@ -70,11 +70,13 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
 
         # prepare
         model.initialization = True
-        frame_count = 0
+        frame_index = 0
         init_video_clip = []
         scores_list = []
         labels_list = []
         bboxes_list = []
+
+        cur_vid_detections = {}
 
         # inference with video stream
         for fid in range(1, num_frames + 1):
@@ -85,10 +87,11 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
 
             orig_h, orig_w = cur_frame.shape[:2]
             orig_size = [orig_w, orig_h]
-            frame_count += 1
+            # update frame index
+            frame_index += 1
 
             if model.initialization:
-                if frame_count <= model.len_clip:
+                if frame_index <= model.len_clip:
                     init_video_clip.append(cur_frame)
                 else:
                     # preprocess
@@ -156,6 +159,7 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
                 cv2.imwrite(os.path.join(save_path, 
                     '{:0>5}.jpg'.format(index)), vis_results)
 
+
         del scores_list, labels_list, bboxes_list
 
 
@@ -217,23 +221,27 @@ if __name__ == '__main__':
         num_classes = 24
         class_names = UCF24_CLASSES
         # dataset
-        dataset = UCF24(cfg=d_cfg,
-                        img_size=args.img_size,
-                        len_clip=m_cfg['len_clip'],
-                        is_train=False,
-                        transform=None,
-                        debug=False)
+        dataset = UCF24(
+            cfg=d_cfg,
+            img_size=args.img_size,
+            len_clip=m_cfg['len_clip'],
+            is_train=False,
+            transform=None,
+            debug=False
+            )
 
     elif args.dataset == 'jhmdb':
         num_classes = 21
         class_names = JHMDB_CLASSES
         # dataset
-        dataset = JHMDB(cfg=d_cfg,
-                        img_size=args.img_size,
-                        len_clip=m_cfg['len_clip'],
-                        is_train=False,
-                        transform=None,
-                        debug=False)
+        dataset = JHMDB(
+            cfg=d_cfg,
+            img_size=args.img_size,
+            len_clip=m_cfg['len_clip'],
+            is_train=False,
+            transform=None,
+            debug=False
+            )
     
     else:
         print('unknow dataset !! Only support voc and coco !!')
@@ -245,22 +253,28 @@ if __name__ == '__main__':
                      np.random.randint(255)) for _ in range(num_classes)]
 
     # build model
-    model = build_model(args=args, 
-                        cfg=m_cfg,
-                        device=device, 
-                        num_classes=num_classes, 
-                        trainable=False)
+    model = build_model(
+        args=args, 
+        cfg=m_cfg,
+        device=device, 
+        num_classes=num_classes, 
+        trainable=False
+        )
 
     # load trained weight
-    model = load_weight(device=device, 
-                        model=model, 
-                        path_to_ckpt=args.weight)
+    model = load_weight(
+        device=device,
+        model=model, 
+        path_to_ckpt=args.weight
+        )
 
     # transform
-    transform = ValTransforms(img_size=args.img_size,
-                              pixel_mean=m_cfg['pixel_mean'],
-                              pixel_std=m_cfg['pixel_std'],
-                              format=m_cfg['format'])
+    transform = ValTransforms(
+        img_size=args.img_size,
+        pixel_mean=m_cfg['pixel_mean'],
+        pixel_std=m_cfg['pixel_std'],
+        format=m_cfg['format']
+        )
 
     # run
     if args.inference == 'clip':

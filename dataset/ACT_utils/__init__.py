@@ -33,8 +33,6 @@ def tubelet_has_gt(tube_list, i, K):
 
 # BOXES
 """ boxes are represented as a numpy array with 4 columns corresponding to the coordinates (x1, y1, x2, y2)"""
-
-
 def area2d(b):
     """Compute the areas for a set of 2D boxes"""
 
@@ -112,8 +110,6 @@ def nms2d(boxes, overlap=0.6):
 
 # TUBELETS
 """ tubelets of length K are represented using numpy array with 4K columns """
-
-
 def nms_tubelets(dets, overlapThresh=0.3, top_k=None):
     """Compute the NMS for a set of scored tubelets
     scored tubelets are numpy array with 4K+1 columns, last one being the score
@@ -175,8 +171,6 @@ def nms_tubelets(dets, overlapThresh=0.3, top_k=None):
 
 # TUBES
 """ tubes are represented as a numpy array with nframes rows and 5 columns (frame, x1, y1, x2, y2). frame number are 1-indexed, coordinates are 0-indexed """
-
-
 def iou3d(b1, b2):
     """Compute the IoU between two tubes with same temporal extent"""
 
@@ -228,8 +222,6 @@ def nms3dt(tubes, overlap=0.5):
     return indices[:counter]
 
 # AP
-
-
 def pr_to_ap(pr):
     """Compute AP given precision-recall
     pr is a Nx2 array with first row being precision and second row being recall
