@@ -483,7 +483,7 @@ class JHMDBEvaluator(object):
             self.thresh = 0.5 + 0.05 * i
             ap += self.videoAP()
         ap = ap / 10.0
-        print('VideoAP_0.50:0.95 \n'.format(opt.model_name))
+        print('VideoAP_0.50:0.95 \n')
         print("\n{:20s} {:8.2f}\n\n".format("mAP", ap))
 
 
