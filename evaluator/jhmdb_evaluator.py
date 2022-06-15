@@ -163,6 +163,7 @@ class JHMDBEvaluator(object):
             except:
                 print("OverflowError: cannot serialize a bytes object larger than 4 GiB")
 
+        # evaluation
         if self.metric == 'frame_map':
             frame_map = self.frameAP(all_dets, vlist)
             self.frame_map = frame_map
@@ -398,6 +399,14 @@ class JHMDBEvaluator(object):
         print("")
 
 
+    def build_tubes(self, all_dets):
+        vlist = self.dataset.video_list
+        
+        for iv, i in enumerate(vlist):
+            # detections of this video
+            detections = all_dets[all_dets[:, 0] == iv, :]
+
+
     def videoAP(self):
         # video name list
         vlist = self.dataset.video_list
@@ -412,6 +421,7 @@ class JHMDBEvaluator(object):
 
             with open(tubename, 'rb') as fid:
                 tubes = pickle.load(fid)
+                
             for ilabel in range(len(self.dataset.labels)):
                 ltubes = tubes[ilabel]
                 idx = nms3dt(ltubes, 0.3)
