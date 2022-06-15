@@ -169,13 +169,16 @@ def build_tubes(dataset, save_dir):
             with open(resname, 'rb') as file:
                 # detection results of per frame
                 VDets[fid] = pickle.load(file)
-
+                
+        # VDets = {fid: {label1: {4+1}, label2: {4+1}, ...},
+        #          fid: {label1: {4+1}, label2: {4+1}, ...},
+        #           ...}
         for ilabel in range(len(dataset.labels)):
             FINISHED_TUBES = []
             CURRENT_TUBES = []  # tubes is a list of tuple (frame, lstubelets)
-            # calculate average scores of tubelets in tubes
 
             def tubescore(tt):
+                # calculate average scores of tubelets in tubes
                 return np.mean(np.array([tt[i][1][-1] for i in range(len(tt))]))
 
             for fid in range(1, nframes + 1):
@@ -238,27 +241,26 @@ def build_tubes(dataset, save_dir):
 
                 beginframe = t[0][0]
                 endframe = t[-1][0]
-                length = endframe + 1 - beginframe
+                length = len(t)
+                length = endframe - beginframe + 1
 
                 # delete tubes with short duraton
                 if length < 15:
                     continue
 
-                # build final tubes by average the tubelets
-                out = np.zeros((length, 6), dtype=np.float32)
+                # re-organize tubes
+                out = np.zeros((length, 6), dtype=np.float32)  
                 out[:, 0] = np.arange(beginframe, endframe + 1)
-                n_per_frame = np.zeros((length, 1), dtype=np.int32)
                 for i in range(len(t)):
-                    frame, box = t[i]
-                    for k in range(K):
-                        out[frame - beginframe + k, 1:5] += box[4 * k:4 * k + 4]
-                        out[frame - beginframe + k, -1] += box[-1]  # single frame confidence
-                        n_per_frame[frame - beginframe + k, 0] += 1
-                out[:, 1:] /= n_per_frame
+                    fid, box = t[i]
+                    out[fid, 1:5] = box[:4]   # bbox of per frame
+                    out[fid, -1] = box[-1]    # bbox score
+                    
                 output.append([out, score])
                 # out: [num_frames, (frame idx, x1, y1, x2, y2, score)]
 
             RES[ilabel] = output
-        # RES{ilabel:[(out[length,6],score)]}ilabel[0,...]
+
+        # RES = {ilabel:[(out[length,6],score)]}, ilabel = [0,...]
         with open(outfile, 'wb') as fid:
             pickle.dump(RES, fid)
