@@ -4,12 +4,12 @@ import pickle
 import cv2
 import numpy as np
 from copy import deepcopy
+import torch
 
 from dataset.jhmdb import JHMDB, JHMDB_CLASSES
-from dataset.ACT_utils import iou2d, pr_to_ap, nms3dt, iou3dt
 from utils.misc import rescale_bboxes, rescale_bboxes_list
-
-from .utils import load_frame_detections
+from .utils import iou2d, pr_to_ap, nms3dt, iou3dt
+from .utils import load_frame_detections, build_tubes
 
 
 class JHMDBEvaluator(object):
@@ -21,8 +21,7 @@ class JHMDBEvaluator(object):
                  thresh=0.5,
                  transform=None,
                  metric='frame_map',
-                 save_dir=None,
-                 stream=False):
+                 save_dir=None):
         self.cfg = cfg
         self.device = device
         self.len_clip = len_clip
@@ -30,7 +29,6 @@ class JHMDBEvaluator(object):
         self.transform = transform
         self.metric = metric
         self.save_dir = save_dir
-        self.stream = stream
         self.num_classes = 21
         self.class_names = JHMDB_CLASSES
         self.frame_map = 0.0
@@ -47,11 +45,11 @@ class JHMDBEvaluator(object):
             debug=False
             )
 
-
+    @torch.no_grad()
     def evaluate(self, model):
         # inference
         num_videos = self.dataset.num_videos
-        for index in range(num_videos):
+        for index in range(1):
             # load a video
             video_name = self.dataset.load_video(index)
 
@@ -66,7 +64,7 @@ class JHMDBEvaluator(object):
             except:
                 pass
 
-            num_frames = len(os.listdir(video_path))
+            num_frames = len(video_frames)
 
             # prepare
             model.initialization = True
@@ -75,7 +73,7 @@ class JHMDBEvaluator(object):
 
             # inference with video stream
             detections = {}
-            for fid in range(num_frames):
+            for fid in range(1, num_frames+1):
                 image_file = os.path.join(video_path, '{:0>5}.png'.format(fid))
                 cur_frame = cv2.imread(image_file)
                 
@@ -142,9 +140,10 @@ class JHMDBEvaluator(object):
                     detections[frame_index] = outputs
 
             # save this video detection results
-            outfile = os.path.join(self.save_dir, video_name, '{:0>5}.pkl')
+            outfile = os.path.join(self.save_dir, video_name, str(fid).zfill(5) + '.pkl')
+            print(outfile)
             for i in detections.keys():
-                with open(outfile.format(fid), 'wb') as file:
+                with open(outfile, 'wb') as file:
                     pickle.dump(detections[i], file)
 
         vlist = self.dataset.video_list
@@ -173,11 +172,10 @@ class JHMDBEvaluator(object):
 
         elif self.metric == 'video_map':
             # First, we build tubelets
-            # TO DO:
-            # build tubelet
+            build_tubes(self.dataset, self.save_dir)
             
             # Next, we calculate the video mAP@0.5
-            video_map = self.video_map()
+            video_map = self.videoAP()
             self.video_map['@0.5'] = video_map
             self.video_map['@0.5:0.95'] = video_map
 
@@ -397,14 +395,6 @@ class JHMDBEvaluator(object):
         print("")
         print("{:20s} ".format("mean") + " ".join(["{:8.2f}".format(np.mean(L)) for L in LIST]))
         print("")
-
-
-    def build_tubes(self, all_dets):
-        vlist = self.dataset.video_list
-        
-        for iv, i in enumerate(vlist):
-            # detections of this video
-            detections = all_dets[all_dets[:, 0] == iv, :]
 
 
     def videoAP(self):

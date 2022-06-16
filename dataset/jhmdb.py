@@ -70,7 +70,7 @@ class JHMDB(data.Dataset):
         with open(pkl_file, 'rb') as fid:
             pkl = pickle.load(fid, encoding='iso-8859-1')
 
-        # basic attributes of UCF24 dataset
+        # basic attributes
         self.nframes = pkl['nframes']
         self.gttubes = pkl['gttubes']
         self.labels = pkl['labels']
@@ -85,6 +85,7 @@ class JHMDB(data.Dataset):
         else:
             # get test video list
             video_list = self.test_videos[self.split - 1]
+        self.video_list = video_list
         self.num_videos = len(video_list)
         
         if self.debug:

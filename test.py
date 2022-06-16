@@ -66,8 +66,16 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
         video_name = dataset.load_video(index)
         print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
         video_path = os.path.join(dataset.image_path, video_name)
-        num_frames = len(os.listdir(video_path))
+        video_frames = os.listdir(video_path)
 
+        # remove useless value
+        try:
+            video_frames.remove('.AppleDouble')
+        except:
+            pass
+
+        num_frames = len(video_frames)
+        
         # prepare
         model.initialization = True
         frame_index = 0
@@ -75,8 +83,6 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
         scores_list = []
         labels_list = []
         bboxes_list = []
-
-        cur_vid_detections = {}
 
         # inference with video stream
         for fid in range(1, num_frames + 1):
@@ -258,7 +264,8 @@ if __name__ == '__main__':
         cfg=m_cfg,
         device=device, 
         num_classes=num_classes, 
-        trainable=False
+        trainable=False,
+        inference=args.inference
         )
 
     # load trained weight
@@ -267,6 +274,9 @@ if __name__ == '__main__':
         model=model, 
         path_to_ckpt=args.weight
         )
+
+    # to eval
+    model = model.to(device).eval()
 
     # transform
     transform = ValTransforms(

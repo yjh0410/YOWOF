@@ -8,7 +8,8 @@ def build_model(args,
                 cfg, 
                 device, 
                 num_classes=80, 
-                trainable=False, 
+                trainable=False,
+                inference='clip',
                 coco_pretrained=None):
     print('==============================')
     print('Build {} ...'.format(args.version.upper()))
@@ -33,9 +34,9 @@ def build_model(args,
 
     # set inference mode
     if not trainable:
-        if args.inference == 'clip':
+        if inference == 'clip':
             model.stream_infernce = False
-        elif args.inference == 'stream':
+        elif inference == 'stream':
             model.stream_infernce = True
 
     # Load COCO pretrained weight

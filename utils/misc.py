@@ -133,7 +133,6 @@ def load_weight(device, model, path_to_ckpt):
             print(k)
 
     model.load_state_dict(checkpoint_state_dict)
-    model = model.to(device).eval()
     print('Finished loading model!')
 
     return model

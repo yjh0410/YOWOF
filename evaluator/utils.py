@@ -2,7 +2,202 @@ import sys
 import os
 import pickle
 import numpy as np
-from dataset.ACT_utils import iou2d, pr_to_ap, nms3dt, iou3dt
+
+
+def area2d(b):
+    """Compute the areas for a set of 2D boxes"""
+
+    return (b[:, 2] - b[:, 0] + 1) * (b[:, 3] - b[:, 1] + 1)
+
+
+def overlap2d(b1, b2):
+    """Compute the overlaps between a set of boxes b1 and one box b2"""
+
+    xmin = np.maximum(b1[:, 0], b2[:, 0])
+    ymin = np.maximum(b1[:, 1], b2[:, 1])
+    xmax = np.minimum(b1[:, 2] + 1, b2[:, 2] + 1)
+    ymax = np.minimum(b1[:, 3] + 1, b2[:, 3] + 1)
+
+    width = np.maximum(0, xmax - xmin)
+    height = np.maximum(0, ymax - ymin)
+
+    return width * height
+
+
+def iou2d(b1, b2):
+    """Compute the IoU between a set of boxes b1 and 1 box b2"""
+
+    if b1.ndim == 1:
+        b1 = b1[None, :]
+    if b2.ndim == 1:
+        b2 = b2[None, :]
+
+    assert b2.shape[0] == 1
+
+    ov = overlap2d(b1, b2)
+
+    return ov / (area2d(b1) + area2d(b2) - ov)
+
+
+def nms2d(boxes, overlap=0.6):
+    """Compute the soft nms given a set of scored boxes,
+    as numpy array with 5 columns <x1> <y1> <x2> <y2> <score>
+    return the indices of the tubelets to keep
+    """
+    if boxes.size == 0:
+        return np.array([], dtype=np.int32)
+
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    scores = boxes[:, 4]
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    order = np.argsort(scores)[::-1]
+    weight = np.zeros_like(scores) + 1
+
+    while order.size > 0:
+        i = order[0]
+
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+
+        inter = np.maximum(0.0, xx2 - xx1 + 1) * np.maximum(0.0, yy2 - yy1 + 1)
+        iou = inter / (areas[i] + areas[order[1:]] - inter)
+
+        index = np.where(iou > overlap)[0]
+        weight[order[index + 1]] = 1 - iou[index]
+
+        index2 = np.where(iou <= overlap)[0]
+        order = order[index2 + 1]
+
+    boxes[:, 4] = boxes[:, 4] * weight
+
+    return boxes
+
+
+def nms_tubelets(dets, overlapThresh=0.3, top_k=None):
+    """Compute the NMS for a set of scored tubelets
+    scored tubelets are numpy array with 4K+1 columns, last one being the score
+    return the indices of the tubelets to keep
+    """
+
+    # If there are no detections, return an empty list
+    if len(dets) == 0:
+        dets
+    if top_k is None:
+        top_k = len(dets)
+
+    K = int((dets.shape[1] - 1) / 4)
+
+    # Coordinates of bounding boxes
+    x1 = [dets[:, 4 * k] for k in range(K)]
+    y1 = [dets[:, 4 * k + 1] for k in range(K)]
+    x2 = [dets[:, 4 * k + 2] for k in range(K)]
+    y2 = [dets[:, 4 * k + 3] for k in range(K)]
+
+    # Compute the area of the bounding boxes and sort the bounding
+    # boxes by the bottom-right y-coordinate of the bounding box
+    # area = (x2 - x1 + 1) * (y2 - y1 + 1)
+    scores = dets[:, -1]
+    area = [(x2[k] - x1[k] + 1) * (y2[k] - y1[k] + 1) for k in range(K)]
+    order = np.argsort(scores)[::-1]
+    weight = np.zeros_like(scores) + 1
+    counter = 0
+
+    while order.size > 0:
+        i = order[0]
+        counter += 1
+
+        # Compute overlap
+        xx1 = [np.maximum(x1[k][i], x1[k][order[1:]]) for k in range(K)]
+        yy1 = [np.maximum(y1[k][i], y1[k][order[1:]]) for k in range(K)]
+        xx2 = [np.minimum(x2[k][i], x2[k][order[1:]]) for k in range(K)]
+        yy2 = [np.minimum(y2[k][i], y2[k][order[1:]]) for k in range(K)]
+
+        w = [np.maximum(0, xx2[k] - xx1[k] + 1) for k in range(K)]
+        h = [np.maximum(0, yy2[k] - yy1[k] + 1) for k in range(K)]
+
+        inter_area = [w[k] * h[k] for k in range(K)]
+        ious = sum([inter_area[k] / (area[k][order[1:]] + area[k][i] - inter_area[k]) for k in range(K)])
+        index = np.where(ious > overlapThresh * K)[0]
+        weight[order[index + 1]] = 1 - ious[index]
+
+        index2 = np.where(ious <= overlapThresh * K)[0]
+        order = order[index2 + 1]
+
+    dets[:, -1] = dets[:, -1] * weight
+
+    new_scores = dets[:, -1]
+    new_order = np.argsort(new_scores)[::-1]
+    dets = dets[new_order, :]
+
+    return dets[:top_k, :]
+
+
+def iou3d(b1, b2):
+    """Compute the IoU between two tubes with same temporal extent"""
+
+    assert b1.shape[0] == b2.shape[0]
+    assert np.all(b1[:, 0] == b2[:, 0])
+
+    ov = overlap2d(b1[:, 1:5], b2[:, 1:5])
+
+    return np.mean(ov / (area2d(b1[:, 1:5]) + area2d(b2[:, 1:5]) - ov))
+
+
+def iou3dt(b1, b2, spatialonly=False):
+    """Compute the spatio-temporal IoU between two tubes"""
+
+    tmin = max(b1[0, 0], b2[0, 0])
+    tmax = min(b1[-1, 0], b2[-1, 0])
+
+    if tmax < tmin:
+        return 0.0
+
+    temporal_inter = tmax - tmin + 1
+    temporal_union = max(b1[-1, 0], b2[-1, 0]) - min(b1[0, 0], b2[0, 0]) + 1
+
+    tube1 = b1[int(np.where(b1[:, 0] == tmin)[0]): int(np.where(b1[:, 0] == tmax)[0]) + 1, :]
+    tube2 = b2[int(np.where(b2[:, 0] == tmin)[0]): int(np.where(b2[:, 0] == tmax)[0]) + 1, :]
+
+    return iou3d(tube1, tube2) * (1. if spatialonly else temporal_inter / temporal_union)
+
+
+def nms3dt(tubes, overlap=0.5):
+    """Compute NMS of scored tubes. Tubes are given as list of (tube, score)
+    return the list of indices to keep
+    """
+
+    if not tubes:
+        return np.array([], dtype=np.int32)
+
+    I = np.argsort([t[1] for t in tubes])
+    indices = np.zeros(I.size, dtype=np.int32)
+    counter = 0
+
+    while I.size > 0:
+        i = I[-1]
+        indices[counter] = i
+        counter += 1
+        ious = np.array([iou3dt(tubes[ii][0], tubes[i][0]) for ii in I[:-1]])
+        I = I[np.where(ious <= overlap)[0]]
+
+    return indices[:counter]
+
+
+def pr_to_ap(pr):
+    """Compute AP given precision-recall
+    pr is a Nx2 array with first row being precision and second row being recall
+    """
+
+    prdif = pr[1:, 1] - pr[:-1, 1]
+    prsum = pr[1:, 0] + pr[:-1, 0]
+
+    return np.sum(prdif * prsum * 0.5)
 
 
 def bbox_iou(bbox1, bbox2):
@@ -58,92 +253,6 @@ def load_frame_detections(dataset, vlist, inference_dir):
     all_dets = np.concatenate(all_dets, axis=0)
 
     return all_dets
-
-
-def compute_score_one_class(bbox1, bbox2, w_iou=1.0, w_scores=1.0, w_scores_mul=0.5):
-    # bbx: <x1> <y1> <x2> <y2> <class score>
-    # bbox: [label, score, ]
-    n_bbox1 = bbox1.shape[0]
-    n_bbox2 = bbox2.shape[0]
-    # for saving all possible scores between each two bbxes in successive frames
-    scores = np.zeros([n_bbox1, n_bbox2], dtype=np.float32)
-    for i in range(n_bbox1):
-        box1 = bbox1[i, :4]
-        for j in range(n_bbox2):
-            box2 = bbox2[j, :4]
-            bbox_iou_frames = bbox_iou(box1, box2, x1y1x2y2=True)
-            sum_score_frames = bbox1[i, 4] + bbox2[j, 4]
-            mul_score_frames = bbox1[i, 4] * bbox2[j, 4]
-            scores[i, j] = w_iou * bbox_iou_frames + w_scores * sum_score_frames + w_scores_mul * mul_score_frames
-
-    return scores
-
-
-def link_bbxes_between_frames(bbox_list, w_iou=1.0, w_scores=1.0, w_scores_mul=0.5):
-    # bbx_list: list of bounding boxes <x1> <y1> <x2> <y2> <class score>
-    # check no empty detections
-    ind_notempty = []
-    nfr = len(bbox_list)
-    for i in range(nfr):
-        if np.array(bbox_list[i]).size:
-            ind_notempty.append(i)
-    # no detections at all
-    if not ind_notempty:
-        return []
-    # miss some frames
-    elif len(ind_notempty)!=nfr:     
-        for i in range(nfr):
-            if not np.array(bbox_list[i]).size:
-                # copy the nearest detections to fill in the missing frames
-                ind_dis = np.abs(np.array(ind_notempty) - i)
-                nn = np.argmin(ind_dis)
-                bbox_list[i] = bbox_list[ind_notempty[nn]]
-
-    
-    detect = bbox_list
-    nframes = len(detect)
-    res = []
-
-    isempty_vertex = np.zeros([nframes,], dtype=np.bool)
-    edge_scores = [compute_score_one_class(detect[i], detect[i+1], w_iou=w_iou, w_scores=w_scores, w_scores_mul=w_scores_mul) for i in range(nframes-1)]
-    copy_edge_scores = edge_scores
-
-    while not np.any(isempty_vertex):
-        # initialize
-        scores = [np.zeros([d.shape[0],], dtype=np.float32) for d in detect]
-        index = [np.nan*np.ones([d.shape[0],], dtype=np.float32) for d in detect]
-        # viterbi
-        # from the second last frame back
-        for i in range(nframes-2, -1, -1):
-            edge_score = edge_scores[i] + scores[i+1]
-            # find the maximum score for each bbox in the i-th frame and the corresponding index
-            scores[i] = np.max(edge_score, axis=1)
-            index[i] = np.argmax(edge_score, axis=1)
-        # decode
-        idx = -np.ones([nframes], dtype=np.int32)
-        idx[0] = np.argmax(scores[0])
-        for i in range(0, nframes-1):
-            idx[i+1] = index[i][idx[i]]
-        # remove covered boxes and build output structures
-        this = np.empty((nframes, 6), dtype=np.float32)
-        this[:, 0] = 1 + np.arange(nframes)
-        for i in range(nframes):
-            j = idx[i]
-            iouscore = 0
-            if i < nframes-1:
-                iouscore = copy_edge_scores[i][j, idx[i+1]] - bbox_list[i][j, 4] - bbox_list[i+1][idx[i+1], 4]
-
-            if i < nframes-1: edge_scores[i] = np.delete(edge_scores[i], j, 0)
-            if i > 0: edge_scores[i-1] = np.delete(edge_scores[i-1], j, 1)
-            this[i, 1:5] = detect[i][j, :4]
-            this[i, 5] = detect[i][j, 4]
-            detect[i] = np.delete(detect[i], j, 0)
-            isempty_vertex[i] = (detect[i].size==0) # it is true when there is no detection in any frame
-        res.append( this )
-        if len(res) == 3:
-            break
-        
-    return res
 
 
 def build_tubes(dataset, save_dir):
