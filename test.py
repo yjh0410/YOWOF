@@ -64,17 +64,9 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
     for index in range(num_videos):
         # load a video
         video_name = dataset.load_video(index)
+        num_frames = dataset.nframes[video_name]
         print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
         video_path = os.path.join(dataset.image_path, video_name)
-        video_frames = os.listdir(video_path)
-
-        # remove useless value
-        try:
-            video_frames.remove('.AppleDouble')
-        except:
-            pass
-
-        num_frames = len(video_frames)
         
         # prepare
         model.initialization = True
@@ -97,9 +89,10 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
             frame_index += 1
 
             if model.initialization:
-                if frame_index <= model.len_clip:
+                if frame_index < model.len_clip:
                     init_video_clip.append(cur_frame)
                 else:
+                    init_video_clip.append(cur_frame)
                     # preprocess
                     xs, _ = transform(init_video_clip)
 

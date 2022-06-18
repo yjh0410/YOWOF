@@ -52,20 +52,12 @@ class JHMDBEvaluator(object):
         for index in range(1):
             # load a video
             video_name = self.dataset.load_video(index)
+            num_frames = self.dataset.nframes[video_name]
 
             # path to video dir
             print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
             video_path = os.path.join(self.dataset.image_path, video_name)
-            video_frames = os.listdir(video_path)
-
-            # remove useless value
-            try:
-                video_frames.remove('.AppleDouble')
-            except:
-                pass
-
-            num_frames = len(video_frames)
-
+            
             # prepare
             model.initialization = True
             frame_index = 0
@@ -85,9 +77,10 @@ class JHMDBEvaluator(object):
                 frame_index += 1
                             
                 if model.initialization:
-                    if frame_index <= model.len_clip:
+                    if frame_index < model.len_clip:
                         init_video_clip.append(cur_frame)
                     else:
+                        init_video_clip.append(cur_frame)
                         # preprocess
                         xs, _ = self.transform(init_video_clip)
 
@@ -104,16 +97,16 @@ class JHMDBEvaluator(object):
                         del init_video_clip
 
                         # save per frame detection results
-                        for fid, (scores, labels, bboxes) in enumerate(zip(init_scores, init_labels, init_bboxes)):
+                        for i, (scores, labels, bboxes) in enumerate(zip(init_scores, init_labels, init_bboxes)):
                             outputs = {}
-                            for i in range(self.num_classes):
-                                keep = (labels == i)
+                            for c in range(self.num_classes):
+                                keep = (labels == c)
                                 c_scores = scores[keep]
                                 c_bboxes = bboxes[keep]
                                 output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
-                                outputs[i] = output
+                                outputs[c] = output
                             
-                            detections[fid+1] = outputs
+                            detections[i+1] = outputs
 
                 else:
                     # preprocess
@@ -130,20 +123,21 @@ class JHMDBEvaluator(object):
 
                     # save per frame detection results
                     outputs = {}
-                    for i in range(self.num_classes):
-                        keep = (cur_labels == i)
+                    for c in range(self.num_classes):
+                        keep = (cur_labels == c)
                         c_scores = cur_scores[keep]
                         c_bboxes = cur_bboxes[keep]
                         output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
-                        outputs[i] = output
-                    
+                        outputs[c] = output
                     detections[frame_index] = outputs
 
             # save this video detection results
-            outfile = os.path.join(self.save_dir, video_name, str(fid).zfill(5) + '.pkl')
-            print(outfile)
+            os.makedirs(os.path.join(self.save_dir, video_name), exist_ok=True)          
             for i in detections.keys():
+                outfile = os.path.join(self.save_dir, video_name, str(i).zfill(5) + '.pkl')
+
                 with open(outfile, 'wb') as file:
+                    # print(detections[i])
                     pickle.dump(detections[i], file)
 
         vlist = self.dataset.video_list
@@ -164,6 +158,8 @@ class JHMDBEvaluator(object):
 
         # evaluation
         if self.metric == 'frame_map':
+            print('-----------------------------------------')
+            print('calculating Frame mAP ...')
             frame_map = self.frameAP(all_dets, vlist)
             self.frame_map = frame_map
 
@@ -171,9 +167,12 @@ class JHMDBEvaluator(object):
             self.frameAP_error()
 
         elif self.metric == 'video_map':
+            print('-----------------------------------------')
+            print('building tubes ...')
             # First, we build tubelets
             build_tubes(self.dataset, self.save_dir)
             
+            print('calculating Video mAP ...')
             # Next, we calculate the video mAP@0.5
             video_map = self.videoAP()
             self.video_map['@0.5'] = video_map
@@ -196,8 +195,9 @@ class JHMDBEvaluator(object):
                     continue
 
                 for tube in tubes[ilabel]:
+                    # tube: [T, 5] -> [[fid, x1, y1, x2, y2], ...]
                     for i in range(tube.shape[0]):
-                        k = (iv, int(tube[i, 0]))
+                        k = (iv, int(tube[i, 0])) # [video_index, frame_index]
                         if k not in gt:
                             gt[k] = []
                         gt[k].append(tube[i, 1:5].tolist())
@@ -215,7 +215,7 @@ class JHMDBEvaluator(object):
 
             for i, j in enumerate(np.argsort(-detections[:, 3])):
                 k = (int(detections[j, 0]), int(detections[j, 1]))
-                box = detections[j, 4:8]
+                box = detections[j, 4:8].astype(np.int32)
                 ispositive = False
 
                 if k in gt:
@@ -234,17 +234,18 @@ class JHMDBEvaluator(object):
                     fn -= 1
                 else:
                     fp += 1
-
                 pr[i + 1, 0] = float(tp) / float(tp + fp)
                 pr[i + 1, 1] = float(tp) / float(tp + fn)
 
             results[label] = pr
 
         # display results
-        ap = 100 * np.array([pr_to_ap(results[label]) for label in self.dataset.labels])
-        frame_mAP = np.mean(ap)
-
-        print('frameAP_{}\n'.format(self.thresh))
+        print('>>>>>>>>>>>>> FrameAP_{} <<<<<<<<<<<<<<'.format(self.thresh))
+        aps = 100 * np.array([pr_to_ap(results[label]) for label in self.dataset.labels])
+        for i, ap in enumerate(aps):
+            print('{}: {:.2f}'.format(self.class_names[i], ap))
+        frame_mAP = np.mean(aps)
+        print()
         print("{:20s} {:8.2f}".format("mAP", frame_mAP))
 
         return frame_mAP
@@ -468,10 +469,13 @@ class JHMDBEvaluator(object):
             res[self.dataset.labels[ilabel]] = pr
 
         # display results
-        ap = 100 * np.array([pr_to_ap(res[label]) for label in self.dataset.labels])
-        video_map = np.mean(ap)
+        print('>>>>>>>>>>>>> VideoAP_{} <<<<<<<<<<<<<<'.format(self.thresh))
+        aps = 100 * np.array([pr_to_ap(res[label]) for label in self.dataset.labels])
+        for i, ap in enumerate(aps):
+            print('{}: {:.2f}'.format(self.class_names[i], ap))
+        print()
+        video_map = np.mean(aps)
 
-        print('VideoAP_{}\n'.format(self.thresh))
         print("{:20s} {:8.2f}".format("mAP", video_map))
 
         return video_map

@@ -220,7 +220,7 @@ def bbox_iou(bbox1, bbox2):
 def load_frame_detections(dataset, vlist, inference_dir):
     all_dets = []
 
-    for iv, v in enumerate(vlist): # video_index, video_name
+    for iv, v in enumerate(vlist[:1]): # video_index, video_name
 
         # load results for each starting frame
         for i in range(1, dataset.nframes[v]+ 1):
@@ -238,7 +238,7 @@ def load_frame_detections(dataset, vlist, inference_dir):
                 box_score = dets[label]
                 # [N, 1]
                 labels = np.empty((box_score.shape[0], 1), dtype=np.int32)
-                labels[:, 0] = label - 1
+                labels[:, 0] = label
                 score_box = np.concatenate([box_score[:, -1:], box_score[:, :-1]], axis=1)
                 label_score_box = np.concatenate([labels, score_box], axis=1)
 
@@ -278,7 +278,7 @@ def build_tubes(dataset, save_dir):
             with open(resname, 'rb') as file:
                 # detection results of per frame
                 VDets[fid] = pickle.load(file)
-                
+
         # VDets = {fid: {label1: {4+1}, label2: {4+1}, ...},
         #          fid: {label1: {4+1}, label2: {4+1}, ...},
         #           ...}
@@ -293,7 +293,7 @@ def build_tubes(dataset, save_dir):
             for fid in range(1, nframes + 1):
                 # load boxes of the new frame
                 # [N, 4+1]
-                cur_preds = VDets[fid][ilabel + 1]
+                cur_preds = VDets[fid][ilabel]
 
                 # just start new tubes
                 if fid == 1:
@@ -362,9 +362,13 @@ def build_tubes(dataset, save_dir):
                 out[:, 0] = np.arange(beginframe, endframe + 1)
                 for i in range(len(t)):
                     fid, box = t[i]
-                    out[fid, 1:5] = box[:4]   # bbox of per frame
-                    out[fid, -1] = box[-1]    # bbox score
-                    
+                    try:
+                        out[fid- beginframe, 1:5] = box[:4]   # bbox of per frame
+                        out[fid- beginframe, -1] = box[-1]    # bbox score
+                    except:
+                        print(t)
+                        print(len(t), out.shape, fid)
+                        exit()
                 output.append([out, score])
                 # out: [num_frames, (frame idx, x1, y1, x2, y2, score)]
 
