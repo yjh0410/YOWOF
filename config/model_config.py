@@ -134,7 +134,7 @@ model_config = {
     'yowof-r50': {
         # input
         'img_size': 320,
-        'len_clip': 7,
+        'len_clip': 3,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -183,6 +183,15 @@ model_config = {
         'iou_t': 0.15,
         'igt': 0.7,
         'ctr_clamp': 32,
+        # loss
+        'alpha': 0.25,
+        'gamma': 2.0,
+        'loss_cls_weight': 1.0,
+        'loss_reg_weight': 1.0,
+        # optimizer
+        'optimizer': 'sgd',
+        'weight_decay': 1e-4,
+        'momentum': 0.9,
 
     },
 

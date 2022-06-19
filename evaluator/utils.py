@@ -220,7 +220,7 @@ def bbox_iou(bbox1, bbox2):
 def load_frame_detections(dataset, vlist, inference_dir):
     all_dets = []
 
-    for iv, v in enumerate(vlist[:1]): # video_index, video_name
+    for iv, v in enumerate(vlist): # video_index, video_name
 
         # load results for each starting frame
         for i in range(1, dataset.nframes[v]+ 1):

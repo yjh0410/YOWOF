@@ -49,7 +49,7 @@ class JHMDBEvaluator(object):
     def evaluate(self, model):
         # inference
         num_videos = self.dataset.num_videos
-        for index in range(1):
+        for index in range(num_videos):
             # load a video
             video_name = self.dataset.load_video(index)
             num_frames = self.dataset.nframes[video_name]
