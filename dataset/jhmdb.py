@@ -4,7 +4,10 @@ import random
 import cv2
 import pickle
 
+import torch
 import torch.utils.data as data
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 try:
     from utils import tubelet_in_out_tubes, tubelet_has_gt
@@ -21,8 +24,6 @@ JHMDB_CLASSES = (
     'wave'
 )
 
-# MODIFY FOR PYTORCH 1+
-cv2.setNumThreads(0)
 
 class JHMDB(data.Dataset):
     def __init__(self, 
