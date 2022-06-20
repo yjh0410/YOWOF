@@ -7,9 +7,9 @@ import pickle
 import torch.utils.data as data
 
 try:
-    from ACT_utils import tubelet_in_out_tubes, tubelet_has_gt
+    from utils import tubelet_in_out_tubes, tubelet_has_gt
 except:
-    from .ACT_utils import tubelet_in_out_tubes, tubelet_has_gt
+    from .utils import tubelet_in_out_tubes, tubelet_has_gt
 
 
 JHMDB_CLASSES = (
@@ -21,6 +21,8 @@ JHMDB_CLASSES = (
     'wave'
 )
 
+# MODIFY FOR PYTORCH 1+
+cv2.setNumThreads(0)
 
 class JHMDB(data.Dataset):
     def __init__(self, 

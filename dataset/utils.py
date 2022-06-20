@@ -1,5 +1,3 @@
-import numpy as np
-
 """ utilities functions for boxes, tubelets, tubes, and ap"""
 
 # Assisting function for finding a good/bad tubelet
