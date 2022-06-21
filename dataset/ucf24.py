@@ -4,7 +4,10 @@ import random
 import cv2
 import pickle
 
+import torch
 import torch.utils.data as data
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 try:
     from utils import tubelet_in_out_tubes, tubelet_has_gt
