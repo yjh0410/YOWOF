@@ -97,6 +97,8 @@ model_config = {
         'neck_act': 'relu',
         'neck_norm': 'BN',
         'neck_depthwise': False,
+        # temp-motion encoder
+        'te_depth': 1,
         # head
         'head_dim': 256,
         'head_norm': 'BN',

@@ -7,6 +7,7 @@ import torch.nn as nn
 from ...backbone import build_backbone
 from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
+from .module.encoder import TempMotionEncoder
 from .loss import Criterion
 
 
@@ -40,21 +41,34 @@ class YOWOF(nn.Module):
         self.initialization = False
 
         # backbone
-        self.backbone, bk_dim = build_backbone(model_name=cfg['backbone'], 
-                                               pretrained=trainable,
-                                               norm_type=cfg['norm_type'])
+        self.backbone, bk_dim = build_backbone(
+            model_name=cfg['backbone'], 
+            pretrained=trainable,
+            norm_type=cfg['norm_type']
+            )
 
         # neck
-        self.neck = build_neck(cfg=cfg, 
-                               in_dim=bk_dim, 
-                               out_dim=cfg['head_dim'])
+        self.neck = build_neck(
+            cfg=cfg, 
+            in_dim=bk_dim, 
+            out_dim=cfg['head_dim']
+            )
                                      
+        # TM-Encoder
+        self.te_encoder = TempMotionEncoder(
+            in_dim=cfg['head_dim'],
+            len_clip=cfg['len_clip'],
+            depth=cfg['te_depth']
+        )
+
         # head
-        self.head = DecoupledHead(head_dim=cfg['head_dim'],
-                                  num_cls_heads=cfg['num_cls_heads'],
-                                  num_reg_heads=cfg['num_reg_heads'],
-                                  act_type=cfg['head_act'],
-                                  norm_type=cfg['head_norm'])
+        self.head = DecoupledHead(
+            head_dim=cfg['head_dim'],
+            num_cls_heads=cfg['num_cls_heads'],
+            num_reg_heads=cfg['num_reg_heads'],
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
+            )
 
         # pred
         self.obj_pred = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
@@ -383,15 +397,21 @@ class YOWOF(nn.Module):
         if not self.trainable:
             return self.inference(video_clips)
         else:
-            box_preds = []
-            cls_preds = []
+            all_feats = []
+            # backbone
             for i in range(len(video_clips)):
-                # backbone
                 feat = self.backbone(video_clips[i])
-
-                # neck
                 feat = self.neck(feat)
 
+                all_feats.append(feat)
+
+            # temporal-motion encoder
+            all_feats = self.te_encoder(all_feats)
+
+            # detection head
+            all_box_preds = []
+            all_cls_preds = []
+            for feat in all_feats:
                 # head
                 cls_feats, reg_feats = self.head(feat)
 
@@ -419,19 +439,20 @@ class YOWOF(nn.Module):
                 box_pred = self.decode_boxes(self.anchor_boxes[None], reg_pred)
 
                 # Collect detection results for each frame.
-                cls_preds.append(normalized_cls_pred)
-                box_preds.append(box_pred)
+                all_cls_preds.append(normalized_cls_pred)
+                all_box_preds.append(box_pred)
 
-            outputs = {"cls_preds": cls_preds,
-                       "box_preds": box_preds,
+            outputs = {"cls_preds": all_cls_preds,
+                       "box_preds": all_box_preds,
+                       "anchors": self.anchor_boxes,
                        'strides': self.stride}
 
             # loss
-            loss_dict = self.criterion(outputs=outputs, 
-                                       targets=targets, 
-                                       anchor_boxes=self.anchor_boxes,
-                                       video_clips=video_clips,
-                                       vis_data=vis_data
-                                       )
+            loss_dict = self.criterion(
+                outputs=outputs, 
+                targets=targets, 
+                video_clips=video_clips,
+                vis_data=vis_data
+                )
 
             return loss_dict 

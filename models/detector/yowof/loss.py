@@ -31,7 +31,6 @@ class Criterion(object):
     def __call__(self, 
                  outputs, 
                  targets, 
-                 anchor_boxes=None, 
                  video_clips=None, 
                  vis_data=False):
         """
@@ -53,6 +52,7 @@ class Criterion(object):
             
         box_preds = outputs['box_preds']
         cls_preds = outputs['cls_preds']
+        anchor_boxes = outputs['anchors']
         len_clip = len(targets)
         batch_size = len(targets[0])
 
