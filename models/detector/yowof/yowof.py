@@ -220,17 +220,24 @@ class YOWOF(nn.Module):
     
     
     def inference_video_clip(self, x):
+        backbone_feats = []
+        img_size = x[0].shape[-1]
+
+        # backbone
+        for i in range(len(x)):
+            feat = self.backbone(x[i])
+            feat = self.neck(feat)
+
+            backbone_feats.append(feat)
+
+        # temporal-motion encoder
+        encoder_feats = self.te_encoder(backbone_feats)
+
+        # detection head
         all_frames_scores = []
         all_frames_labels = []
         all_frames_bboxes = []
-        img_size = x[0].shape[-1]
-        for i in range(len(x)):
-            # backbone
-            feat = self.backbone(x[i])
-
-            # neck
-            feat = self.neck(feat)
-
+        for feat in encoder_feats:
             # head
             cls_feats, reg_feats = self.head(feat)
 
@@ -286,19 +293,26 @@ class YOWOF(nn.Module):
             all_frames_labels.append(labels)
             all_frames_bboxes.append(bboxes)
 
-        return all_frames_scores, all_frames_labels, all_frames_bboxes
+        return backbone_feats, all_frames_scores, all_frames_labels, all_frames_bboxes
 
 
-    def inference_single_frame(self, x):
+    def inference_single_frame(self, x, backbone_feats):
         img_size = x.shape[-1]
         # backbone
-        feat = self.backbone(x)
+        cur_feat = self.backbone(x)
+        cur_feat = self.neck(cur_feat)
 
-        # neck
-        feat = self.neck(feat)
+        # push the current feature
+        backbone_feats.append(cur_feat)
+        # delete the oldest feature
+        del backbone_feats[0]
+
+        # temporal-motion encoder
+        encoder_feats = self.te_encoder(backbone_feats)
+        cur_feat = encoder_feats[-1]
 
         # head
-        cls_feats, reg_feats = self.head(feat)
+        cls_feats, reg_feats = self.head(cur_feat)
 
         obj_pred = self.obj_pred(reg_feats)
         cls_pred = self.cls_pred(cls_feats)
@@ -348,14 +362,14 @@ class YOWOF(nn.Module):
         # post-process
         scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-        return scores, labels, bboxes
+        return backbone_feats, scores, labels, bboxes
 
 
     @torch.no_grad()
     def inference(self, x):
         # Init inference, model processes a video clip
         if not self.stream_infernce:
-            (
+            (   all_feats,
                 all_frames_scores, 
                 all_frames_labels, 
                 all_frames_bboxes
@@ -372,16 +386,27 @@ class YOWOF(nn.Module):
 
             if self.initialization:
                 # Init stage, detector process a video clip
-                (
+                # and output results of per frame
+                (   
+                    clip_feats,
                     init_scores, 
                     init_labels, 
                     init_bboxes
                     ) = self.inference_video_clip(x)
                 self.initialization = False
+                self.clip_feats = clip_feats
+
                 return init_scores, init_labels, init_bboxes
             else:
                 # After init stage, detector process current frame
-                cur_scores, cur_labels, cur_bboxes = self.inference_single_frame(x)
+                (
+                    clip_feats,
+                    cur_scores,
+                    cur_labels,
+                    cur_bboxes
+                    ) = self.inference_single_frame(x, self.clip_feats)
+                self.clip_feats = clip_feats
+
                 return cur_scores, cur_labels, cur_bboxes
 
 
