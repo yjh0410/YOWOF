@@ -9,8 +9,7 @@ from evaluator.jhmdb_evaluator import JHMDBEvaluator
 
 from dataset.transforms import ValTransforms
 
-from utils.misc import load_weight, rescale_bboxes, rescale_bboxes_list
-from utils.vis_tools import vis_video_clip, vis_video_frame
+from utils.misc import load_weight
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model

@@ -10,6 +10,8 @@ from dataset.ucf24 import UCF24
 from dataset.jhmdb import JHMDB
 from dataset.transforms import TrainTransforms, ValTransforms
 
+from evaluator.jhmdb_evaluator import JHMDBEvaluator
+
 
 def build_dataset(d_cfg, m_cfg, args, is_train=False):
     """
@@ -53,7 +55,14 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
                         transform=train_transform,
                         debug=False)
         # evaluator
-        evaluator = None
+        evaluator = JHMDBEvaluator(
+                        cfg=d_cfg,
+                        len_clip=m_cfg['len_clip'],
+                        img_size=args.img_size,
+                        thresh=0.5,
+                        transform=val_transform,
+                        metric='frame_map',
+                        save_dir=args.save_dir)
     
     else:
         print('unknow dataset !! Only support UCF24 and JHMDB !!')

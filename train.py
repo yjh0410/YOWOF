@@ -38,6 +38,8 @@ def parse_args():
                         help='after eval epoch, the model is evaluated on val dataset.')
     parser.add_argument('--vis_data', action='store_true', default=False,
                         help='use tensorboard')
+    parser.add_argument('--save_dir', default='inference_results/',
+                        type=str, help='save inference results.')
 
     # model
     parser.add_argument('-v', '--version', default='baseline', type=str,
@@ -141,7 +143,7 @@ def train():
     # training configuration
     max_epoch = d_cfg['max_epoch']
     epoch_size = len(dataloader)
-    best_map = -1.
+    best_frame_map = -1.
     warmup = True
 
     t0 = time.time()
@@ -240,13 +242,13 @@ def train():
                     # evaluate
                     evaluator.evaluate(model_without_ddp)
 
-                    cur_map = evaluator.map
-                    if cur_map > best_map:
+                    cur_frame_map = evaluator.frame_map
+                    if cur_frame_map > best_frame_map:
                         # update best-map
-                        best_map = cur_map
+                        best_frame_map = cur_frame_map
                         # save model
                         print('Saving state, epoch:', epoch + 1)
-                        weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_map*100)
+                        weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_frame_map*100)
                         checkpoint_path = os.path.join(path_to_save, weight_name)
                         torch.save({'model': model_without_ddp.state_dict(),
                                     'optimizer': optimizer.state_dict(),

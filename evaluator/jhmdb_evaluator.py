@@ -15,7 +15,6 @@ from .utils import load_frame_detections, build_tubes
 class JHMDBEvaluator(object):
     def __init__(self,
                  cfg=None,
-                 device=None,
                  len_clip=1,
                  img_size=320,
                  thresh=0.5,
@@ -23,7 +22,6 @@ class JHMDBEvaluator(object):
                  metric='frame_map',
                  save_dir=None):
         self.cfg = cfg
-        self.device = device
         self.len_clip = len_clip
         self.thresh = thresh
         self.transform = transform
@@ -47,6 +45,8 @@ class JHMDBEvaluator(object):
 
     @torch.no_grad()
     def evaluate(self, model):
+        device = model.device
+
         # inference
         num_videos = self.dataset.num_videos
         for index in range(num_videos):
@@ -54,8 +54,10 @@ class JHMDBEvaluator(object):
             video_name = self.dataset.load_video(index)
             num_frames = self.dataset.nframes[video_name]
 
+            if (index + 1) % 50 == 0:
+                print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
+
             # path to video dir
-            print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
             video_path = os.path.join(self.dataset.image_path, video_name)
             
             # prepare
@@ -85,7 +87,7 @@ class JHMDBEvaluator(object):
                         xs, _ = self.transform(init_video_clip)
 
                         # to device
-                        xs = [x.unsqueeze(0).to(self.device) for x in xs] 
+                        xs = [x.unsqueeze(0).to(device) for x in xs] 
 
                         # inference with an init video clip
                         init_scores, init_labels, init_bboxes = model(xs)
@@ -113,7 +115,7 @@ class JHMDBEvaluator(object):
                     xs, _ = self.transform([cur_frame])
 
                     # to device
-                    xs = [x.unsqueeze(0).to(self.device) for x in xs] 
+                    xs = [x.unsqueeze(0).to(device) for x in xs] 
 
                     # inference with the current frame
                     cur_scores, cur_labels, cur_bboxes = model(xs[0])
@@ -144,17 +146,12 @@ class JHMDBEvaluator(object):
 
         # load per-frame detections
         frame_detections_file = os.path.join(self.save_dir, 'frame_detections.pkl')
-        if os.path.isfile(frame_detections_file):
-            print('load previous detection results...')
-            with open(frame_detections_file, 'rb') as fid:
-                all_dets = pickle.load(fid)
-        else:
-            all_dets = load_frame_detections(self.dataset, vlist, self.save_dir)
-            try:
-                with open(frame_detections_file, 'wb') as fid:
-                    pickle.dump(all_dets, fid, protocol=4)
-            except:
-                print("OverflowError: cannot serialize a bytes object larger than 4 GiB")
+        all_dets = load_frame_detections(self.dataset, vlist, self.save_dir)
+        try:
+            with open(frame_detections_file, 'wb') as fid:
+                pickle.dump(all_dets, fid, protocol=4)
+        except:
+            print("OverflowError: cannot serialize a bytes object larger than 4 GiB")
 
         # evaluation
         if self.metric == 'frame_map':
