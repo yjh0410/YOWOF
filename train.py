@@ -249,7 +249,7 @@ def train():
                         best_frame_map = cur_frame_map
                         # save model
                         print('Saving state, epoch:', epoch + 1)
-                        weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_frame_map*100)
+                        weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_frame_map)
                         checkpoint_path = os.path.join(path_to_save, weight_name)
                         torch.save({'model': model_without_ddp.state_dict(),
                                     'optimizer': optimizer.state_dict(),
