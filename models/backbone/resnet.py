@@ -55,9 +55,9 @@ class BackboneBase(nn.Module):
 
     def __init__(self, backbone: nn.Module, num_channels: int):
         super().__init__()
-        # for name, parameter in backbone.named_parameters():
-        #     if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
-        #         parameter.requires_grad_(False)
+        for name, parameter in backbone.named_parameters():
+            if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+                parameter.requires_grad_(False)
         return_layers = {'layer4': "0"}        
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
