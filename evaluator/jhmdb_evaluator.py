@@ -7,7 +7,7 @@ from copy import deepcopy
 import torch
 
 from dataset.jhmdb import JHMDB, JHMDB_CLASSES
-from utils.misc import rescale_bboxes, rescale_bboxes_list
+from utils.box_ops import rescale_bboxes, rescale_bboxes_list
 from .utils import iou2d, pr_to_ap, nms3dt, iou3dt
 from .utils import load_frame_detections, build_tubes
 
@@ -54,7 +54,7 @@ class JHMDBEvaluator(object):
             video_name = self.dataset.load_video(index)
             num_frames = self.dataset.nframes[video_name]
 
-            if (index + 1) % 50 == 0:
+            if (index) % 50 == 0:
                 print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
 
             # path to video dir

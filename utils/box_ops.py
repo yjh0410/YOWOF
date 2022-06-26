@@ -1,5 +1,6 @@
 import torch
 from torchvision.ops.boxes import box_area
+import numpy as np
 
 
 def box_cxcywh_to_xyxy(x):
@@ -55,6 +56,33 @@ def generalized_box_iou(boxes1, boxes2):
     area = wh[:, :, 0] * wh[:, :, 1]
 
     return iou - (area - union) / area
+
+
+def rescale_bboxes(bboxes, orig_size):
+    orig_w, orig_h = orig_size[0], orig_size[1]
+    bboxes[..., [0, 2]] = np.clip(
+        bboxes[..., [0, 2]] * orig_w, a_min=0., a_max=orig_w
+        )
+    bboxes[..., [1, 3]] = np.clip(
+        bboxes[..., [1, 3]] * orig_h, a_min=0., a_max=orig_h
+        )
+    
+    return bboxes
+
+
+def rescale_bboxes_list(bboxes_list, orig_size):
+    orig_w, orig_h = orig_size[0], orig_size[1]
+    rescale_bboxes_list = []
+    for bboxes in bboxes_list:
+        bboxes[..., [0, 2]] = np.clip(
+            bboxes[..., [0, 2]] * orig_w, a_min=0., a_max=orig_w
+            )
+        bboxes[..., [1, 3]] = np.clip(
+            bboxes[..., [1, 3]] * orig_h, a_min=0., a_max=orig_h
+            )
+        rescale_bboxes_list.append(bboxes)
+    
+    return rescale_bboxes_list
 
 
 if __name__ == '__main__':

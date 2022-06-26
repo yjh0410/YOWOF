@@ -45,10 +45,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def jhmdb_eval(d_cfg, model, device, transform, save_dir, metrics):
+def jhmdb_eval(d_cfg, model, transform, save_dir, metrics):
     evaluator = JHMDBEvaluator(
         cfg=d_cfg,
-        device=device,
         len_clip=model.len_clip,
         img_size=args.img_size,
         thresh=0.5,
@@ -121,7 +120,6 @@ if __name__ == '__main__':
         jhmdb_eval(
             d_cfg=d_cfg,
             model=model,
-            device=device,
             transform=transform,
             save_dir=save_path,
             metrics=args.metrics
