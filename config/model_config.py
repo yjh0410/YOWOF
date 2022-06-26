@@ -23,7 +23,7 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
-        'norm_type': 'FrozeBN',
+        'norm_type': 'BN',
         'stride': 32,
         'pretrained': None,
         # neck
@@ -87,7 +87,7 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
-        'norm_type': 'FrozeBN',
+        'norm_type': 'BN',
         'stride': 32,
         'pretrained': None,
         # neck
@@ -154,7 +154,7 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50',
-        'norm_type': 'FrozeBN',
+        'norm_type': 'BN',
         'stride': 32,
         'pretrained': None,
         # neck
@@ -218,7 +218,7 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50-d',
-        'norm_type': 'FrozeBN',
+        'norm_type': 'BN',
         'stride': 16,
         'pretrained': None,
         # neck
