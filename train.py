@@ -171,6 +171,7 @@ def train():
                     print('eval ...')
                     # set eval mode
                     model_without_ddp.trainable = False
+                    model_without_ddp.stream_infernce = True
                     model_without_ddp.eval()
 
                     # evaluate
@@ -193,6 +194,7 @@ def train():
 
                     # set train mode.
                     model_without_ddp.trainable = True
+                    model_without_ddp.stream_infernce = False
                     model_without_ddp.train()
         
             if args.distributed:
