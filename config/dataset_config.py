@@ -13,7 +13,7 @@ dataset_config = {
         'max_epoch': 12,
         'lr_epoch': [6, 10],
         'batch_size': 32,
-        'base_lr': 0.012/64.,
+        'base_lr': 0.12/64.,
         'bk_lr_ratio': 1.0/3.0,
         # warmup strategy
         'warmup': 'linear',
