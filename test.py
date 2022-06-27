@@ -10,8 +10,8 @@ from dataset.jhmdb import JHMDB, JHMDB_CLASSES
 from dataset.transforms import ValTransforms
 
 from utils.misc import load_weight
-from utils.box_ops import rescale_bboxes, rescale_bboxes_list
-from utils.vis_tools import vis_video_clip, vis_video_frame
+from utils.box_ops import rescale_bboxes
+from utils.vis_tools import vis_video_frame
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model

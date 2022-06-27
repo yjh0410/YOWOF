@@ -1,6 +1,6 @@
 python train.py \
         --cuda \
-        -d jhmdb \
+        -d ucf24 \
         -v yowof-r18 \
         --num_workers 4 \
         --eval_epoch 2 \
