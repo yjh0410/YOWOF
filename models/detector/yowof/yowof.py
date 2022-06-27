@@ -4,6 +4,8 @@ import numpy as np
 import math
 import torch
 import torch.nn as nn
+
+from models.basic.conv import Conv
 from ...backbone import build_backbone
 from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
@@ -54,12 +56,17 @@ class YOWOF(nn.Module):
             out_dim=cfg['head_dim']
             )
                                      
-        # TM-Encoder
-        self.te_encoder = TempMotionEncoder(
-            in_dim=cfg['head_dim'],
-            len_clip=cfg['len_clip'],
-            depth=cfg['te_depth']
-        )
+        # # TM-Encoder
+        # self.te_encoder = TempMotionEncoder(
+        #     in_dim=cfg['head_dim'],
+        #     len_clip=cfg['len_clip'],
+        #     depth=cfg['te_depth']
+        # )
+
+        self.te_encoder = nn.Sequential(
+            Conv(cfg['head_dim']*self.len_clip, cfg['head_dim'], k=1, act_type=None),
+            Conv(cfg['head_dim'], cfg['head_dim'], k=3, p=1, act_type=None)
+            )
 
         # head
         self.head = DecoupledHead(
@@ -82,13 +89,15 @@ class YOWOF(nn.Module):
 
         # criterion
         if self.trainable:
-            self.criterion = Criterion(cfg=cfg,
-                                       device=device,
-                                       alpha=cfg['alpha'],
-                                       gamma=cfg['gamma'],
-                                       loss_cls_weight=cfg['loss_cls_weight'],
-                                       loss_reg_weight=cfg['loss_reg_weight'],
-                                       num_classes=num_classes)
+            self.criterion = Criterion(
+                cfg=cfg,
+                device=device,
+                alpha=cfg['alpha'],
+                gamma=cfg['gamma'],
+                loss_cls_weight=cfg['loss_cls_weight'],
+                loss_reg_weight=cfg['loss_reg_weight'],
+                num_classes=num_classes
+                )
 
 
     def _init_pred_layers(self):  
@@ -230,70 +239,63 @@ class YOWOF(nn.Module):
 
             backbone_feats.append(feat)
 
-        # temporal-motion encoder
-        encoder_feats = self.te_encoder(backbone_feats)
+        # # temporal-motion encoder
+        # encoder_feats = self.te_encoder(backbone_feats)
+        # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
+        feat = self.te_encoder(backbone_feats)
 
-        # detection head
-        all_frames_scores = []
-        all_frames_labels = []
-        all_frames_bboxes = []
-        for feat in encoder_feats:
-            # head
-            cls_feats, reg_feats = self.head(feat)
+        # head
+        cls_feats, reg_feats = self.head(feat)
 
-            obj_pred = self.obj_pred(reg_feats)
-            cls_pred = self.cls_pred(cls_feats)
-            reg_pred = self.reg_pred(reg_feats)
+        obj_pred = self.obj_pred(reg_feats)
+        cls_pred = self.cls_pred(cls_feats)
+        reg_pred = self.reg_pred(reg_feats)
 
-            # implicit objectness
-            B, _, H, W = obj_pred.size()
-            obj_pred = obj_pred.view(B, -1, 1, H, W)
-            cls_pred = cls_pred.view(B, -1, self.num_classes, H, W)
-            normalized_cls_pred = cls_pred + obj_pred - torch.log(
-                1. + 
-                torch.clamp(cls_pred, max=DEFAULT_EXP_CLAMP).exp() + 
-                torch.clamp(obj_pred, max=DEFAULT_EXP_CLAMP).exp())
-            # [B, KA, C, H, W] -> [B, H, W, KA, C] -> [B, M, C], M = HxWxKA
-            normalized_cls_pred = normalized_cls_pred.permute(0, 3, 4, 1, 2).contiguous()
-            normalized_cls_pred = normalized_cls_pred.view(B, -1, self.num_classes)
+        # implicit objectness
+        B, _, H, W = obj_pred.size()
+        obj_pred = obj_pred.view(B, -1, 1, H, W)
+        cls_pred = cls_pred.view(B, -1, self.num_classes, H, W)
+        normalized_cls_pred = cls_pred + obj_pred - torch.log(
+            1. + 
+            torch.clamp(cls_pred, max=DEFAULT_EXP_CLAMP).exp() + 
+            torch.clamp(obj_pred, max=DEFAULT_EXP_CLAMP).exp())
+        # [B, KA, C, H, W] -> [B, H, W, KA, C] -> [B, M, C], M = HxWxKA
+        normalized_cls_pred = normalized_cls_pred.permute(0, 3, 4, 1, 2).contiguous()
+        normalized_cls_pred = normalized_cls_pred.view(B, -1, self.num_classes)
 
-            # [B, KA*4, H, W] -> [B, KA, 4, H, W] -> [B, H, W, KA, 4] -> [B, M, 4]
-            reg_pred =reg_pred.view(B, -1, 4, H, W).permute(0, 3, 4, 1, 2).contiguous()
-            reg_pred = reg_pred.view(B, -1, 4)
+        # [B, KA*4, H, W] -> [B, KA, 4, H, W] -> [B, H, W, KA, 4] -> [B, M, 4]
+        reg_pred =reg_pred.view(B, -1, 4, H, W).permute(0, 3, 4, 1, 2).contiguous()
+        reg_pred = reg_pred.view(B, -1, 4)
 
-            # [1, M, C] -> [M, C]
-            cls_pred = normalized_cls_pred[0]
-            reg_pred = reg_pred[0]
-                        
-            # scores
-            scores, labels = torch.max(cls_pred.sigmoid(), dim=-1)
+        # [1, M, C] -> [M, C]
+        cls_pred = normalized_cls_pred[0]
+        reg_pred = reg_pred[0]
+                    
+        # scores
+        scores, labels = torch.max(cls_pred.sigmoid(), dim=-1)
 
-            # topk
-            anchor_boxes = self.anchor_boxes
-            if scores.shape[0] > self.topk:
-                scores, indices = torch.topk(scores, self.topk)
-                labels = labels[indices]
-                reg_pred = reg_pred[indices]
-                anchor_boxes = anchor_boxes[indices]
+        # topk
+        anchor_boxes = self.anchor_boxes
+        if scores.shape[0] > self.topk:
+            scores, indices = torch.topk(scores, self.topk)
+            labels = labels[indices]
+            reg_pred = reg_pred[indices]
+            anchor_boxes = anchor_boxes[indices]
 
-            # decode box
-            bboxes = self.decode_boxes(anchor_boxes[None], reg_pred[None])[0] # [N, 4]
-            # normalize box
-            bboxes = torch.clamp(bboxes / img_size, 0., 1.)
-            
-            # to cpu
-            scores = scores.cpu().numpy()
-            labels = labels.cpu().numpy()
-            bboxes = bboxes.cpu().numpy()
+        # decode box
+        bboxes = self.decode_boxes(anchor_boxes[None], reg_pred[None])[0] # [N, 4]
+        # normalize box
+        bboxes = torch.clamp(bboxes / img_size, 0., 1.)
+        
+        # to cpu
+        scores = scores.cpu().numpy()
+        labels = labels.cpu().numpy()
+        bboxes = bboxes.cpu().numpy()
 
-            # post-process
-            scores, labels, bboxes = self.post_process(scores, labels, bboxes)
+        # post-process
+        scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-            all_frames_scores.append(scores)
-            all_frames_labels.append(labels)
-            all_frames_bboxes.append(bboxes)
-
-        return backbone_feats, all_frames_scores, all_frames_labels, all_frames_bboxes
+        return backbone_feats, scores, labels, bboxes
 
 
     def inference_single_frame(self, x, backbone_feats):
@@ -308,7 +310,7 @@ class YOWOF(nn.Module):
         del backbone_feats[0]
 
         # temporal-motion encoder
-        encoder_feats = self.te_encoder(backbone_feats)
+        encoder_feats = backbone_feats # self.te_encoder(backbone_feats)
         cur_feat = encoder_feats[-1]
 
         # head
@@ -369,16 +371,10 @@ class YOWOF(nn.Module):
     def inference(self, x):
         # Init inference, model processes a video clip
         if not self.stream_infernce:
-            (   all_feats,
-                all_frames_scores, 
-                all_frames_labels, 
-                all_frames_bboxes
-                ) = self.inference_video_clip(x)
-            # set stream_inference to True
-            return (all_frames_scores, 
-                    all_frames_labels, 
-                    all_frames_bboxes
-                    )
+            bk_feats, scores, labels, bboxes = self.inference_video_clip(x)
+
+            return scores, labels, bboxes
+            
         else:
             self.scores_list = []
             self.bboxes_list = []
@@ -422,53 +418,53 @@ class YOWOF(nn.Module):
         if not self.trainable:
             return self.inference(video_clips)
         else:
-            all_feats = []
+            bk_feats = []
             # backbone
             for i in range(len(video_clips)):
                 feat = self.backbone(video_clips[i])
                 feat = self.neck(feat)
 
-                all_feats.append(feat)
+                bk_feats.append(feat)
 
             # temporal-motion encoder
-            all_feats = self.te_encoder(all_feats)
+            # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
+            bk_feats = torch.cat(bk_feats, dim=1)
+            feat = self.te_encoder(bk_feats)
 
             # detection head
             all_box_preds = []
             all_cls_preds = []
-            for feat in all_feats:
-                # head
-                cls_feats, reg_feats = self.head(feat)
+            cls_feats, reg_feats = self.head(feat)
 
-                obj_pred = self.obj_pred(reg_feats)
-                cls_pred = self.cls_pred(cls_feats)
-                reg_pred = self.reg_pred(reg_feats)
+            obj_pred = self.obj_pred(reg_feats)
+            cls_pred = self.cls_pred(cls_feats)
+            reg_pred = self.reg_pred(reg_feats)
 
-                # implicit objectness
-                B, _, H, W = obj_pred.size()
-                obj_pred = obj_pred.view(B, -1, 1, H, W)
-                cls_pred = cls_pred.view(B, -1, self.num_classes, H, W)
-                normalized_cls_pred = cls_pred + obj_pred - torch.log(
-                    1. + 
-                    torch.clamp(cls_pred, max=DEFAULT_EXP_CLAMP).exp() + 
-                    torch.clamp(obj_pred, max=DEFAULT_EXP_CLAMP).exp())
-                # [B, KA, C, H, W] -> [B, H, W, KA, C] -> [B, M, C], M = HxWxKA
-                normalized_cls_pred = normalized_cls_pred.permute(0, 3, 4, 1, 2).contiguous()
-                normalized_cls_pred = normalized_cls_pred.view(B, -1, self.num_classes)
+            # implicit objectness
+            B, _, H, W = obj_pred.size()
+            obj_pred = obj_pred.view(B, -1, 1, H, W)
+            cls_pred = cls_pred.view(B, -1, self.num_classes, H, W)
+            normalized_cls_pred = cls_pred + obj_pred - torch.log(
+                1. + 
+                torch.clamp(cls_pred, max=DEFAULT_EXP_CLAMP).exp() + 
+                torch.clamp(obj_pred, max=DEFAULT_EXP_CLAMP).exp())
+            # [B, KA, C, H, W] -> [B, H, W, KA, C] -> [B, M, C], M = HxWxKA
+            normalized_cls_pred = normalized_cls_pred.permute(0, 3, 4, 1, 2).contiguous()
+            normalized_cls_pred = normalized_cls_pred.view(B, -1, self.num_classes)
 
-                # [B, KA*4, H, W] -> [B, KA, 4, H, W] -> [B, H, W, KA, 4] -> [B, M, 4]
-                reg_pred =reg_pred.view(B, -1, 4, H, W).permute(0, 3, 4, 1, 2).contiguous()
-                reg_pred = reg_pred.view(B, -1, 4)
+            # [B, KA*4, H, W] -> [B, KA, 4, H, W] -> [B, H, W, KA, 4] -> [B, M, 4]
+            reg_pred =reg_pred.view(B, -1, 4, H, W).permute(0, 3, 4, 1, 2).contiguous()
+            reg_pred = reg_pred.view(B, -1, 4)
 
-                # decode box
-                box_pred = self.decode_boxes(self.anchor_boxes[None], reg_pred)
+            # decode box
+            box_pred = self.decode_boxes(self.anchor_boxes[None], reg_pred)
 
-                # Collect detection results for each frame.
-                all_cls_preds.append(normalized_cls_pred)
-                all_box_preds.append(box_pred)
+            # Collect detection results for each frame.
+            all_cls_preds.append(normalized_cls_pred)
+            all_box_preds.append(box_pred)
 
-            outputs = {"cls_preds": all_cls_preds,
-                       "box_preds": all_box_preds,
+            outputs = {"cls_preds": normalized_cls_pred,
+                       "box_preds": box_pred,
                        "anchors": self.anchor_boxes,
                        'strides': self.stride}
 
