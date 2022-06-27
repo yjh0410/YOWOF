@@ -239,9 +239,7 @@ class YOWOF(nn.Module):
 
             backbone_feats.append(feat)
 
-        # # temporal-motion encoder
-        # encoder_feats = self.te_encoder(backbone_feats)
-        # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
+        # temporal-motion encoder
         bk_feats = torch.cat(backbone_feats, dim=1)
         feat = self.te_encoder(bk_feats)
 
@@ -299,19 +297,19 @@ class YOWOF(nn.Module):
         return backbone_feats, scores, labels, bboxes
 
 
-    def inference_single_frame(self, x, backbone_feats):
+    def inference_single_frame(self, x):
         img_size = x.shape[-1]
         # backbone
-        cur_feat = self.backbone(x)
-        cur_feat = self.neck(cur_feat)
+        cur_bk_feat = self.backbone(x)
+        cur_bk_feat = self.neck(cur_bk_feat)
 
         # push the current feature
-        backbone_feats.append(cur_feat)
+        self.clip_feats.append(cur_bk_feat)
         # delete the oldest feature
-        del backbone_feats[0]
+        del self.clip_feats[0]
 
         # encoder
-        bk_feats = torch.cat(backbone_feats, dim=1)
+        bk_feats = torch.cat(self.clip_feats, dim=1)
         cur_feat = self.te_encoder(bk_feats)
 
         # head
@@ -365,7 +363,7 @@ class YOWOF(nn.Module):
         # post-process
         scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-        return backbone_feats, scores, labels, bboxes
+        return cur_bk_feat, scores, labels, bboxes
 
 
     @torch.no_grad()
@@ -397,12 +395,11 @@ class YOWOF(nn.Module):
             else:
                 # After init stage, detector process current frame
                 (
-                    clip_feats,
+                    cur_feats,
                     cur_scores,
                     cur_labels,
                     cur_bboxes
-                    ) = self.inference_single_frame(x, self.clip_feats)
-                self.clip_feats = clip_feats
+                    ) = self.inference_single_frame(x)
 
                 return cur_scores, cur_labels, cur_bboxes
 
