@@ -2,10 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import numpy as np
-import os
-import cv2
-
 from dataset.ucf24 import UCF24
 from dataset.jhmdb import JHMDB
 from dataset.transforms import TrainTransforms, ValTransforms
