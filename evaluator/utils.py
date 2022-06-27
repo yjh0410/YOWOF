@@ -219,11 +219,12 @@ def bbox_iou(bbox1, bbox2):
 
 def load_frame_detections(dataset, vlist, inference_dir):
     all_dets = []
+    len_clip = dataset.len_clip
 
     for iv, v in enumerate(vlist): # video_index, video_name
 
         # load results for each starting frame
-        for i in range(1, dataset.nframes[v]+ 1):
+        for i in range(len_clip, dataset.nframes[v]+ 1):
             pkl = os.path.join(inference_dir, v, "{:0>5}.pkl".format(i))
             if not os.path.isfile(pkl):
                 print("ERROR: Missing extracted tubelets " + pkl)
@@ -269,7 +270,7 @@ def build_tubes(dataset, save_dir):
 
         # load detected tubelets
         VDets = {}
-        for fid in range(1, nframes + 1):
+        for fid in range(dataset.len_clip, nframes + 1):
             resname = os.path.join(save_dir, v, "{:0>5}.pkl".format(fid))
             if not os.path.isfile(resname):
                 print("ERROR: Missing extracted tubelets " + resname)
@@ -290,7 +291,7 @@ def build_tubes(dataset, save_dir):
                 # calculate average scores of tubelets in tubes
                 return np.mean(np.array([tt[i][1][-1] for i in range(len(tt))]))
 
-            for fid in range(1, nframes + 1):
+            for fid in range(dataset.len_clip, nframes + 1):
                 # load boxes of the new frame
                 # [N, 4+1]
                 cur_preds = VDets[fid][ilabel]

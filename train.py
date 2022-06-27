@@ -95,7 +95,6 @@ def train():
 
     # dataset and evaluator
     dataset, evaluator, num_classes = build_dataset(d_cfg, m_cfg, args, is_train=True)
-    evaluator = None
 
     # dataloader
     batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()

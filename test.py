@@ -74,9 +74,6 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
         model.initialization = True
         frame_index = 0
         init_video_clip = []
-        scores_list = []
-        labels_list = []
-        bboxes_list = []
 
         # inference with video stream
         for fid in range(1, num_frames + 1):
@@ -105,18 +102,18 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
                     init_scores, init_labels, init_bboxes = model(xs)
 
                     # rescale
-                    init_bboxes = rescale_bboxes_list(init_bboxes, orig_size)
-
-                    # store init predictions
-                    scores_list.extend(init_scores)
-                    labels_list.extend(init_labels)
-                    bboxes_list.extend(init_bboxes)
+                    init_bboxes = rescale_bboxes(init_bboxes, orig_size)
 
                     # vis init detection
-                    vis_results = vis_video_clip(
-                        init_video_clip, scores_list, labels_list, bboxes_list, 
-                        args.vis_thresh, class_names, class_colors
-                    )
+                    vis_results = vis_video_frame(
+                        frame=init_video_clip[-1],
+                        scores=init_scores,
+                        labels=init_labels,
+                        bboxes=init_bboxes,
+                        vis_thresh=args.vis_thresh,
+                        class_names=class_names,
+                        class_colors=class_colors
+                        )
 
                     # save result
                     cv2.imwrite(os.path.join(save_path, video_name,
@@ -142,11 +139,6 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
                 # rescale
                 cur_bboxes = rescale_bboxes(cur_bboxes, orig_size)
 
-                # store current predictions
-                scores_list.append(cur_score)
-                labels_list.append(cur_label)
-                bboxes_list.append(cur_bboxes)
-
                 # vis current detection results
                 vis_results = vis_video_frame(
                     cur_frame, cur_score, cur_label, cur_bboxes, 
@@ -159,9 +151,6 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
                 # save result
                 cv2.imwrite(os.path.join(save_path, 
                     '{:0>5}.jpg'.format(index)), vis_results)
-
-
-        del scores_list, labels_list, bboxes_list
 
 
 @torch.no_grad()
@@ -186,23 +175,30 @@ def inference_with_video_clip(args, model, device, dataset, transform=None, clas
 
         t0 = time.time()
         # inference
-        scores_list, labels_list, bboxes_list = model(xs)
+        scores, labels, bboxes = model(xs)
         print("inference time ", time.time() - t0, "s")
         
         # rescale
-        bboxes_list = rescale_bboxes_list(bboxes_list, orig_size)
+        bboxes = rescale_bboxes(bboxes, orig_size)
 
-        # vis detection
-        vis_results = vis_video_clip(
-            video_clip, scores_list, labels_list, bboxes_list, 
-            args.vis_thresh, class_names, class_colors
-        )
+        # vis results of key-frame
+        vis_results = vis_video_frame(
+            frame=video_clip[-1],
+            scores=scores,
+            labels=labels,
+            bboxes=bboxes,
+            vis_thresh=args.vis_thresh,
+            class_names=class_names,
+            class_colors=class_colors
+            )
+
+        cv2.imshow('key-frame frame', vis_results)
+        cv2.waitKey(0)
 
         # save result
         cv2.imwrite(os.path.join(save_path,
             '{:0>5}.jpg'.format(index)), vis_results)
         
-
 
 if __name__ == '__main__':
     args = parse_args()

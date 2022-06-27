@@ -242,7 +242,8 @@ class YOWOF(nn.Module):
         # # temporal-motion encoder
         # encoder_feats = self.te_encoder(backbone_feats)
         # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
-        feat = self.te_encoder(backbone_feats)
+        bk_feats = torch.cat(backbone_feats, dim=1)
+        feat = self.te_encoder(bk_feats)
 
         # head
         cls_feats, reg_feats = self.head(feat)
@@ -309,9 +310,9 @@ class YOWOF(nn.Module):
         # delete the oldest feature
         del backbone_feats[0]
 
-        # temporal-motion encoder
-        encoder_feats = backbone_feats # self.te_encoder(backbone_feats)
-        cur_feat = encoder_feats[-1]
+        # encoder
+        bk_feats = torch.cat(backbone_feats, dim=1)
+        cur_feat = self.te_encoder(bk_feats)
 
         # head
         cls_feats, reg_feats = self.head(cur_feat)

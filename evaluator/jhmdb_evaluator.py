@@ -93,22 +93,21 @@ class JHMDBEvaluator(object):
                         init_scores, init_labels, init_bboxes = model(xs)
 
                         # rescale
-                        init_bboxes = rescale_bboxes_list(init_bboxes, orig_size)
+                        init_bboxes = rescale_bboxes(init_bboxes, orig_size)
 
                         model.initialization = False
                         del init_video_clip
 
-                        # save per frame detection results
-                        for i, (scores, labels, bboxes) in enumerate(zip(init_scores, init_labels, init_bboxes)):
-                            outputs = {}
-                            for c in range(self.num_classes):
-                                keep = (labels == c)
-                                c_scores = scores[keep]
-                                c_bboxes = bboxes[keep]
-                                output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
-                                outputs[c] = output
+                        # save key-frame detection results
+                        outputs = {}
+                        for c in range(self.num_classes):
+                            keep = (init_labels == c)
+                            c_scores = init_scores[keep]
+                            c_bboxes = init_bboxes[keep]
+                            output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
+                            outputs[c] = output
                             
-                            detections[i+1] = outputs
+                        detections[fid] = outputs
 
                 else:
                     # preprocess
@@ -195,6 +194,11 @@ class JHMDBEvaluator(object):
                     # tube: [T, 5] -> [[fid, x1, y1, x2, y2], ...]
                     for i in range(tube.shape[0]):
                         k = (iv, int(tube[i, 0])) # [video_index, frame_index]
+                        
+                        # ignore init frames
+                        if k[1] < self.len_clip:
+                            continue
+
                         if k not in gt:
                             gt[k] = []
                         gt[k].append(tube[i, 1:5].tolist())
