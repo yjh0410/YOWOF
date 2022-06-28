@@ -126,10 +126,6 @@ model_config = {
         'gamma': 2.0,
         'loss_cls_weight': 1.0,
         'loss_reg_weight': 1.0,
-        # optimizer
-        'optimizer': 'sgd',
-        'weight_decay': 1e-4,
-        'momentum': 0.9,
 
     },
 

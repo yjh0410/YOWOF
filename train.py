@@ -127,9 +127,9 @@ def train():
     optimizer = build_optimizer(model=model_without_ddp,
                                 base_lr=base_lr,
                                 bk_lr_ratio=d_cfg['bk_lr_ratio'],
-                                name=m_cfg['optimizer'],
-                                momentum=m_cfg['momentum'],
-                                weight_decay=m_cfg['weight_decay'])
+                                name=d_cfg['optimizer'],
+                                momentum=d_cfg['momentum'],
+                                weight_decay=d_cfg['weight_decay'])
 
     # lr scheduler
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(

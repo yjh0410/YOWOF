@@ -30,10 +30,13 @@ dataset_config = {
         'train_split': 1,
         'test_split': 1,
         # train config
+        'optimizer': 'adamw',
+        'weight_decay': 1e-4,
+        'momentum': 0.9,
         'max_epoch': 8,
-        'lr_epoch': [4, 8],
+        'lr_epoch': [2, 4, 6, 8],
         'batch_size': 32,
-        'base_lr': 0.12/64.,
+        'base_lr': 0.0001/32.,
         'bk_lr_ratio': 1.0/3.0,
         # warmup strategy
         'warmup': 'linear',
