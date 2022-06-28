@@ -9,7 +9,7 @@ from models.basic.conv import Conv
 from ...backbone import build_backbone
 from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
-from .module.encoder import TempMotionEncoder
+from .encoder import MotionEncoder
 from .loss import Criterion
 
 
@@ -56,17 +56,16 @@ class YOWOF(nn.Module):
             out_dim=cfg['head_dim']
             )
                                      
-        # # TM-Encoder
-        # self.te_encoder = TempMotionEncoder(
-        #     in_dim=cfg['head_dim'],
-        #     len_clip=cfg['len_clip'],
-        #     depth=cfg['te_depth']
-        # )
+        # TM-Encoder
+        self.te_encoder = MotionEncoder(
+            in_dim=cfg['head_dim'],
+            len_clip=cfg['len_clip']
+        )
 
-        self.te_encoder = nn.Sequential(
-            Conv(cfg['head_dim']*self.len_clip, cfg['head_dim'], k=1, act_type=None),
-            Conv(cfg['head_dim'], cfg['head_dim'], k=3, p=1, act_type=None)
-            )
+        # self.te_encoder = nn.Sequential(
+        #     Conv(cfg['head_dim']*self.len_clip, cfg['head_dim'], k=1, act_type=None),
+        #     Conv(cfg['head_dim'], cfg['head_dim'], k=3, p=1, act_type=None)
+        #     )
 
         # head
         self.head = DecoupledHead(
@@ -239,9 +238,12 @@ class YOWOF(nn.Module):
 
             backbone_feats.append(feat)
 
-        # temporal-motion encoder
-        bk_feats = torch.cat(backbone_feats, dim=1)
-        feat = self.te_encoder(bk_feats)
+        # # temporal-motion encoder
+        # bk_feats = torch.cat(backbone_feats, dim=1)
+        # feat = self.te_encoder(bk_feats)
+        # motion encoder
+        # List[K, B, C, H, W] -> [B, C, H, W]
+        feat = self.te_encoder(backbone_feats)
 
         # head
         cls_feats, reg_feats = self.head(feat)
@@ -308,9 +310,12 @@ class YOWOF(nn.Module):
         # delete the oldest feature
         del self.clip_feats[0]
 
-        # encoder
-        bk_feats = torch.cat(self.clip_feats, dim=1)
-        cur_feat = self.te_encoder(bk_feats)
+        # # encoder
+        # bk_feats = torch.cat(self.clip_feats, dim=1)
+        # cur_feat = self.te_encoder(bk_feats)
+        # motion encoder
+        # List[K, B, C, H, W] -> [B, C, H, W]
+        cur_feat = self.te_encoder(self.clip_feats)
 
         # head
         cls_feats, reg_feats = self.head(cur_feat)
@@ -424,9 +429,13 @@ class YOWOF(nn.Module):
 
                 bk_feats.append(feat)
 
-            # temporal-motion encoder
-            # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
-            bk_feats = torch.cat(bk_feats, dim=1)
+            # # temporal-motion encoder
+            # # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
+            # bk_feats = torch.cat(bk_feats, dim=1)
+            # feat = self.te_encoder(bk_feats)
+
+            # motion encoder
+            # List[K, B, C, H, W] -> [B, C, H, W]
             feat = self.te_encoder(bk_feats)
 
             # detection head
