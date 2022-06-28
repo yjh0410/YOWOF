@@ -26,7 +26,7 @@ def build_model(args,
     elif 'yowof' in args.version:
         model = YOWOF(cfg=cfg,
                       device=device,
-                      img_size=cfg['test_size'],
+                      img_size=cfg['train_size'] if trainable else cfg['test_size'],
                       num_classes=num_classes, 
                       trainable=trainable,
                       conf_thresh=cfg['conf_thresh'],
