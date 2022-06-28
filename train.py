@@ -1,9 +1,10 @@
 from __future__ import division
 
 import os
-import math
+import random
 import time
 import argparse
+import numpy as np
 from copy import deepcopy
 
 import torch
@@ -19,6 +20,9 @@ from utils.solver.warmup_schedule import build_warmup
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
+
+
+GLOBAL_SEED = 42
 
 
 def parse_args():
@@ -66,6 +70,18 @@ def parse_args():
     return parser.parse_args()
 
 
+def set_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+
+
+def worker_init_fn(dump):
+    set_seed(GLOBAL_SEED)
+
+
 def train():
     args = parse_args()
     print("Setting Arguments.. : ", args)
@@ -99,7 +115,7 @@ def train():
 
     # dataloader
     batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()
-    dataloader = build_dataloader(args, dataset, batch_size, CollateFunc())
+    dataloader = build_dataloader(args, dataset, batch_size, CollateFunc(), worker_init_fn)
 
     # build model
     net = build_model(args=args, 
