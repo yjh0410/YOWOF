@@ -148,9 +148,9 @@ def inference_with_video_stream(args, model, device, transform=None, class_names
                 cv2.imshow('current frame', vis_results)
                 cv2.waitKey(0)
 
-                # save result
-                cv2.imwrite(os.path.join(save_path, 
-                    '{:0>5}.jpg'.format(index)), vis_results)
+                # # save result
+                # cv2.imwrite(os.path.join(save_path, 
+                #     '{:0>5}.jpg'.format(index)), vis_results)
 
 
 @torch.no_grad()

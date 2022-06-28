@@ -80,7 +80,7 @@ model_config = {
                          'exposure': 1.5},
                          {'name': 'RandomHorizontalFlip'},
                          {'name': 'RandomShift', 'max_shift': 32},
-                         {'name': 'JitterCrop', 'jitter_ratio': 0.3},
+                        #  {'name': 'JitterCrop', 'jitter_ratio': 0.3},
                          {'name': 'ToTensor'},
                          {'name': 'Resize'},
                          {'name': 'Normalize'},
