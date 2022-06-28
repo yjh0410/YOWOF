@@ -70,7 +70,7 @@ model_config = {
         # input
         'train_size': 320,
         'test_size': 320,
-        'len_clip': 8,
+        'len_clip': 16,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -196,8 +196,9 @@ model_config = {
 
     'yowof-r50-D': {
         # input
-        'img_size': 320,
-        'len_clip': 7,
+        'train_size': 320,
+        'test_size': 320,
+        'len_clip': 8,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -224,10 +225,12 @@ model_config = {
         'neck_act': 'relu',
         'neck_norm': 'BN',
         'neck_depthwise': False,
+        # temp-motion encoder
+        'te_depth': 1,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
-        'act_type': 'relu',
+        'head_act': 'relu',
         'num_cls_heads': 2,
         'num_reg_heads': 2,
         'head_depthwise': False,
@@ -235,13 +238,22 @@ model_config = {
         'conf_thresh': 0.05,
         'nms_thresh': 0.6,
         # anchor box
-        'anchor_size': [8, 16, 32, 64, 128, 256],
+        'anchor_size': [[8, 8], 
+                        [16, 16],
+                        [32, 32], 
+                        [64, 64], 
+                        [128, 128]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
         'iou_t': 0.15,
         'igt': 0.7,
         'ctr_clamp': 32,
+        # loss
+        'alpha': 0.25,
+        'gamma': 2.0,
+        'loss_cls_weight': 1.0,
+        'loss_reg_weight': 1.0,
 
     },
 

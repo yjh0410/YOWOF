@@ -82,11 +82,12 @@ def build_dataloader(args, dataset, batch_size, collate_fn=None, worker_init_fn=
                                                         batch_size, 
                                                         drop_last=True)
 
-    dataloader = torch.utils.data.DataLoader(dataset, 
-                                             batch_sampler=batch_sampler_train,
-                                             collate_fn=collate_fn, 
-                                             num_workers=args.num_workers,
-                                             worker_init_fn=worker_init_fn)
+    dataloader = torch.utils.data.DataLoader(
+        dataset=dataset, 
+        batch_sampler=batch_sampler_train,
+        collate_fn=collate_fn, 
+        num_workers=args.num_workers
+        )
     
     return dataloader
     
