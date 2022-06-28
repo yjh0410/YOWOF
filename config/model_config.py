@@ -117,7 +117,7 @@ model_config = {
                         [128, 128]],
         # matcher
         'matcher': 'uniform_matcher',
-        'topk': 4,
+        'topk': 1,
         'iou_t': 0.15,
         'igt': 0.7,
         'ctr_clamp': 32,

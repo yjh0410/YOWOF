@@ -20,7 +20,8 @@ DEFAULT_EXP_CLAMP = math.log(1e8)
 class YOWOF(nn.Module):
     def __init__(self, 
                  cfg,
-                 device, 
+                 device,
+                 img_size,
                  num_classes = 20, 
                  conf_thresh = 0.05,
                  nms_thresh = 0.6,
@@ -29,7 +30,7 @@ class YOWOF(nn.Module):
         super(YOWOF, self).__init__()
         self.cfg = cfg
         self.device = device
-        self.fmp_size = None
+        self.img_size = img_size
         self.stride = cfg['stride']
         self.len_clip = cfg['len_clip']
         self.num_classes = num_classes
@@ -41,6 +42,10 @@ class YOWOF(nn.Module):
         self.anchor_size = torch.as_tensor(cfg['anchor_size'])
         self.stream_infernce = False
         self.initialization = False
+
+        self.anchor_boxes = self.generate_anchors(
+            [img_size//self.stride, img_size//self.stride]) # [M, 4]
+
 
         # backbone
         self.backbone, bk_dim = build_backbone(
@@ -61,11 +66,6 @@ class YOWOF(nn.Module):
             in_dim=cfg['head_dim'],
             len_clip=cfg['len_clip']
         )
-
-        # self.te_encoder = nn.Sequential(
-        #     Conv(cfg['head_dim']*self.len_clip, cfg['head_dim'], k=1, act_type=None),
-        #     Conv(cfg['head_dim'], cfg['head_dim'], k=3, p=1, act_type=None)
-        #     )
 
         # head
         self.head = DecoupledHead(
@@ -412,12 +412,7 @@ class YOWOF(nn.Module):
     def forward(self, video_clips, targets=None, vis_data=False):
         """
             video_clips: List[Tensor] -> [Tensor[B, C, H, W], ..., Tensor[B, C, H, W]].
-        """
-        # generate anchor box
-        img_size = video_clips[0].shape[-1]
-        self.anchor_boxes = self.generate_anchors(
-            [img_size//self.stride, img_size//self.stride]) # [M, 4]
-                        
+        """                        
         if not self.trainable:
             return self.inference(video_clips)
         else:
@@ -428,11 +423,6 @@ class YOWOF(nn.Module):
                 feat = self.neck(feat)
 
                 bk_feats.append(feat)
-
-            # # temporal-motion encoder
-            # # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
-            # bk_feats = torch.cat(bk_feats, dim=1)
-            # feat = self.te_encoder(bk_feats)
 
             # motion encoder
             # List[K, B, C, H, W] -> [B, C, H, W]
