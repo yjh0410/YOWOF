@@ -43,30 +43,28 @@ class YOWOF(nn.Module):
         self.stream_infernce = False
         self.initialization = False
 
-        self.anchor_boxes = self.generate_anchors(
-            [img_size//self.stride, img_size//self.stride]) # [M, 4]
+        # ------------------ Anchor Box --------------------
+        # [M, 4]
+        self.anchor_boxes = self.generate_anchors(img_size)
 
-
+        # ------------------ Network ---------------------
         # backbone
         self.backbone, bk_dim = build_backbone(
             model_name=cfg['backbone'], 
             pretrained=trainable,
             norm_type=cfg['norm_type']
             )
-
         # neck
         self.neck = build_neck(
             cfg=cfg, 
             in_dim=bk_dim, 
             out_dim=cfg['head_dim']
-            )
-                                     
+            )                         
         # TM-Encoder
         self.te_encoder = MotionEncoder(
             in_dim=cfg['head_dim'],
             len_clip=cfg['len_clip']
         )
-
         # head
         self.head = DecoupledHead(
             head_dim=cfg['head_dim'],
@@ -75,7 +73,6 @@ class YOWOF(nn.Module):
             act_type=cfg['head_act'],
             norm_type=cfg['head_norm']
             )
-
         # pred
         self.obj_pred = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
         self.cls_pred = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
@@ -86,7 +83,7 @@ class YOWOF(nn.Module):
             # init bias
             self._init_pred_layers()
 
-        # criterion
+        # ------------------ Criterion ---------------------
         if self.trainable:
             self.criterion = Criterion(
                 cfg=cfg,
@@ -110,34 +107,31 @@ class YOWOF(nn.Module):
         nn.init.constant_(self.reg_pred.bias, 0.0)
 
 
-    def generate_anchors(self, fmp_size):
+    def generate_anchors(self, img_size):
         """fmp_size: list -> [H, W] \n
            stride: int -> output stride
         """
-        # check anchor boxes
-        if self.fmp_size is not None and self.fmp_size == fmp_size:
-            return self.anchor_boxes
-        else:
-            # generate grid cells
-            fmp_h, fmp_w = fmp_size
-            anchor_y, anchor_x = torch.meshgrid([torch.arange(fmp_h), torch.arange(fmp_w)])
-            # [H, W, 2] -> [HW, 2]
-            anchor_xy = torch.stack([anchor_x, anchor_y], dim=-1).float().view(-1, 2) + 0.5
-            # [HW, 2] -> [HW, 1, 2] -> [HW, KA, 2] 
-            anchor_xy = anchor_xy[:, None, :].repeat(1, self.num_anchors, 1)
-            anchor_xy *= self.stride
+        # generate grid cells
+        img_h = img_w = img_size
+        fmp_h, fmp_w = img_h // self.stride, img_w // self.stride
+        anchor_y, anchor_x = torch.meshgrid([torch.arange(fmp_h), torch.arange(fmp_w)])
+        # [H, W, 2] -> [HW, 2]
+        anchor_xy = torch.stack([anchor_x, anchor_y], dim=-1).float().view(-1, 2) + 0.5
+        # [HW, 2] -> [HW, 1, 2] -> [HW, KA, 2] 
+        anchor_xy = anchor_xy[:, None, :].repeat(1, self.num_anchors, 1)
+        anchor_xy *= self.stride
 
-            # [KA, 2] -> [1, KA, 2] -> [HW, KA, 2]
-            anchor_wh = self.anchor_size[None, :, :].repeat(fmp_h*fmp_w, 1, 1)
+        # [KA, 2] -> [1, KA, 2] -> [HW, KA, 2]
+        anchor_wh = self.anchor_size[None, :, :].repeat(fmp_h*fmp_w, 1, 1)
 
-            # [HW, KA, 4] -> [M, 4]
-            anchor_boxes = torch.cat([anchor_xy, anchor_wh], dim=-1)
-            anchor_boxes = anchor_boxes.view(-1, 4).to(self.device)
+        # [HW, KA, 4] -> [M, 4]
+        anchor_boxes = torch.cat([anchor_xy, anchor_wh], dim=-1)
+        anchor_boxes = anchor_boxes.view(-1, 4).to(self.device)
 
-            self.anchor_boxes = anchor_boxes
-            self.fmp_size = fmp_size
+        self.anchor_boxes = anchor_boxes
+        self.fmp_size = fmp_size
 
-            return anchor_boxes
+        return anchor_boxes
         
 
     def decode_boxes(self, anchor_boxes, pred_reg):
