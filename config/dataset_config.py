@@ -35,7 +35,7 @@ dataset_config = {
         'momentum': 0.9,
         'max_epoch': 8,
         'lr_epoch': [3, 5, 7],
-        'batch_size': 32,
+        'batch_size': 16,
         'base_lr': 0.01/32.,
         'bk_lr_ratio': 1.0/1.0,
         # warmup strategy
