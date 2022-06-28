@@ -128,9 +128,6 @@ class YOWOF(nn.Module):
         anchor_boxes = torch.cat([anchor_xy, anchor_wh], dim=-1)
         anchor_boxes = anchor_boxes.view(-1, 4).to(self.device)
 
-        self.anchor_boxes = anchor_boxes
-        self.fmp_size = fmp_size
-
         return anchor_boxes
         
 
