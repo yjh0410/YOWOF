@@ -45,6 +45,8 @@ def parse_args():
                         help='use tensorboard')
     parser.add_argument('--save_dir', default='inference_results/',
                         type=str, help='save inference results.')
+    parser.add_argument('--fp16', dest="fp16", action="store_true", default=False,
+                        help="Adopting mix precision training.")
 
     # model
     parser.add_argument('-v', '--version', default='baseline', type=str,
