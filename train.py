@@ -207,10 +207,10 @@ def train():
 
             # # Backward
             # (losses / d_cfg['accumulate']).backward()
-            if args.grad_clip_norm > 0.:
-                total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
-            else:
-                total_norm = get_total_grad_norm(model.parameters())
+            # if args.grad_clip_norm > 0.:
+            #     total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
+            # else:
+            #     total_norm = get_total_grad_norm(model.parameters())
 
             # Backward and Optimize
             scaler.scale(losses / d_cfg['accumulate']).backward()
@@ -239,7 +239,7 @@ def train():
 
                 # other infor
                 log += '[time: {:.2f}]'.format(t1 - t0)
-                log += '[gnorm: {:.2f}]'.format(total_norm)
+                # log += '[gnorm: {:.2f}]'.format(total_norm)
                 log += '[size: {}]'.format(m_cfg['train_size'])
 
                 # print log infor
