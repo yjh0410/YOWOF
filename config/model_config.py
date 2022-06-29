@@ -66,7 +66,7 @@ model_config = {
 
     },
 
-    'yowof-r50': {
+    'yowof-r18': {
         # input
         'train_size': 320,
         'test_size': 320,
@@ -87,9 +87,10 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50',
+        'freeze': False,
         'norm_type': 'BN',
         'stride': 32,
-        'pretrained': None,
+        'pretrained': True,
         # neck
         'neck': 'spp_block',
         'pooling_size': [5, 9, 13],
