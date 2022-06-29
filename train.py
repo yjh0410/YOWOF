@@ -205,25 +205,28 @@ def train():
                 print('loss is NAN !!')
                 continue
 
-            # # Backward
-            # (losses / d_cfg['accumulate']).backward()
-            # if args.grad_clip_norm > 0.:
-            #     total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
-            # else:
-            #     total_norm = get_total_grad_norm(model.parameters())
+            if args.fp16:
+                # Backward and Optimize
+                scaler.scale(losses / d_cfg['accumulate']).backward()
+                if args.grad_clip_norm > 0.:
+                    total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
+                else:
+                    total_norm = get_total_grad_norm(model.parameters())
 
-            # Backward and Optimize
-            scaler.scale(losses / d_cfg['accumulate']).backward()
-            # Optimize
-            if ni % d_cfg['accumulate'] == 0:
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad()
+                # Optimize
+                if ni % d_cfg['accumulate'] == 0:
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad()
 
-            # # Optimize
-            # if ni % d_cfg['accumulate'] == 0:
-            #     optimizer.step()
-            #     optimizer.zero_grad()
+            else:
+                # Backward
+                (losses / d_cfg['accumulate']).backward()
+
+                # Optimize
+                if ni % d_cfg['accumulate'] == 0:
+                    optimizer.step()
+                    optimizer.zero_grad()
 
             # Display
             if distributed_utils.is_main_process() and iter_i % 10 == 0:
@@ -239,7 +242,7 @@ def train():
 
                 # other infor
                 log += '[time: {:.2f}]'.format(t1 - t0)
-                # log += '[gnorm: {:.2f}]'.format(total_norm)
+                log += '[gnorm: {:.2f}]'.format(total_norm)
                 log += '[size: {}]'.format(m_cfg['train_size'])
 
                 # print log infor
