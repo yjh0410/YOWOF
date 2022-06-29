@@ -1,5 +1,4 @@
 import torch
-from .baseline.baseline import Baseline
 from .yowof.yowof import YOWOF
 
 
@@ -14,16 +13,7 @@ def build_model(args,
     print('==============================')
     print('Build {} ...'.format(args.version.upper()))
 
-    if args.version == 'baseline':
-        model = Baseline(cfg=cfg,
-                         device=device, 
-                         num_classes=num_classes, 
-                         trainable=trainable,
-                         conf_thresh=cfg['conf_thresh'],
-                         nms_thresh=cfg['nms_thresh'],
-                         topk=args.topk)
-
-    elif 'yowof' in args.version:
+    if 'yowof' in args.version:
         model = YOWOF(cfg=cfg,
                       device=device,
                       img_size=cfg['train_size'] if trainable else cfg['test_size'],
