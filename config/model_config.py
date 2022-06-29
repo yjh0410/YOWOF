@@ -23,9 +23,10 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
+        'freeze': True,
         'norm_type': 'BN',
         'stride': 32,
-        'pretrained': None,
+        'pretrained': True,
         # neck
         'neck': 'spp_block',
         'pooling_size': [5, 9, 13],
