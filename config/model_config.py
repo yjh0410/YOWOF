@@ -66,7 +66,7 @@ model_config = {
 
     },
 
-    'yowof-r18': {
+    'yowof-r50': {
         # input
         'train_size': 320,
         'test_size': 320,
