@@ -35,8 +35,9 @@ dataset_config = {
         'momentum': 0.9,
         'max_epoch': 8,
         'lr_epoch': [3, 5, 7],
-        'batch_size': 16,
-        'base_lr': 0.01/16.,
+        'batch_size': 32,
+        'accumulate': 1,
+        'base_lr': 0.01,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,

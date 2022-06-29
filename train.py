@@ -139,7 +139,7 @@ def train():
         model_without_ddp = model.module
 
     # optimizer
-    base_lr = d_cfg['base_lr'] * batch_size
+    base_lr = d_cfg['base_lr']
     optimizer = build_optimizer(
         model=model_without_ddp,
         base_lr=base_lr,
@@ -199,16 +199,19 @@ def train():
                 print('loss is NAN !!')
                 continue
 
-            # Backward and Optimize
-            losses.backward()
+            # Backward
+            (losses / d_cfg['accumulate']).backward()
             if args.grad_clip_norm > 0.:
                 total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
             else:
                 total_norm = get_total_grad_norm(model.parameters())
-            optimizer.step()
-            optimizer.zero_grad()
 
-            # display
+            # Optimize
+            if ni % d_cfg['accumulate'] == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
+            # Display
             if distributed_utils.is_main_process() and iter_i % 10 == 0:
                 t1 = time.time()
                 cur_lr = [param_group['lr']  for param_group in optimizer.param_groups]
