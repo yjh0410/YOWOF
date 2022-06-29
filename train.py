@@ -11,6 +11,7 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.cuda.amp as amp
 
 from utils import distributed_utils
 from utils.com_flops_params import FLOPs_and_Params
@@ -104,6 +105,9 @@ def train():
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
+
+    # amp
+    scaler = amp.GradScaler(enabled=args.fp16)
 
     # config
     d_cfg = build_dataset_config(args)
@@ -199,17 +203,25 @@ def train():
                 print('loss is NAN !!')
                 continue
 
-            # Backward
-            (losses / d_cfg['accumulate']).backward()
+            # # Backward
+            # (losses / d_cfg['accumulate']).backward()
             if args.grad_clip_norm > 0.:
                 total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip_norm)
             else:
                 total_norm = get_total_grad_norm(model.parameters())
 
+            # Backward and Optimize
+            scaler.scale(losses / d_cfg['accumulate']).backward()
             # Optimize
             if ni % d_cfg['accumulate'] == 0:
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
                 optimizer.zero_grad()
+
+            # # Optimize
+            # if ni % d_cfg['accumulate'] == 0:
+            #     optimizer.step()
+            #     optimizer.zero_grad()
 
             # Display
             if distributed_utils.is_main_process() and iter_i % 10 == 0:
