@@ -140,22 +140,25 @@ def train():
 
     # optimizer
     base_lr = d_cfg['base_lr'] * batch_size
-    optimizer = build_optimizer(model=model_without_ddp,
-                                base_lr=base_lr,
-                                bk_lr_ratio=d_cfg['bk_lr_ratio'],
-                                name=d_cfg['optimizer'],
-                                momentum=d_cfg['momentum'],
-                                weight_decay=d_cfg['weight_decay'])
+    optimizer = build_optimizer(
+        model=model_without_ddp,
+        base_lr=base_lr,
+        name=d_cfg['optimizer'],
+        momentum=d_cfg['momentum'],
+        weight_decay=d_cfg['weight_decay']
+        )
 
     # lr scheduler
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer=optimizer, milestones=d_cfg['lr_epoch'])
 
     # warmup scheduler
-    warmup_scheduler = build_warmup(name=d_cfg['warmup'],
-                                    base_lr=base_lr,
-                                    wp_iter=d_cfg['wp_iter'],
-                                    warmup_factor=d_cfg['warmup_factor'])
+    warmup_scheduler = build_warmup(
+        name=d_cfg['warmup'],
+        base_lr=base_lr,
+        wp_iter=d_cfg['wp_iter'],
+        warmup_factor=d_cfg['warmup_factor']
+        )
 
     # training configuration
     max_epoch = d_cfg['max_epoch']
