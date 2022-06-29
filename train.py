@@ -194,7 +194,9 @@ def train():
             video_clips = [video_clip.to(device) for video_clip in video_clips]
 
             # inference
-            loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
+            with torch.cuda.amp.autocast(enabled=args.fp16):
+                loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
+                
             losses = loss_dict['losses']
 
             # reduce            
