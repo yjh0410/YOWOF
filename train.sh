@@ -14,7 +14,7 @@ python train.py \
         --num_workers 4 \
         --eval_epoch 2 \
         --fp16 \
-        # -p ./weights/pretrained/yolof-rt-R50/yolof-rt-R50_33.9.pth
+        -p ./weights/pretrained/yolof-rt-R50/yolof-rt-R50_33.9.pth
 
 # python train.py \
 #         --cuda \
