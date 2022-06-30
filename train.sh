@@ -1,10 +1,11 @@
-# python train.py \
-#         --cuda \
-#         -d jhmdb \
-#         -v yowof-r18 \
-#         --num_workers 4 \
-#         --eval_epoch 2 \
-#         -p ./weights/pretrained/yolof-rt-R18/yolof-rt-R18_29.2.pth
+python train.py \
+        --cuda \
+        -d jhmdb \
+        -v yowof-r18 \
+        --num_workers 4 \
+        --eval_epoch 2 \
+        --fp16 \
+        -p ./weights/pretrained/yolof-rt-R18/yolof-rt-R18_29.2.pth
 
 # python train.py \
 #         --cuda \
@@ -15,11 +16,11 @@
 #         --fp16 \
 #         -p ./weights/pretrained/yolof-rt-R50/yolof-rt-R50_33.9.pth
 
-python train.py \
-        --cuda \
-        -d jhmdb \
-        -v yowof-r50-D \
-        --num_workers 4 \
-        --eval_epoch 2 \
-        --fp16 \
-        -p ./weights/pretrained/yolof-rt-R50-DC5/yolof-rt-R50-DC5_35.4.pth
+# python train.py \
+#         --cuda \
+#         -d jhmdb \
+#         -v yowof-r50-D \
+#         --num_workers 4 \
+#         --eval_epoch 2 \
+#         --fp16 \
+#         -p ./weights/pretrained/yolof-rt-R50-DC5/yolof-rt-R50-DC5_35.4.pth
