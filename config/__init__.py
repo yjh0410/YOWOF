@@ -4,7 +4,7 @@ from .model_config import model_config
 
 def build_model_config(args):
     print('==============================')
-    print('Build Model: {} '.format(args.version.upper()))
+    print('Model Config: {} '.format(args.version.upper()))
     
     m_cfg = model_config[args.version]
 
@@ -13,7 +13,7 @@ def build_model_config(args):
 
 def build_dataset_config(args):
     print('==============================')
-    print('Build Dataset: {} '.format(args.version.upper()))
+    print('Dataset Config: {} '.format(args.dataset.upper()))
     
     d_cfg = dataset_config[args.dataset]
 
