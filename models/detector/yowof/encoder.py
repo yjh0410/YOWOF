@@ -5,7 +5,7 @@ from ...basic.conv import Conv
 
 # Motion Encoder
 class MotionEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.25, len_clip=1):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -29,8 +29,8 @@ class MotionEncoder(nn.Module):
 
         # output conv
         self.out_conv = nn.Sequential(
-            Conv(inter_dim * (len_clip - 1),
-                 in_dim * len_clip,
+            Conv(inter_dim,
+                 in_dim,
                  k=1,
                  act_type='relu',
                  norm_type='BN')
@@ -46,7 +46,7 @@ class MotionEncoder(nn.Module):
         for feat, layer in zip(feats, self.input_proj):
             input_feats.append(layer(feat))
 
-        motion_feats = []
+        motion_feats = [torch.zeros_like(input_feats[0])]
         for idx in range(len(feats) - 1):
             feat_t1 = input_feats[idx]
             feat_t2 = input_feats[idx + 1]
@@ -54,15 +54,16 @@ class MotionEncoder(nn.Module):
             motion_feat = smooth(feat_t2) - feat_t1
             motion_feats.append(motion_feat)
 
-        # List[K-1, B, C', H, W] -> [B, (K-1)C', H, W]
-        mfeats = torch.cat(motion_feats, dim=1)
-
-        # [B, (K-1)C', H, W] -> [B, KC, H, W]
+        # List[K, B, C', H, W] -> [B, K, C', H, W]
+        mfeats = torch.stack(motion_feats, dim=1)
+        B, K, C, H, W = mfeats.size()
+        # [B, K, C', H, W] -> [BK, C', H, W]
+        mfeats = mfeats.view(-1, C, H, W)
+        # [BK, C', H, W] -> [BK, C, H, W]
         out_feats = self.out_conv(mfeats)
 
-        B, _, H, W = out_feats.size()
-        # [B, KC, H, W] -> [B, K, C, H, W]
-        out_feats = out_feats.view(B, self.len_clip, -1, H, W)
+        # [BK, C, H, W] -> [B, K, C, H, W]
+        out_feats = out_feats.view(B, K, -1, H, W)
         # [B, K, C, H, W] -> [B, C, K, H, W]
         out_feats = out_feats.permute(0, 2, 1, 3, 4).contiguous()
 
@@ -71,7 +72,7 @@ class MotionEncoder(nn.Module):
 
 # Spatio-Temporal Encoder
 class SpatioEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.25, len_clip=1):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -82,15 +83,13 @@ class SpatioEncoder(nn.Module):
         self.len_clip = len_clip
 
         # input projection
-        in_dims = in_dim * len_clip
-        inter_dim = int(in_dim * len_clip * expand_ratio)
+        inter_dim = int(in_dim / expand_ratio)
 
-        # Spatio Attention: [B, KC, H, W] shape required
+        # Spatio Attention: [BK, C, H, W] shape required
         self.spatio_attn = nn.Sequential(
-            Conv(in_dims, inter_dim, k=1, act_type='relu', norm_type='BN'),
+            Conv(in_dim, inter_dim, k=1, act_type='relu', norm_type='BN'),
             Conv(inter_dim, inter_dim, k=3, p=1, act_type='relu', norm_type='BN'),
-            Conv(inter_dim, in_dims, k=1, act_type=None, norm_type='BN'),
-            nn.Sigmoid()
+            Conv(inter_dim, in_dim, k=1, act_type='relu', norm_type='BN')
         )
 
     
@@ -98,15 +97,17 @@ class SpatioEncoder(nn.Module):
         """
             feats: List(Tensor) [K, B, C, H, W]
         """
-        # List[K, B, C, H, W] -> [B, KC, H, W]
-        spatio_feats = torch.cat(feats, dim=1)
-        B, _, H, W = spatio_feats.size()
+        # List[K, B, C, H, W] -> [B, K, C, H, W]
+        spatio_feats = torch.stack(feats, dim=1)
+        B, K, C, H, W = spatio_feats.size()
+        # [B, K, C, H, W] -> [BK, C, H, W]
+        spatio_feats = spatio_feats.view(-1, C, H, W)
 
         # Spatio attention
         spatio_feats = self.spatio_attn(spatio_feats) * spatio_feats + spatio_feats
 
-        # [B, KC, H, W] -> [B, K, C, H, W]
-        out_feats = spatio_feats.view(B, self.len_clip, -1, H, W)
+        # [BK, C, H, W] -> [B, K, C, H, W]
+        out_feats = spatio_feats.view(B, K, C, H, W)
         # [B, K, C, H, W] -> [B, C, K, H, W]
         out_feats = out_feats.permute(0, 2, 1, 3, 4).contiguous()
 
@@ -115,7 +116,7 @@ class SpatioEncoder(nn.Module):
 
 # Temporal Encoder
 class TemporalEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.25, len_clip=1):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -152,7 +153,7 @@ class TemporalEncoder(nn.Module):
 
 # STM Encoder
 class STMEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.25, len_clip=1, depth=1):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, depth=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
