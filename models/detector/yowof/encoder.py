@@ -207,6 +207,7 @@ class STMEncoder(nn.Module):
         """
             feats: (List) [K, B, C, H, W]
         """
+        K = self.len_clip
         B, C, H, W = feats[0].size()
         for se, te, me, fl in zip(self.spatio_encoders, self.temporal_encoders, self.motion_encoders, self.fuse_layers):
             # out shape: [B, C, K, H, W]
@@ -218,9 +219,9 @@ class STMEncoder(nn.Module):
             # [B, C, K, H, W] -> [B, C, K, HW]
             feats = fl(feats.flatten(-2))
             # [B, C, K, HW] -> [B, C, K, H, W]
-            feats = feats.view(B, C, self.len_clip, H, W)
+            feats = feats.view(B, C, K, H, W)
             # [B, C, K, H, W] -> List[K, B, C, H, W]
-            feats = [feats[:, :, k, :, :] for k in range(self.len_clip)]
+            feats = [feats[:, :, k, :, :] for k in range(K)]
 
         # output: List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
         out_feat = self.out_layer(torch.cat(feats, dim=1))
