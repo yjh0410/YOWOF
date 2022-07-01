@@ -83,7 +83,7 @@ class SpatioEncoder(nn.Module):
         self.len_clip = len_clip
 
         # input projection
-        inter_dim = int(in_dim / expand_ratio)
+        inter_dim = int(in_dim * expand_ratio)
 
         # Spatio Conv: [BK, C, H, W] shape required
         self.spatio_attn = nn.Sequential(
@@ -127,7 +127,7 @@ class TemporalEncoder(nn.Module):
         self.len_clip = len_clip
 
         # input projection
-        inter_dim = int(in_dim / expand_ratio)
+        inter_dim = int(in_dim * expand_ratio)
 
 
         # Temporal Conv: [BHW, C, K] shape required
