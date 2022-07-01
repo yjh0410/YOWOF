@@ -9,7 +9,7 @@ from models.basic.conv import Conv
 from ...backbone import build_backbone
 from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
-from .encoder import MotionEncoder
+from .encoder import STMEncoder
 from .loss import Criterion
 
 
@@ -62,9 +62,11 @@ class YOWOF(nn.Module):
             out_dim=cfg['head_dim']
             )                         
         # TM-Encoder
-        self.te_encoder = MotionEncoder(
+        self.te_encoder = STMEncoder(
             in_dim=cfg['head_dim'],
-            len_clip=cfg['len_clip']
+            expand_ratio=0.25,
+            len_clip=cfg['len_clip'],
+            depth=cfg['encoder_depth']
         )
         # head
         self.head = DecoupledHead(

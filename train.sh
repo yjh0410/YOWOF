@@ -1,3 +1,4 @@
+# Train YOWOF-R18
 python train.py \
         --cuda \
         -d jhmdb \
@@ -7,6 +8,7 @@ python train.py \
         --fp16 \
         -p ./weights/pretrained/yolof-rt-R18/yolof-rt-R18_29.2.pth
 
+# # Train YOWOF-R50
 # python train.py \
 #         --cuda \
 #         -d jhmdb \
@@ -16,6 +18,7 @@ python train.py \
 #         --fp16 \
 #         -p ./weights/pretrained/yolof-rt-R50/yolof-rt-R50_33.9.pth
 
+# # Train YOWOF-R50-D
 # python train.py \
 #         --cuda \
 #         -d jhmdb \
