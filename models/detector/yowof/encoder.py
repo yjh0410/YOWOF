@@ -54,11 +54,9 @@ class MotionEncoder(nn.Module):
             motion_feat = smooth(feat_t2) - feat_t1
             motion_feats.append(motion_feat)
 
-        # List[K, B, C', H, W] -> [B, K, C', H, W]
-        mfeats = torch.stack(motion_feats, dim=1)
-        B, K, C, H, W = mfeats.size()
-        # [B, K, C', H, W] -> [BK, C', H, W]
-        mfeats = mfeats.view(-1, C, H, W)
+        K, B, C, H, W = self.len_clip, motion_feats[0].size()
+        # List[K, B, C', H, W] -> [BK, C', H, W]
+        mfeats = torch.cat(motion_feats, dim=0)
         # [BK, C', H, W] -> [BK, C, H, W]
         out_feats = self.out_conv(mfeats)
 
@@ -224,7 +222,7 @@ class STMEncoder(nn.Module):
             # [B, C, K, H, W] -> List[K, B, C, H, W]
             feats = [feats[:, :, k, :, :] for k in range(self.len_clip)]
 
-        # output: [B, C, H, W]
+        # output: List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
         out_feat = self.out_layer(torch.cat(feats, dim=1))
 
         return out_feat
