@@ -134,7 +134,7 @@ class TemporalEncoder(nn.Module):
         self.temporal_attn = nn.Sequential(
             # kernel 1
             nn.Conv1d(in_dim, inter_dim, kernel_size=1),
-            nn.BatchNorm1d(in_dim),
+            nn.BatchNorm1d(inter_dim),
             # kernel 3
             nn.Conv1d(inter_dim, inter_dim, kernel_size=3, padding=1),
             nn.BatchNorm1d(inter_dim),
