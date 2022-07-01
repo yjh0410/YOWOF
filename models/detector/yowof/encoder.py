@@ -85,9 +85,9 @@ class SpatioEncoder(nn.Module):
         # input projection
         inter_dim = int(in_dim / expand_ratio)
 
-        # Spatio Attention: [BK, C, H, W] shape required
+        # Spatio Conv: [BK, C, H, W] shape required
         self.spatio_attn = nn.Sequential(
-            Conv(in_dim, inter_dim, k=1, act_type='relu', norm_type='BN'),
+            Conv(in_dim, inter_dim, k=1, act_type=None, norm_type='BN'),
             Conv(inter_dim, inter_dim, k=3, p=1, act_type='relu', norm_type='BN'),
             Conv(inter_dim, in_dim, k=1, act_type='relu', norm_type='BN')
         )
@@ -104,7 +104,7 @@ class SpatioEncoder(nn.Module):
         spatio_feats = spatio_feats.view(-1, C, H, W)
 
         # Spatio attention
-        spatio_feats = self.spatio_attn(spatio_feats) * spatio_feats + spatio_feats
+        spatio_feats = self.spatio_attn(spatio_feats) + spatio_feats
 
         # [BK, C, H, W] -> [B, K, C, H, W]
         out_feats = spatio_feats.view(B, K, C, H, W)
@@ -126,11 +126,23 @@ class TemporalEncoder(nn.Module):
         self.expand_ratio = expand_ratio
         self.len_clip = len_clip
 
-        # Temporal Attention: [B, C, K, HW] shape required
+        # input projection
+        inter_dim = int(in_dim / expand_ratio)
+
+
+        # Temporal Conv: [BHW, C, K] shape required
         self.temporal_attn = nn.Sequential(
-            Conv(in_dim, in_dim, k=(3, 1), p=(1, 0), act_type='relu', norm_type='BN'),
-            Conv(in_dim, in_dim, k=1, act_type=None, norm_type='BN'),
-            nn.Sigmoid()
+            # kernel 1
+            nn.Conv1d(in_dim, inter_dim, kernel_size=1),
+            nn.BatchNorm1d(in_dim),
+            # kernel 3
+            nn.Conv1d(inter_dim, inter_dim, kernel_size=3, padding=1),
+            nn.BatchNorm1d(inter_dim),
+            nn.ReLU(inplace=True),
+            # kernel 1
+            nn.Conv1d(inter_dim, in_dim, kernel_size=1),
+            nn.BatchNorm1d(in_dim),
+            nn.ReLU(inplace=True)
         )
 
     
@@ -138,15 +150,19 @@ class TemporalEncoder(nn.Module):
         """
             feats: List(Tensor) [K, B, C, H, W]
         """
-        B, C, H, W = feats[0].size()
-        # List[K, B, C, H, W] -> [B, C, K, H, W] -> [B, C, K, HW]
-        temporal_feats = torch.stack(feats, dim=2).flatten(-2)
+        # List[K, B, C, H, W] -> [B, K, C, H, W]
+        temporal_feats = torch.stack(feats, dim=1)
+        B, K, C, H, W = temporal_feats.size()
+        # [B, K, C, H, W] -> [B, H, W, C, K] -> [BHW, C, K]
+        temporal_feats = temporal_feats.permute(0, 3, 4, 2, 1).contiguous()
+        temporal_feats = temporal_feats.view(-1, C, K)
 
         # Temporal attention
-        temporal_feats = self.temporal_attn(temporal_feats) * temporal_feats + temporal_feats
+        temporal_feats = self.temporal_attn(temporal_feats) + temporal_feats
 
-        # [B, C, K, HW] -> [B, C, K, H, W]
-        out_feats = temporal_feats.view(B, -1, self.len_clip, H, W)
+        # [BHW, C, K] -> [B, H, W, C, K] -> [B, C, K, H, W]
+        out_feats = temporal_feats.view(B, H, W, C, K)
+        out_feats = out_feats.permute(0, 3, 4, 1, 2).contiguous()
 
         return out_feats
 
