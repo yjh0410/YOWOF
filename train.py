@@ -194,7 +194,10 @@ def train():
             video_clips = [video_clip.to(device) for video_clip in video_clips]
 
             # inference
-            with torch.cuda.amp.autocast(enabled=args.fp16):
+            if args.fp16:
+                with torch.cuda.amp.autocast(enabled=args.fp16):
+                    loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
+            else:
                 loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
                 
             losses = loss_dict['losses']
@@ -207,24 +210,23 @@ def train():
                 print('loss is NAN !!')
                 continue
 
-            if args.fp16:
-                # Backward and Optimize
-                scaler.scale(losses / d_cfg['accumulate']).backward()
+            # Backward and Optimize
+            scaler.scale(losses / d_cfg['accumulate']).backward()
 
-                # Optimize
-                if ni % d_cfg['accumulate'] == 0:
-                    scaler.step(optimizer)
-                    scaler.update()
-                    optimizer.zero_grad()
+            # Optimize
+            if ni % d_cfg['accumulate'] == 0:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
 
-            else:
-                # Backward
-                (losses / d_cfg['accumulate']).backward()
+            # else:
+            #     # Backward
+            #     (losses / d_cfg['accumulate']).backward()
 
-                # Optimize
-                if ni % d_cfg['accumulate'] == 0:
-                    optimizer.step()
-                    optimizer.zero_grad()
+            #     # Optimize
+            #     if ni % d_cfg['accumulate'] == 0:
+            #         optimizer.step()
+            #         optimizer.zero_grad()
 
             # Display
             if distributed_utils.is_main_process() and iter_i % 10 == 0:
