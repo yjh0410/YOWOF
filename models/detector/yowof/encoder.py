@@ -60,10 +60,10 @@ class MotionEncoder(nn.Module):
         # [BK, C', H, W] -> [BK, C, H, W]
         out_feats = self.out_conv(mfeats)
 
-        # [BK, C, H, W] -> [B, K, C, H, W]
-        out_feats = out_feats.view(B, K, -1, H, W)
-        # [B, K, C, H, W] -> [B, C, K, H, W]
-        out_feats = out_feats.permute(0, 2, 1, 3, 4).contiguous()
+        # [BK, C, H, W] -> [K, B, C, H, W]
+        out_feats = out_feats.view(K, B, -1, H, W)
+        # [K, B, C, H, W] -> [B, C, K, H, W]
+        out_feats = out_feats.permute(1, 2, 0, 3, 4).contiguous()
 
         return out_feats
 
@@ -95,19 +95,17 @@ class SpatioEncoder(nn.Module):
         """
             feats: List(Tensor) [K, B, C, H, W]
         """
-        # List[K, B, C, H, W] -> [B, K, C, H, W]
-        spatio_feats = torch.stack(feats, dim=1)
-        B, K, C, H, W = spatio_feats.size()
-        # [B, K, C, H, W] -> [BK, C, H, W]
-        spatio_feats = spatio_feats.view(-1, C, H, W)
+        K, B, C, H, W = self.len_clip, feats[0].size()
+        # List[K, B, C, H, W] -> [BK, C, H, W]
+        spatio_feats = torch.cat(feats, dim=0)
 
         # Spatio attention
         spatio_feats = self.spatio_attn(spatio_feats) + spatio_feats
 
-        # [BK, C, H, W] -> [B, K, C, H, W]
-        out_feats = spatio_feats.view(B, K, C, H, W)
-        # [B, K, C, H, W] -> [B, C, K, H, W]
-        out_feats = out_feats.permute(0, 2, 1, 3, 4).contiguous()
+        # [BK, C, H, W] -> [K, B, C, H, W]
+        out_feats = spatio_feats.view(K, B, C, H, W)
+        # [K, B, C, H, W] -> [B, C, K, H, W]
+        out_feats = out_feats.permute(1, 2, 0, 3, 4).contiguous()
 
         return out_feats
 
