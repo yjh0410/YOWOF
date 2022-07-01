@@ -54,7 +54,8 @@ class MotionEncoder(nn.Module):
             motion_feat = smooth(feat_t2) - feat_t1
             motion_feats.append(motion_feat)
 
-        K, B, C, H, W = self.len_clip, motion_feats[0].size()
+        K = self.len_clip
+        B, C, H, W = motion_feats[0].size()
         # List[K, B, C', H, W] -> [BK, C', H, W]
         mfeats = torch.cat(motion_feats, dim=0)
         # [BK, C', H, W] -> [BK, C, H, W]
@@ -95,7 +96,8 @@ class SpatioEncoder(nn.Module):
         """
             feats: List(Tensor) [K, B, C, H, W]
         """
-        K, B, C, H, W = self.len_clip, feats[0].size()
+        K = self.len_clip
+        B, C, H, W = feats[0].size()
         # List[K, B, C, H, W] -> [BK, C, H, W]
         spatio_feats = torch.cat(feats, dim=0)
 
