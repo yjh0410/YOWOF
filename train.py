@@ -15,7 +15,7 @@ import torch.cuda.amp as amp
 
 from utils import distributed_utils
 from utils.com_flops_params import FLOPs_and_Params
-from utils.misc import CollateFunc, build_dataset, build_dataloader, get_total_grad_norm
+from utils.misc import CollateFunc, build_dataset, build_dataloader, ModelEMA
 from utils.solver.optimizer import build_optimizer
 from utils.solver.warmup_schedule import build_warmup
 
@@ -47,6 +47,8 @@ def parse_args():
                         type=str, help='save inference results.')
     parser.add_argument('--fp16', dest="fp16", action="store_true", default=False,
                         help="Adopting mix precision training.")
+    parser.add_argument('--ema', dest="ema", action="store_true", default=False,
+                        help="use model EMA.")
 
     # model
     parser.add_argument('-v', '--version', default='baseline', type=str,
@@ -146,12 +148,13 @@ def train():
 
     # optimizer
     base_lr = d_cfg['base_lr']
-    optimizer = build_optimizer(
+    optimizer, start_epoch = build_optimizer(
         model=model_without_ddp,
         base_lr=base_lr,
         name=d_cfg['optimizer'],
         momentum=d_cfg['momentum'],
-        weight_decay=d_cfg['weight_decay']
+        weight_decay=d_cfg['weight_decay'],
+        resume=args.resume
         )
 
     # lr scheduler
@@ -166,6 +169,14 @@ def train():
         warmup_factor=d_cfg['warmup_factor']
         )
 
+    # EMA
+    if args.ema:
+        print('use EMA ...')
+        ema = ModelEMA(model, start_epoch*epoch_size)
+    else:
+        ema = None
+
+
     # training configuration
     max_epoch = d_cfg['max_epoch']
     epoch_size = len(dataloader)
@@ -173,7 +184,7 @@ def train():
     warmup = True
 
     t0 = time.time()
-    for epoch in range(max_epoch):
+    for epoch in range(start_epoch, max_epoch):
         if args.distributed:
             dataloader.batch_sampler.sampler.set_epoch(epoch)            
 
@@ -211,22 +222,27 @@ def train():
                 continue
 
             # Backward and Optimize
-            scaler.scale(losses / d_cfg['accumulate']).backward()
+            if args.fp16:
+                scaler.scale(losses / d_cfg['accumulate']).backward()
 
-            # Optimize
-            if ni % d_cfg['accumulate'] == 0:
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad()
+                # Optimize
+                if ni % d_cfg['accumulate'] == 0:
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad()
+                    
+            else:
+                # Backward
+                (losses / d_cfg['accumulate']).backward()
 
-            # else:
-            #     # Backward
-            #     (losses / d_cfg['accumulate']).backward()
+                # Optimize
+                if ni % d_cfg['accumulate'] == 0:
+                    optimizer.step()
+                    optimizer.zero_grad()
 
-            #     # Optimize
-            #     if ni % d_cfg['accumulate'] == 0:
-            #         optimizer.step()
-            #         optimizer.zero_grad()
+            # ema
+            if args.ema:
+                ema.update(model)
 
             # Display
             if distributed_utils.is_main_process() and iter_i % 10 == 0:
@@ -254,13 +270,14 @@ def train():
         # evaluation
         if (epoch + 1) % args.eval_epoch == 0 or (epoch + 1) == max_epoch:
             # check evaluator
+            model_eval = ema.ema if args.ema else model_without_ddp
             if distributed_utils.is_main_process():
                 if evaluator is None:
                     print('No evaluator ... save model and go on training.')
                     print('Saving state, epoch: {}'.format(epoch + 1))
                     weight_name = '{}_epoch_{}.pth'.format(args.version, epoch + 1)
                     checkpoint_path = os.path.join(path_to_save, weight_name)
-                    torch.save({'model': model_without_ddp.state_dict(),
+                    torch.save({'model': model_eval.state_dict(),
                                 'optimizer': optimizer.state_dict(),
                                 'lr_scheduler': lr_scheduler.state_dict(),
                                 'epoch': epoch,
@@ -270,12 +287,12 @@ def train():
                 else:
                     print('eval ...')
                     # set eval mode
-                    model_without_ddp.trainable = False
-                    model_without_ddp.stream_infernce = True
-                    model_without_ddp.eval()
+                    model_eval.trainable = False
+                    model_eval.stream_infernce = True
+                    model_eval.eval()
 
                     # evaluate
-                    evaluator.evaluate(model_without_ddp)
+                    evaluator.evaluate(model_eval)
 
                     cur_frame_map = evaluator.frame_map
                     if cur_frame_map > best_frame_map:
@@ -285,7 +302,7 @@ def train():
                         print('Saving state, epoch:', epoch + 1)
                         weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_frame_map)
                         checkpoint_path = os.path.join(path_to_save, weight_name)
-                        torch.save({'model': model_without_ddp.state_dict(),
+                        torch.save({'model': model_eval.state_dict(),
                                     'optimizer': optimizer.state_dict(),
                                     'lr_scheduler': lr_scheduler.state_dict(),
                                     'epoch': epoch,
@@ -293,9 +310,9 @@ def train():
                                     checkpoint_path)                      
 
                     # set train mode.
-                    model_without_ddp.trainable = True
-                    model_without_ddp.stream_infernce = False
-                    model_without_ddp.train()
+                    model_eval.trainable = True
+                    model_eval.stream_infernce = False
+                    model_eval.train()
         
             if args.distributed:
                 # wait for all processes to synchronize

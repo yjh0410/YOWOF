@@ -1,11 +1,13 @@
 from torch import optim
+import torch
 
 
 def build_optimizer(model,
                     base_lr=0.0,
                     name='sgd',
                     momentum=0.,
-                    weight_decay=0.):
+                    weight_decay=0.,
+                    resume=None):
     print('==============================')
     print('Optimizer: {}'.format(name))
     print('--momentum: {}'.format(momentum))
@@ -27,5 +29,14 @@ def build_optimizer(model,
         optimizer = optim.AdamW(model.parameters(), 
                                 lr=base_lr,
                                 weight_decay=weight_decay)
+    
+    start_epoch = 0
+    if resume is not None:
+        print('keep training: ', resume)
+        checkpoint = torch.load(resume)
+        # checkpoint state dict
+        checkpoint_state_dict = checkpoint.pop("optimizer")
+        optimizer.load_state_dict(checkpoint_state_dict)
+        start_epoch = checkpoint.pop("epoch") + 1
                                 
-    return optimizer
+    return optimizer, start_epoch
