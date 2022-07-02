@@ -284,11 +284,6 @@ def train():
                 
                 t0 = time.time()
 
-            # Empty cache
-            if ni % d_cfg['accumulate'] == 0:
-                torch.cuda.empty_cache()
-                del losses, loss_dict_reduced
-
         lr_scheduler.step()
         
         # evaluation
