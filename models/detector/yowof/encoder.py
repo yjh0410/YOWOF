@@ -4,6 +4,7 @@ from ...basic.conv import Conv
 
 
 # Motion Encoder
+# Motion Encoder
 class MotionEncoder(nn.Module):
     def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
@@ -70,7 +71,7 @@ class MotionEncoder(nn.Module):
 
 
 # Spatio-Temporal Encoder
-class SpatioEncoder(nn.Module):
+class SpatioTemporalEncoder(nn.Module):
     def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
@@ -84,14 +85,21 @@ class SpatioEncoder(nn.Module):
         # input projection
         inter_dim = int(in_dim * expand_ratio)
 
-        # Spatio Conv: [BK, C, H, W] shape required
-        self.spatio_attn = nn.Sequential(
+        # Spatio Bottleneck: [BK, C, H, W] shape required
+        self.spatio_bottleneck = nn.Sequential(
             Conv(in_dim, inter_dim, k=1, act_type=None, norm_type='BN'),
             Conv(inter_dim, inter_dim, k=3, p=1, act_type='relu', norm_type='BN'),
             Conv(inter_dim, in_dim, k=1, act_type='relu', norm_type='BN')
         )
 
-    
+        # Temporal Bottleneck: [B, C, K, HW] shape required
+        self.temporal_bottleneck = nn.Sequential(
+            Conv(in_dim, inter_dim, k=(1, 1),  p=(0, 0), act_type=None, norm_type='BN'),
+            Conv(inter_dim, inter_dim, k=(3, 1), p=(1, 0), act_type='relu', norm_type='BN'),
+            Conv(inter_dim, in_dim, k=(1, 1),  p=(0, 0), act_type='relu', norm_type='BN')
+        )
+
+
     def forward(self, feats):
         """
             feats: List(Tensor) [K, B, C, H, W]
@@ -101,20 +109,29 @@ class SpatioEncoder(nn.Module):
         # List[K, B, C, H, W] -> [BK, C, H, W]
         spatio_feats = torch.cat(feats, dim=0)
 
-        # Spatio attention
-        spatio_feats = self.spatio_attn(spatio_feats) + spatio_feats
+        # Spatio
+        spatio_feats = self.spatio_bottleneck(spatio_feats) + spatio_feats
 
         # [BK, C, H, W] -> [K, B, C, H, W]
-        out_feats = spatio_feats.view(K, B, C, H, W)
+        spatio_feats = spatio_feats.view(K, B, C, H, W)
         # [K, B, C, H, W] -> [B, C, K, H, W]
-        out_feats = out_feats.permute(1, 2, 0, 3, 4).contiguous()
+        spatio_feats = spatio_feats.permute(1, 2, 0, 3, 4).contiguous()
+
+        # [B, C, K, H, W] -> [B, C, K, HW]
+        temporal_feats = spatio_feats.flatten(-2)
+
+        # Temporal
+        temporal_feats = self.temporal_bottleneck(temporal_feats) + temporal_feats
+
+        # [B, C, K, HW] -> [B, C, K, H, W]
+        out_feats = spatio_feats.view(B, C, K, H, W)
 
         return out_feats
 
 
-# Temporal Encoder
-class TemporalEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
+# STM Encoder
+class STMEncoder(nn.Module):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, depth=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -123,48 +140,58 @@ class TemporalEncoder(nn.Module):
         self.in_dim = in_dim
         self.expand_ratio = expand_ratio
         self.len_clip = len_clip
+        self.depth = depth
 
-        # input projection
-        inter_dim = int(in_dim * expand_ratio)
+        self.spattemp_encoders = nn.ModuleList([
+            SpatioTemporalEncoder(in_dim, expand_ratio, len_clip)
+            for _ in range(depth)
+        ])
+
+        self.motion_encoders = nn.ModuleList([
+            MotionEncoder(in_dim, expand_ratio, len_clip)
+            for _ in range(depth)
+        ])
+
+        # fuse layer
+        self.smooth_layers = nn.ModuleList([
+            nn.Conv2d(in_dim, in_dim , kernel_size=3, padding=1)
+            for _ in range(depth)
+        ])
+
+        # out layer
+        self.out_layer = Conv(in_dim * len_clip, in_dim, k=1, act_type='relu', norm_type='BN')
 
 
-        # Temporal Conv: [BHW, C, K] shape required
-        self.temporal_attn = nn.Sequential(
-            # kernel 1
-            nn.Conv1d(in_dim, inter_dim, kernel_size=1),
-            nn.BatchNorm1d(inter_dim),
-            # kernel 3
-            nn.Conv1d(inter_dim, inter_dim, kernel_size=3, padding=1),
-            nn.BatchNorm1d(inter_dim),
-            nn.ReLU(inplace=True),
-            # kernel 1
-            nn.Conv1d(inter_dim, in_dim, kernel_size=1),
-            nn.BatchNorm1d(in_dim),
-            nn.ReLU(inplace=True)
-        )
-
-    
     def forward(self, feats):
         """
-            feats: List(Tensor) [K, B, C, H, W]
+            feats: (List) [K, B, C, H, W]
         """
-        # List[K, B, C, H, W] -> [B, K, C, H, W]
-        temporal_feats = torch.stack(feats, dim=1)
-        B, K, C, H, W = temporal_feats.size()
-        # [B, K, C, H, W] -> [B, H, W, C, K] -> [BHW, C, K]
-        temporal_feats = temporal_feats.permute(0, 3, 4, 2, 1).contiguous()
-        temporal_feats = temporal_feats.view(-1, C, K)
+        K = self.len_clip
+        B, C, H, W = feats[0].size()
+        for ste, mte, smooth in zip(self.spattemp_encoders, self.motion_encoders, self.smooth_layers):
+            # out shape: [B, C, K, H, W]
+            spattemp_feats = ste(feats)
+            motion_feats = mte(feats)
 
-        # Temporal attention
-        temporal_feats = self.temporal_attn(temporal_feats) + temporal_feats
+            feats = spattemp_feats + motion_feats
+            # [B, C, K, H, W] -> [B, K, C, H, W]
+            feats = feats.permute(0, 2, 1, 3, 4).contiguous()
+            # [B, K, C, H, W] -> [BK, C, H, W]
+            feats = feats.view(-1, C, H, W)
 
-        # [BHW, C, K] -> [B, H, W, C, K] -> [B, C, K, H, W]
-        out_feats = temporal_feats.view(B, H, W, C, K)
-        out_feats = out_feats.permute(0, 3, 4, 1, 2).contiguous()
+            # smooth
+            feats = smooth(feats)
 
-        return out_feats
+            # [BK, C, H, W] -> [B, K, C, H, W]
+            feats = feats.view(B, K, C, H, W)
 
+            # [B, K, C, H, W] -> List[K, B, C, H, W]
+            feats = [feats[:, k, :, :, :] for k in range(K)]
 
+        # output: List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
+        out_feat = self.out_layer(torch.cat(feats, dim=1))
+
+        return out_feat
 # STM Encoder
 class STMEncoder(nn.Module):
     def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, depth=1):
