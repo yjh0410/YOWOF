@@ -154,16 +154,16 @@ def train():
         model = DDP(model, device_ids=[args.gpu])
         model_without_ddp = model.module
 
-    # Compute FLOPs and Params
-    if distributed_utils.is_main_process():
-        model_copy = deepcopy(model_without_ddp)
-        FLOPs_and_Params(
-            model=model_copy,
-            img_size=m_cfg['test_size'],
-            len_clip=m_cfg['len_clip'],
-            device=device,
-            stream=True)
-        del model_copy
+    # # Compute FLOPs and Params
+    # if distributed_utils.is_main_process():
+    #     model_copy = deepcopy(model_without_ddp)
+    #     FLOPs_and_Params(
+    #         model=model_copy,
+    #         img_size=m_cfg['test_size'],
+    #         len_clip=m_cfg['len_clip'],
+    #         device=device,
+    #         stream=True)
+    #     del model_copy
         
     # optimizer
     base_lr = d_cfg['base_lr']
