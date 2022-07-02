@@ -192,68 +192,8 @@ class STMEncoder(nn.Module):
         out_feat = self.out_layer(torch.cat(feats, dim=1))
 
         return out_feat
-# STM Encoder
-class STMEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, depth=1):
-        """
-            in_dim: (Int) -> dim of single feature
-            K: (Int) -> length of video clip
-        """
-        super().__init__()
-        self.in_dim = in_dim
-        self.expand_ratio = expand_ratio
-        self.len_clip = len_clip
-        self.depth = depth
-
-        self.spatio_encoders = nn.ModuleList([
-            SpatioEncoder(in_dim, expand_ratio, len_clip)
-            for _ in range(depth)
-        ])
-
-        self.temporal_encoders = nn.ModuleList([
-            TemporalEncoder(in_dim, expand_ratio, len_clip)
-            for _ in range(depth)
-        ])
-
-        self.motion_encoders = nn.ModuleList([
-            MotionEncoder(in_dim, expand_ratio, len_clip)
-            for _ in range(depth)
-        ])
-
-        # fuse layer
-        self.fuse_layers = nn.ModuleList([
-            Conv(in_dim, in_dim , k=1, act_type='relu', norm_type='BN')
-            for _ in range(depth)
-        ])
-
-        # out layer
-        self.out_layer = Conv(in_dim * len_clip, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
 
 
-    def forward(self, feats):
-        """
-            feats: (List) [K, B, C, H, W]
-        """
-        K = self.len_clip
-        B, C, H, W = feats[0].size()
-        for se, te, me, fl in zip(self.spatio_encoders, self.temporal_encoders, self.motion_encoders, self.fuse_layers):
-            # out shape: [B, C, K, H, W]
-            spatio_feats = se(feats)
-            temporal_feats = te(feats)
-            motion_feats = me(feats)
-
-            feats = spatio_feats + temporal_feats + motion_feats
-            # [B, C, K, H, W] -> [B, C, K, HW]
-            feats = fl(feats.flatten(-2))
-            # [B, C, K, HW] -> [B, C, K, H, W]
-            feats = feats.view(B, C, K, H, W)
-            # [B, C, K, H, W] -> List[K, B, C, H, W]
-            feats = [feats[:, :, k, :, :] for k in range(K)]
-
-        # output: List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
-        out_feat = self.out_layer(torch.cat(feats, dim=1))
-
-        return out_feat
 # Channel Fusion and Attetion Mechanism
 class CFAM(nn.Module):
     def __init__(self, in_dim, dropout=0.):
