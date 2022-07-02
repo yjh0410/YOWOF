@@ -9,7 +9,6 @@ python train.py \
         --fp16 \
         --ema \
         -p ./weights/pretrained/yolof-rt-R18/yolof-rt-R18_29.2.pth
-        34303583e9364e2b6c544131b82ede4b2c92a867
 
 # # Train YOWOF-R50
 # python train.py \

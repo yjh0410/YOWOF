@@ -194,7 +194,7 @@ if __name__ == '__main__':
     from transforms import TrainTransforms, ValTransforms
     dataset_config={
         # dataset
-        'data_root': 'E:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
+        'data_root': '/mnt/share/ssd2/dataset/STAD/JHMDB',
         'anno_file': 'JHMDB-GT.pkl',
         'train_split': 1,
         'test_split': 1,
