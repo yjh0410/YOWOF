@@ -172,19 +172,18 @@ def train():
         warmup_factor=d_cfg['warmup_factor']
         )
 
+    # training configuration
+    max_epoch = d_cfg['max_epoch']
+    epoch_size = len(dataloader)
+    best_frame_map = -1.
+    warmup = True
+
     # EMA
     if args.ema:
         print('use EMA ...')
         ema = ModelEMA(model, start_epoch*epoch_size)
     else:
         ema = None
-
-
-    # training configuration
-    max_epoch = d_cfg['max_epoch']
-    epoch_size = len(dataloader)
-    best_frame_map = -1.
-    warmup = True
 
     t0 = time.time()
     for epoch in range(start_epoch, max_epoch):
