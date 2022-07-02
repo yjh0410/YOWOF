@@ -153,7 +153,7 @@ class STMEncoder(nn.Module):
 
         # fuse layer
         self.smooth_layers = nn.ModuleList([
-            nn.Conv2d(in_dim, in_dim , kernel_size=3, padding=1)
+            nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=1)
             for _ in range(depth)
         ])
 
@@ -205,14 +205,14 @@ class CFAM(nn.Module):
             Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
         )
 
-        self.qkv_conv = nn.Conv2d(in_dim, 3*in_dim, kernel_size=1)
+        self.qkv_conv = nn.Conv2d(in_dim, 3*in_dim, kernel_size=1, bias=False)
         self.attend = nn.Softmax(dim = -1)
         self.out = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=1),
-            nn.Dropout2d(dropout)
+            nn.Dropout2d(dropout),
+            nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(in_dim),
+            nn.ReLU(inplace=True)
         )
-        self.norm = nn.BatchNorm2d(in_dim)
-        self.act = nn.ReLU(inplace=True)
 
 
     def forward(self, x):
@@ -235,7 +235,7 @@ class CFAM(nn.Module):
         # [B, C, C] x [B, C, N] -> [B, C, N]
         y = torch.matmul(attn, v)
         y = y.view(B, C, H, W)
-        out = self.act(self.norm(self.out(y)))
 
-        return x + out
+        return x + self.out(y)
+
         
