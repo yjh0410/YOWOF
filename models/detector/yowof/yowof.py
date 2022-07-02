@@ -64,7 +64,7 @@ class YOWOF(nn.Module):
         # TM-Encoder
         self.stm_encoder = STMEncoder(
             in_dim=cfg['head_dim'],
-            expand_ratio=0.25,
+            expand_ratio=0.5,
             len_clip=cfg['len_clip'],
             depth=cfg['encoder_depth']
         )
