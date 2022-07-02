@@ -57,6 +57,8 @@ def parse_args():
                         help='topk candidates for evaluation')
     parser.add_argument('-p', '--coco_pretrained', default=None, type=str,
                         help='coco pretrained weight')
+    parser.add_argument('-r', '--resume', default=None, type=str,
+                        help='keep training')
 
     # dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
@@ -131,7 +133,8 @@ def train():
                       device=device, 
                       num_classes=num_classes, 
                       trainable=True,
-                      coco_pretrained=args.coco_pretrained)
+                      coco_pretrained=args.coco_pretrained,
+                      resume=args.resume)
     model = net
     model = model.to(device).train()
 
