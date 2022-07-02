@@ -209,7 +209,6 @@ def train():
         # train one epoch
         for iter_i, (video_clips, targets) in enumerate(dataloader):
             ni = iter_i + epoch * epoch_size
-            torch.cuda.empty_cache()
 
             # warmup
             if ni < d_cfg['wp_iter'] and warmup:
@@ -250,6 +249,8 @@ def train():
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()
+                    torch.cuda.empty_cache()
+
                     
             else:
                 # Backward
@@ -259,6 +260,7 @@ def train():
                 if ni % d_cfg['accumulate'] == 0:
                     optimizer.step()
                     optimizer.zero_grad()
+                    torch.cuda.empty_cache()
 
             # ema
             if args.ema:
