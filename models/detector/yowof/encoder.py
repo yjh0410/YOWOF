@@ -172,7 +172,6 @@ class STMEncoder(nn.Module):
             motion_feats = mte(feats)
 
             feats = spattemp_feats + motion_feats
-            feats = feats.permute(0, 2, 1, 3, 4).contiguous()
             # [K, B, C, H, W] -> [BK, C, H, W]
             feats = feats.view(-1, C, H, W)
 
