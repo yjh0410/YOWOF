@@ -250,6 +250,8 @@ def train():
                     scaler.update()
                     optimizer.zero_grad()
                     torch.cuda.empty_cache()
+                    del losses, loss_dict_reduced
+
 
                     
             else:
@@ -261,6 +263,7 @@ def train():
                     optimizer.step()
                     optimizer.zero_grad()
                     torch.cuda.empty_cache()
+                    del losses, loss_dict_reduced
 
             # ema
             if args.ema:
@@ -287,8 +290,6 @@ def train():
                 
                 t0 = time.time()
             
-            del losses, loss_dict_reduced
-
         lr_scheduler.step()
         
         # evaluation
