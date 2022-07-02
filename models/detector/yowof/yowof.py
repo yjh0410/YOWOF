@@ -9,7 +9,7 @@ from models.basic.conv import Conv
 from ...backbone import build_backbone
 from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
-from .encoder import STMEncoder
+from .encoder import STMEncoder, CFAM
 from .loss import Criterion
 
 
@@ -62,12 +62,15 @@ class YOWOF(nn.Module):
             out_dim=cfg['head_dim']
             )                         
         # TM-Encoder
-        self.te_encoder = STMEncoder(
+        self.stm_encoder = STMEncoder(
             in_dim=cfg['head_dim'],
             expand_ratio=0.25,
             len_clip=cfg['len_clip'],
             depth=cfg['encoder_depth']
         )
+        # feature aggregator
+        self.feat_aggr = CFAM(in_dim=cfg['head_dim'], dropout=0.1)
+
         # head
         self.head = DecoupledHead(
             head_dim=cfg['head_dim'],
@@ -232,12 +235,12 @@ class YOWOF(nn.Module):
 
             backbone_feats.append(feat)
 
-        # # temporal-motion encoder
-        # bk_feats = torch.cat(backbone_feats, dim=1)
-        # feat = self.te_encoder(bk_feats)
-        # motion encoder
-        # List[K, B, C, H, W] -> [B, C, H, W]
-        feat = self.te_encoder(backbone_feats)
+        # spatio-temporal-motion encoder
+        stm_feat = self.stm_encoder(backbone_feats)
+        spa_feat = backbone_feats[-1]
+
+        # feature aggregation
+        feat = self.feat_aggr(torch.cat([spa_feat, stm_feat], dim=1))
 
         # head
         cls_feats, reg_feats = self.head(feat)
@@ -304,12 +307,12 @@ class YOWOF(nn.Module):
         # delete the oldest feature
         del self.clip_feats[0]
 
-        # # encoder
-        # bk_feats = torch.cat(self.clip_feats, dim=1)
-        # cur_feat = self.te_encoder(bk_feats)
-        # motion encoder
-        # List[K, B, C, H, W] -> [B, C, H, W]
-        cur_feat = self.te_encoder(self.clip_feats)
+        # spatio-temporal-motion encoder
+        cur_stm_feat = self.stm_encoder(self.clip_feats)
+        cur_spa_feat = self.clip_feats[-1]
+
+        # feature aggregation
+        cur_feat = self.feat_aggr(torch.cat([cur_spa_feat, cur_stm_feat], dim=1))
 
         # head
         cls_feats, reg_feats = self.head(cur_feat)
@@ -410,21 +413,22 @@ class YOWOF(nn.Module):
         if not self.trainable:
             return self.inference(video_clips)
         else:
-            bk_feats = []
+            backbone_feats = []
             # backbone
             for i in range(len(video_clips)):
                 feat = self.backbone(video_clips[i])
                 feat = self.neck(feat)
 
-                bk_feats.append(feat)
+                backbone_feats.append(feat)
 
-            # motion encoder
-            # List[K, B, C, H, W] -> [B, C, H, W]
-            feat = self.te_encoder(bk_feats)
+            # spatio-temporal-motion encoder
+            stm_feat = self.stm_encoder(backbone_feats)
+            spa_feat = backbone_feats[-1]
+
+            # feature aggregation
+            feat = self.feat_aggr(torch.cat([spa_feat, stm_feat], dim=1))
 
             # detection head
-            all_box_preds = []
-            all_cls_preds = []
             cls_feats, reg_feats = self.head(feat)
 
             obj_pred = self.obj_pred(reg_feats)
@@ -449,10 +453,6 @@ class YOWOF(nn.Module):
 
             # decode box
             box_pred = self.decode_boxes(self.anchor_boxes[None], reg_pred)
-
-            # Collect detection results for each frame.
-            all_cls_preds.append(normalized_cls_pred)
-            all_box_preds.append(box_pred)
 
             outputs = {"cls_preds": normalized_cls_pred,
                        "box_preds": box_pred,
