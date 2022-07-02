@@ -63,8 +63,6 @@ class MotionEncoder(nn.Module):
 
         # [BK, C, H, W] -> [K, B, C, H, W]
         out_feats = out_feats.view(K, B, -1, H, W)
-        # [K, B, C, H, W] -> [B, C, K, H, W]
-        out_feats = out_feats.permute(1, 2, 0, 3, 4).contiguous()
 
         return out_feats
 
@@ -93,9 +91,8 @@ class SpatioTemporalEncoder(nn.Module):
 
         # Temporal Bottleneck: [B, C, K, HW] shape required
         self.temporal_bottleneck = nn.Sequential(
-            Conv(in_dim, inter_dim, k=(1, 1),  p=(0, 0), act_type=None, norm_type='BN'),
-            Conv(inter_dim, inter_dim, k=(3, 1), p=(1, 0), act_type='relu', norm_type='BN'),
-            Conv(inter_dim, in_dim, k=(1, 1),  p=(0, 0), act_type='relu', norm_type='BN')
+            Conv(in_dim, in_dim, k=(3, 1), p=(1, 0), act_type='relu', norm_type='BN'),
+            Conv(in_dim, in_dim, k=(3, 1), p=(1, 0), act_type='relu', norm_type='BN')
         )
 
 
@@ -124,6 +121,8 @@ class SpatioTemporalEncoder(nn.Module):
 
         # [B, C, K, HW] -> [B, C, K, H, W]
         out_feats = spatio_feats.view(B, C, K, H, W)
+        # [B, C, K, H, W] -> [K, B, C, H, W] 
+        out_feats = out_feats.permute(2, 0, 1, 3, 4).contiguous()
 
         return out_feats
 
@@ -168,24 +167,23 @@ class STMEncoder(nn.Module):
         K = self.len_clip
         B, C, H, W = feats[0].size()
         for ste, mte, smooth in zip(self.spattemp_encoders, self.motion_encoders, self.smooth_layers):
-            # out shape: [B, C, K, H, W]
+            # out shape: [K, B, C, H, W]
             spattemp_feats = ste(feats)
             motion_feats = mte(feats)
 
             feats = spattemp_feats + motion_feats
-            # [B, C, K, H, W] -> [B, K, C, H, W]
             feats = feats.permute(0, 2, 1, 3, 4).contiguous()
-            # [B, K, C, H, W] -> [BK, C, H, W]
+            # [K, B, C, H, W] -> [BK, C, H, W]
             feats = feats.view(-1, C, H, W)
 
             # smooth
             feats = smooth(feats)
 
-            # [BK, C, H, W] -> [B, K, C, H, W]
-            feats = feats.view(B, K, C, H, W)
+            # [BK, C, H, W] -> [K, B, C, H, W]
+            feats = feats.view(K, B, C, H, W)
 
-            # [B, K, C, H, W] -> List[K, B, C, H, W]
-            feats = [feats[:, k, :, :, :] for k in range(K)]
+            # [K, B, C, H, W] -> List[K, B, C, H, W]
+            feats = [feats[k, :, :, :, :] for k in range(K)]
 
         # output: List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
         out_feat = self.out_layer(torch.cat(feats, dim=1))

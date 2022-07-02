@@ -6,13 +6,13 @@ import numpy as np
 from copy import deepcopy
 import torch
 
-from dataset.jhmdb import JHMDB, JHMDB_CLASSES
+from dataset.ucf24 import UCF24, UCF24_CLASSES
 from utils.box_ops import rescale_bboxes
 from .utils import iou2d, pr_to_ap, nms3dt, iou3dt
 from .utils import load_frame_detections, build_tubes
 
 
-class JHMDBEvaluator(object):
+class UCFEvaluator(object):
     def __init__(self,
                  cfg=None,
                  len_clip=1,
@@ -28,13 +28,13 @@ class JHMDBEvaluator(object):
         self.metric = metric
         self.save_dir = save_dir
         self.num_classes = 21
-        self.class_names = JHMDB_CLASSES
+        self.class_names = UCF24_CLASSES
         self.frame_map = 0.0
         self.video_map = {'@0.5': 0.0,
                           '@0.5:0.95': 0.0}
 
         # dataset
-        self.dataset = JHMDB(
+        self.dataset = UCF24(
             cfg=cfg,
             img_size=img_size,
             len_clip=len_clip,

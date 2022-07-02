@@ -28,29 +28,31 @@ GLOBAL_SEED = 42
 
 def parse_args():
     parser = argparse.ArgumentParser(description='YOWOF')
-    # basic
+    # CUDA
     parser.add_argument('--cuda', action='store_true', default=False,
                         help='use cuda.')
-    parser.add_argument('--num_workers', default=4, type=int, 
-                        help='Number of workers used in dataloading')
-    parser.add_argument('--grad_clip_norm', type=float, default=-1.,
-                        help='grad clip.')
+
+    # Visualization
     parser.add_argument('--tfboard', action='store_true', default=False,
                         help='use tensorboard')
     parser.add_argument('--save_folder', default='weights/', type=str, 
                         help='path to save weight')
-    parser.add_argument('--eval_epoch', default=2, type=int, 
-                        help='after eval epoch, the model is evaluated on val dataset.')
     parser.add_argument('--vis_data', action='store_true', default=False,
                         help='use tensorboard')
-    parser.add_argument('--save_dir', default='inference_results/',
-                        type=str, help='save inference results.')
+
+    # Mix precision training
     parser.add_argument('--fp16', dest="fp16", action="store_true", default=False,
                         help="Adopting mix precision training.")
-    parser.add_argument('--ema', dest="ema", action="store_true", default=False,
-                        help="use model EMA.")
 
-    # model
+    # Evaluation
+    parser.add_argument('--eval', action='store_true', default=False, 
+                        help='do evaluation during training.')
+    parser.add_argument('--eval_epoch', default=2, type=int, 
+                        help='after eval epoch, the model is evaluated on val dataset.')
+    parser.add_argument('--save_dir', default='inference_results/',
+                        type=str, help='save inference results.')
+
+    # Model
     parser.add_argument('-v', '--version', default='baseline', type=str,
                         help='build spatio-temporal action detector')
     parser.add_argument('--topk', default=40, type=int,
@@ -59,10 +61,14 @@ def parse_args():
                         help='coco pretrained weight')
     parser.add_argument('-r', '--resume', default=None, type=str,
                         help='keep training')
+    parser.add_argument('--ema', dest="ema", action="store_true", default=False,
+                        help="use model EMA.")
 
-    # dataset
+    # Dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
                         help='ucf24, jhmdb')
+    parser.add_argument('--num_workers', default=4, type=int, 
+                        help='Number of workers used in dataloading')
     
     # DDP train
     parser.add_argument('-dist', '--distributed', action='store_true', default=False,
@@ -121,7 +127,6 @@ def train():
 
     # dataset and evaluator
     dataset, evaluator, num_classes = build_dataset(d_cfg, m_cfg, args, is_train=True)
-    # evaluator = None
 
     # dataloader
     batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()
@@ -149,6 +154,17 @@ def train():
         model = DDP(model, device_ids=[args.gpu])
         model_without_ddp = model.module
 
+    # Compute FLOPs and Params
+    if distributed_utils.is_main_process():
+        model_copy = deepcopy(model_without_ddp)
+        FLOPs_and_Params(
+            model=model_copy,
+            img_size=m_cfg['test_size'],
+            len_clip=m_cfg['len_clip'],
+            device=device,
+            stream=True)
+        del model_copy
+        
     # optimizer
     base_lr = d_cfg['base_lr']
     optimizer, start_epoch = build_optimizer(
@@ -193,6 +209,8 @@ def train():
         # train one epoch
         for iter_i, (video_clips, targets) in enumerate(dataloader):
             ni = iter_i + epoch * epoch_size
+            torch.cuda.empty_cache()
+
             # warmup
             if ni < d_cfg['wp_iter'] and warmup:
                 warmup_scheduler.warmup(ni, optimizer)
@@ -204,7 +222,7 @@ def train():
                 warmup_scheduler.set_lr(optimizer, lr=base_lr, base_lr=base_lr)
 
             # to device
-            video_clips = [video_clip.to(device) for video_clip in video_clips]
+            video_clips = [video_clip.to(device, non_blocking=True) for video_clip in video_clips]
 
             # inference
             if args.fp16:
@@ -266,6 +284,8 @@ def train():
                 print(log, flush=True)
                 
                 t0 = time.time()
+            
+            del losses, loss_dict_reduced
 
         lr_scheduler.step()
         

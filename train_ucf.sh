@@ -1,9 +1,10 @@
 # Train YOWOF-R18
 python train.py \
         --cuda \
-        -d jhmdb \
+        -d ucf24 \
         -v yowof-r18 \
         --num_workers 4 \
+        --eval \
         --eval_epoch 2 \
         --fp16 \
         --ema \
@@ -12,7 +13,7 @@ python train.py \
 # # Train YOWOF-R50
 # python train.py \
 #         --cuda \
-#         -d jhmdb \
+#         -d ucf24 \
 #         -v yowof-r50 \
 #         --num_workers 4 \
 #         --eval_epoch 2 \
@@ -22,7 +23,7 @@ python train.py \
 # # Train YOWOF-R50-D
 # python train.py \
 #         --cuda \
-#         -d jhmdb \
+#         -d ucf24 \
 #         -v yowof-r50-D \
 #         --num_workers 4 \
 #         --eval_epoch 2 \

@@ -99,7 +99,7 @@ model_config = {
         'neck_norm': 'BN',
         'neck_depthwise': False,
         # temp-motion encoder
-        'te_depth': 1,
+        'encoder_depth': 2,
         # head
         'head_dim': 256,
         'head_norm': 'BN',

@@ -33,14 +33,14 @@ dataset_config = {
         'train_split': 1,
         'test_split': 1,
         # train config
-        'optimizer': 'adamw',
+        'optimizer': 'sgd',
         'weight_decay': 0.,
         'momentum': 0.9,
         'max_epoch': 10,
         'lr_epoch': [3, 5, 7],
         'batch_size': 16,
         'accumulate': 2,
-        'base_lr': 0.0001,
+        'base_lr': 0.01,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
