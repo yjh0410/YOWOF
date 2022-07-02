@@ -1,4 +1,3 @@
-from turtle import forward
 import torch
 import torch.nn as nn
 from ...basic.conv import Conv
@@ -181,7 +180,6 @@ class STMEncoder(nn.Module):
 
             # smooth
             feats = smooth(feats)
-
 
             # [BK, C, H, W] -> [B, K, C, H, W]
             feats = feats.view(B, K, C, H, W)
