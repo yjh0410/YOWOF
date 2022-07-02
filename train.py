@@ -249,10 +249,6 @@ def train():
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()
-                    torch.cuda.empty_cache()
-                    del losses, loss_dict_reduced
-
-
                     
             else:
                 # Backward
@@ -262,8 +258,6 @@ def train():
                 if ni % d_cfg['accumulate'] == 0:
                     optimizer.step()
                     optimizer.zero_grad()
-                    torch.cuda.empty_cache()
-                    del losses, loss_dict_reduced
 
             # ema
             if args.ema:
@@ -289,7 +283,12 @@ def train():
                 print(log, flush=True)
                 
                 t0 = time.time()
-            
+
+            # Empty cache
+            if ni % d_cfg['accumulate'] == 0:
+                torch.cuda.empty_cache()
+                del losses, loss_dict_reduced
+
         lr_scheduler.step()
         
         # evaluation
