@@ -4,7 +4,6 @@ python train.py \
         -d ucf24 \
         -v yowof-r18 \
         --num_workers 4 \
-        --eval \
         --eval_epoch 2 \
         --fp16 \
         --ema \

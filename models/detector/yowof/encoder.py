@@ -4,7 +4,6 @@ from ...basic.conv import Conv
 
 
 # Motion Encoder
-# Motion Encoder
 class MotionEncoder(nn.Module):
     def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
