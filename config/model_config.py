@@ -23,7 +23,6 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
-        'freeze': False,
         'norm_type': 'BN',
         'stride': 32,
         'pretrained': True,
