@@ -37,12 +37,12 @@ dataset_config = {
         'freeze_backbone': False,
         # train config
         'optimizer': 'sgd',
-        'weight_decay': 1e-4,
+        'weight_decay': 0,
         'momentum': 0.9,
         'max_epoch': 10,
         'lr_epoch': [3, 5, 7],
-        'batch_size': 32,
-        'accumulate': 1,
+        'batch_size': 16,
+        'accumulate': 2,
         'base_lr': 0.01 / 32.,
         # warmup strategy
         'warmup': 'linear',
