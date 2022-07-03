@@ -162,6 +162,7 @@ class SpatioTemporalEncoder(nn.Module):
 
         feats = torch.stack(feats)
         coeffs = torch.stack([coeffs[:, k:k+1, :, :] for k in range(self.len_clip)])
+        print(coeffs)
 
         # [B, C, H, W]
         feats = torch.mean(feats * coeffs, dim=0, keepdim=False)
