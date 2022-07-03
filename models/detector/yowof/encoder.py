@@ -18,10 +18,7 @@ class CSAM(nn.Module):
         self.linear = Conv(in_dim, in_dim, k=1, act_type=None, norm_type='BN')
 
         # output
-        self.out = nn.Sequential(
-            nn.Dropout2d(dropout),
-            Conv(in_dim, in_dim, k=1, act_type=None, norm_type='BN')
-            )
+        self.out = Conv(in_dim, in_dim, k=1, act_type=None, norm_type='BN')
 
 
     def forward(self, x):
@@ -127,18 +124,14 @@ class SpatioTemporalEncoder(nn.Module):
         self.expand_ratio = expand_ratio
         self.len_clip = len_clip
 
-        # spatial avgpool
-        self.spa_avgpool = nn.AdaptiveAvgPool2d(1)
+        # attention
+        self.attn = Conv(in_dim * len_clip, in_dim * len_clip, k=1, act_type='relu', norm_type='BN')
 
-        # coefficient
-        self.coeff = nn.Sequential(
-            nn.Conv2d(in_dim * len_clip, len_clip, kernel_size=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(len_clip, len_clip, kernel_size=1),
+        # fuse conv
+        self.fuse_conv = nn.Sequential(
+            Conv(in_dim * len_clip, in_dim, k=1, act_type='relu', norm_type='BN'),
+            Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
         )
-
-        # smooth
-        self.smooth = Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
 
         # CSAM
         self.csam = CSAM(in_dim, dropout)
@@ -152,21 +145,13 @@ class SpatioTemporalEncoder(nn.Module):
             feats: List(Tensor) [K, B, C, H, W]
         """
         # List[K, B, C, H, W] -> [B, KC, H, W]
-        spatio_feats = torch.cat(feats, dim=1)
+        sfeats = torch.cat(feats, dim=1)
+ 
+        # attention
+        sfeats = sfeats + torch.sigmoid(self.attn(sfeats))
 
-        # [B, KC, H, W] -> [B, KC, 1, 1]
-        spatio_vectors = self.spa_avgpool(spatio_feats)
-
-        # [B, KC, 1, 1] -> [B, K, 1, 1]
-        coeffs = torch.sigmoid(self.coeff(spatio_vectors))
-
-        feats = torch.stack(feats)
-        coeffs = torch.stack([coeffs[:, k:k+1, :, :] for k in range(self.len_clip)])
-        print(coeffs)
-
-        # [B, C, H, W]
-        feats = torch.mean(feats * coeffs, dim=0, keepdim=False)
-        feats = self.smooth(feats)
+        # fuse [B, KC, H, W] -> [B, C, H, W]
+        feats = self.fuse_conv(sfeats)
 
         # Channel Self Attention Module
         feats = self.csam(feats)
