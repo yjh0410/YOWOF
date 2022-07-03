@@ -167,7 +167,7 @@ def train():
         del model_copy
         
     # optimizer
-    base_lr = d_cfg['base_lr'] * d_cfg['batch_size'] * d_cfg['accumulate']
+    base_lr = d_cfg['base_lr']
     optimizer, start_epoch = build_optimizer(
         model=model_without_ddp,
         base_lr=base_lr,

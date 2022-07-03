@@ -43,7 +43,7 @@ dataset_config = {
         'lr_epoch': [3, 5, 7],
         'batch_size': 16,
         'accumulate': 2,
-        'base_lr': 0.01 / 32.,
+        'base_lr': 0.01,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
