@@ -77,9 +77,9 @@ class YOWOF(nn.Module):
             norm_type=cfg['head_norm']
             )
         # pred
-        self.obj_pred = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
-        self.cls_pred = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
-        self.reg_pred = nn.Conv2d(cfg['head_dim'], 4 * self.num_anchors, kernel_size=3, padding=1)
+        self.obj_pred_ = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
+        self.cls_pred_ = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
+        self.reg_pred_ = nn.Conv2d(cfg['head_dim'], 4 * self.num_anchors, kernel_size=3, padding=1)
 
 
         if trainable:
@@ -101,13 +101,13 @@ class YOWOF(nn.Module):
 
     def _init_pred_layers(self):  
         # init cls pred
-        nn.init.normal_(self.cls_pred.weight, mean=0, std=0.01)
+        nn.init.normal_(self.cls_pred_.weight, mean=0, std=0.01)
         init_prob = 0.01
         bias_value = -torch.log(torch.tensor((1. - init_prob) / init_prob))
-        nn.init.constant_(self.cls_pred.bias, bias_value)
+        nn.init.constant_(self.cls_pred_.bias, bias_value)
         # init reg pred
-        nn.init.normal_(self.reg_pred.weight, mean=0, std=0.01)
-        nn.init.constant_(self.reg_pred.bias, 0.0)
+        nn.init.normal_(self.reg_pred_.weight, mean=0, std=0.01)
+        nn.init.constant_(self.reg_pred_.bias, 0.0)
 
 
     def generate_anchors(self, img_size):
@@ -238,9 +238,9 @@ class YOWOF(nn.Module):
         # head
         cls_feats, reg_feats = self.head(feat)
 
-        obj_pred = self.obj_pred(reg_feats)
-        cls_pred = self.cls_pred(cls_feats)
-        reg_pred = self.reg_pred(reg_feats)
+        obj_pred = self.obj_pred_(reg_feats)
+        cls_pred = self.cls_pred_(cls_feats)
+        reg_pred = self.reg_pred_(reg_feats)
 
         # implicit objectness
         B, _, H, W = obj_pred.size()
@@ -306,9 +306,9 @@ class YOWOF(nn.Module):
         # head
         cls_feats, reg_feats = self.head(cur_feat)
 
-        obj_pred = self.obj_pred(reg_feats)
-        cls_pred = self.cls_pred(cls_feats)
-        reg_pred = self.reg_pred(reg_feats)
+        obj_pred = self.obj_pred_(reg_feats)
+        cls_pred = self.cls_pred_(cls_feats)
+        reg_pred = self.reg_pred_(reg_feats)
 
         # implicit objectness
         B, _, H, W = obj_pred.size()
@@ -416,9 +416,9 @@ class YOWOF(nn.Module):
             # detection head
             cls_feats, reg_feats = self.head(feat)
 
-            obj_pred = self.obj_pred(reg_feats)
-            cls_pred = self.cls_pred(cls_feats)
-            reg_pred = self.reg_pred(reg_feats)
+            obj_pred = self.obj_pred_(reg_feats)
+            cls_pred = self.cls_pred_(cls_feats)
+            reg_pred = self.reg_pred_(reg_feats)
 
             # implicit objectness
             B, _, H, W = obj_pred.size()
