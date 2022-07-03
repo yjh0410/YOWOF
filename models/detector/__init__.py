@@ -3,8 +3,9 @@ from .yowof.yowof import YOWOF
 
 
 # build YOWOF detector
-def build_model(args, 
-                cfg, 
+def build_model(args,
+                d_cfg,
+                m_cfg, 
                 device, 
                 num_classes=80, 
                 trainable=False,
@@ -14,15 +15,26 @@ def build_model(args,
     print('==============================')
     print('Build {} ...'.format(args.version.upper()))
 
+    # Basic config
+    if trainable:
+        dropout = m_cfg['dropout']
+        img_size = m_cfg['train_size']
+    else:
+        dropout = 0.
+        img_size = m_cfg['test_size']
+
+    # build YOWOF
     if 'yowof' in args.version:
-        model = YOWOF(cfg=cfg,
+        model = YOWOF(cfg=m_cfg,
                       device=device,
-                      img_size=cfg['train_size'] if trainable else cfg['test_size'],
+                      img_size=img_size,
                       num_classes=num_classes, 
+                      conf_thresh=m_cfg['conf_thresh'],
+                      nms_thresh=m_cfg['nms_thresh'],
+                      topk=args.topk,
                       trainable=trainable,
-                      conf_thresh=cfg['conf_thresh'],
-                      nms_thresh=cfg['nms_thresh'],
-                      topk=args.topk)
+                      dropout=dropout
+                      )
 
     # set inference mode
     if not trainable:
@@ -52,6 +64,16 @@ def build_model(args,
                 print(k)
 
         model.load_state_dict(checkpoint_state_dict, strict=False)
+
+    # Freeze backbone
+    if d_cfg['freeze_backbone']:
+        print('Freeze Backbone ...')
+        for m in model.backbone.parameters():
+            m.requires_grad = False
+
+        for m in model.neck.parameters():
+            m.requires_grad = False
+
 
     # keep training       
     if resume is not None:

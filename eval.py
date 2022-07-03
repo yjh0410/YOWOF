@@ -102,7 +102,8 @@ if __name__ == '__main__':
     # build model
     model = build_model(
         args=args, 
-        cfg=m_cfg,
+        d_cfg=d_cfg,
+        m_cfg=m_cfg,
         device=device, 
         num_classes=num_classes, 
         trainable=False,

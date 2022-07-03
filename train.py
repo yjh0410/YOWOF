@@ -133,8 +133,9 @@ def train():
     dataloader = build_dataloader(args, dataset, batch_size, CollateFunc())
 
     # build model
-    net = build_model(args=args, 
-                      cfg=m_cfg,
+    net = build_model(args=args,
+                      d_cfg=d_cfg,
+                      m_cfg=m_cfg,
                       device=device, 
                       num_classes=num_classes, 
                       trainable=True,

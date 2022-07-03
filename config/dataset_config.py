@@ -28,17 +28,19 @@ dataset_config = {
     'jhmdb': {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/JHMDB',
-        # 'data_root': 'E:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
+        'data_root': 'E:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
         'anno_file': 'JHMDB-GT.pkl',
         'train_split': 1,
         'test_split': 1,
+        # freeze
+        'freeze_backbone': True,
         # train config
         'optimizer': 'sgd',
         'weight_decay': 0.,
         'momentum': 0.9,
         'max_epoch': 10,
         'lr_epoch': [3, 5, 7],
-        'batch_size': 16,
+        'batch_size': 1,
         'accumulate': 2,
         'base_lr': 0.01,
         # warmup strategy
