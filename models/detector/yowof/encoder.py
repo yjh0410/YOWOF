@@ -5,7 +5,7 @@ from ...basic.conv import Conv
 
 # Channel Self Attetion Module
 class CSAM(nn.Module):
-    def __init__(self, in_dim, dropout=0.):
+    def __init__(self, in_dim):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
@@ -46,7 +46,7 @@ class CSAM(nn.Module):
 
 # Motion Encoder
 class MotionEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, dropout=0.):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -75,7 +75,7 @@ class MotionEncoder(nn.Module):
         )
 
         # CSAM
-        self.csam = CSAM(in_dim, dropout)
+        self.csam = CSAM(in_dim)
 
         # output conv
         self.out_conv = Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
@@ -114,7 +114,7 @@ class MotionEncoder(nn.Module):
 
 # Spatio-Temporal Encoder
 class SpatioTemporalEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, dropout=0.):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -131,7 +131,7 @@ class SpatioTemporalEncoder(nn.Module):
         )
 
         # CSAM
-        self.csam = CSAM(in_dim, dropout)
+        self.csam = CSAM(in_dim)
 
         # output conv
         self.out_conv = Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
@@ -158,7 +158,7 @@ class SpatioTemporalEncoder(nn.Module):
 
 # STM Encoder
 class STMEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1, dropout=0.):
+    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -175,13 +175,13 @@ class STMEncoder(nn.Module):
         ])
 
         # SpatioTemporalEncoder
-        self.st_encoder = SpatioTemporalEncoder(in_dim, expand_ratio, len_clip, dropout)
+        self.st_encoder = SpatioTemporalEncoder(in_dim, expand_ratio, len_clip)
 
         # Motion Encoder
-        self.mt_encoder = MotionEncoder(in_dim, expand_ratio, len_clip, dropout)
+        self.mt_encoder = MotionEncoder(in_dim, expand_ratio, len_clip)
 
         # CSAM
-        self.csam = CSAM(in_dim, dropout)
+        self.csam = CSAM(in_dim)
 
         # fuse layer
         self.fuse_conv = nn.Sequential(
