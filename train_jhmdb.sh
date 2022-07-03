@@ -2,7 +2,7 @@
 python train.py \
         --cuda \
         -d jhmdb \
-        -v yowof-rro-D \
+        -v yowof-r50-D \
         --num_workers 4 \
         --eval \
         --eval_epoch 2 \
