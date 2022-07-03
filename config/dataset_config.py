@@ -9,20 +9,21 @@ dataset_config = {
         'anno_file': 'UCF101v2-GT.pkl',
         'train_split': 1,
         'test_split': 1,
+        # freeze
+        'freeze_backbone': False,
         # train config
         'optimizer': 'sgd',
-        'weight_decay': 0.,
+        'weight_decay': 1e-4,
         'momentum': 0.9,
         'max_epoch': 10,
         'lr_epoch': [3, 5, 7],
-        'batch_size': 16,
-        'accumulate': 2,
-        'base_lr': 0.01,
+        'batch_size': 128,
+        'accumulate': 1,
+        'base_lr': 0.01 / 32.,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
         'wp_iter': 500,
-
     },
     
     'jhmdb': {
@@ -33,7 +34,7 @@ dataset_config = {
         'train_split': 1,
         'test_split': 1,
         # freeze
-        'freeze_backbone': True,
+        'freeze_backbone': False,
         # train config
         'optimizer': 'sgd',
         'weight_decay': 1e-4,
