@@ -151,7 +151,6 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50-d',
-        'freeze': False,
         'norm_type': 'BN',
         'stride': 16,
         'pretrained': True,
@@ -163,7 +162,8 @@ model_config = {
         'neck_norm': 'BN',
         'neck_depthwise': False,
         # temp-motion encoder
-        'te_depth': 1,
+        'encoder_expand_ratio': 1.0,
+        'dropout': 0.1,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
@@ -175,7 +175,7 @@ model_config = {
         'conf_thresh': 0.05,
         'nms_thresh': 0.6,
         # anchor box
-        'anchor_size': [[8, 8], 
+        'anchor_size': [[8, 8],
                         [16, 16],
                         [32, 32], 
                         [64, 64], 
