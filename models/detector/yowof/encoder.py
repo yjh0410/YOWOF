@@ -124,9 +124,6 @@ class SpatioTemporalEncoder(nn.Module):
         self.expand_ratio = expand_ratio
         self.len_clip = len_clip
 
-        # attention
-        self.attn = Conv(in_dim * len_clip, in_dim * len_clip, k=1, act_type='relu', norm_type='BN')
-
         # fuse conv
         self.fuse_conv = nn.Sequential(
             Conv(in_dim * len_clip, in_dim, k=1, act_type='relu', norm_type='BN'),
@@ -147,9 +144,6 @@ class SpatioTemporalEncoder(nn.Module):
         # List[K, B, C, H, W] -> [B, KC, H, W]
         sfeats = torch.cat(feats, dim=1)
  
-        # attention
-        sfeats = sfeats + torch.sigmoid(self.attn(sfeats))
-
         # fuse [B, KC, H, W] -> [B, C, H, W]
         feats = self.fuse_conv(sfeats)
 
