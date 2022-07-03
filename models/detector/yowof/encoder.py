@@ -128,14 +128,13 @@ class SpatioTemporalEncoder(nn.Module):
         self.len_clip = len_clip
 
         # spatial avgpool
-        self.spa_avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.spa_avgpool = nn.AdaptiveAvgPool2d(1)
 
         # coefficient
         self.coeff = nn.Sequential(
-            nn.Linear(in_dim * len_clip, len_clip),
+            nn.Conv2d(in_dim * len_clip, len_clip, kernel_size=1),
             nn.ReLU(inplace=True),
-            nn.Linear(len_clip, len_clip),
-            nn.Softmax()
+            nn.Conv2d(len_clip, len_clip, kernel_size=1),
         )
 
         # smooth
@@ -155,15 +154,17 @@ class SpatioTemporalEncoder(nn.Module):
         # List[K, B, C, H, W] -> [B, KC, H, W]
         spatio_feats = torch.cat(feats, dim=1)
 
-        # [B, KC, H, W] -> [B, KC, 1, 1] -> [B, KC]
+        # [B, KC, H, W] -> [B, KC, 1, 1]
         spatio_vectors = self.spa_avgpool(spatio_feats)
-        spatio_vectors = spatio_vectors.flatten(1)
 
-        # [B, KC] -> [B, K]
-        coeffs = self.coeff(spatio_vectors)
+        # [B, KC, 1, 1] -> [B, K, 1, 1]
+        coeffs = torch.sigmoid(self.coeff(spatio_vectors))
 
-        # Weighted summation: List[K, B, C, H, W] -> [B, C, H, W]
-        feats = sum([feats[k] * coeffs[..., k] for k in range(self.len_clip)])
+        feats = torch.stack(feats)
+        coeffs = torch.stack([coeffs[:, k:k+1, :, :] for k in range(self.len_clip)])
+
+        # [B, C, H, W]
+        feats = torch.mean(feats * coeffs, dim=0, keepdim=False)
         feats = self.smooth(feats)
 
         # Channel Self Attention Module
