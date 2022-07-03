@@ -4,8 +4,7 @@ from .shufflenetv2 import build_sfnetv2
 
 def build_backbone(model_name='resnet50-d', 
                    pretrained=False, 
-                   norm_type='BN',
-                   freeze=False):
+                   norm_type='BN'):
     print('==============================')
     print('Backbone: {}'.format(model_name.upper()))
     print('--pretrained: {}'.format(pretrained))
@@ -21,10 +20,5 @@ def build_backbone(model_name='resnet50-d',
     else:
         print('Unknown Backbone ...')
         exit()
-
-    if freeze:
-        print('freeze parameters backone ...')
-        for m in model.parameters():
-            m.requires_grad = False
 
     return model, feat_dim

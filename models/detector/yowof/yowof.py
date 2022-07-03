@@ -52,8 +52,7 @@ class YOWOF(nn.Module):
         self.backbone, bk_dim = build_backbone(
             model_name=cfg['backbone'], 
             pretrained=trainable,
-            norm_type=cfg['norm_type'],
-            freeze=cfg['freeze']
+            norm_type=cfg['norm_type']
             )
         # neck
         self.neck = build_neck(
