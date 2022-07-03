@@ -5,6 +5,7 @@ import time
 import numpy as np
 import torch
 
+from evaluator.ucf_evaluator import UCFEvaluator
 from evaluator.jhmdb_evaluator import JHMDBEvaluator
 
 from dataset.transforms import ValTransforms
@@ -47,6 +48,20 @@ def parse_args():
 
 def jhmdb_eval(d_cfg, model, transform, save_dir, metrics):
     evaluator = JHMDBEvaluator(
+        cfg=d_cfg,
+        len_clip=model.len_clip,
+        img_size=args.img_size,
+        thresh=0.5,
+        transform=transform,
+        save_dir=save_dir)
+
+    for metric in metrics:
+        evaluator.metric = metric
+        evaluator.evaluate(model)
+
+
+def ucf24_eval(d_cfg, model, transform, save_dir, metrics):
+    evaluator = UCFEvaluator(
         cfg=d_cfg,
         len_clip=model.len_clip,
         img_size=args.img_size,
@@ -118,6 +133,14 @@ if __name__ == '__main__':
     # run
     if args.dataset == 'jhmdb':
         jhmdb_eval(
+            d_cfg=d_cfg,
+            model=model,
+            transform=transform,
+            save_dir=save_path,
+            metrics=args.metrics
+            )
+    elif args.dataset == 'ucf24':
+        ucf24_eval(
             d_cfg=d_cfg,
             model=model,
             transform=transform,

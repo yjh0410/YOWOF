@@ -88,6 +88,7 @@ class UCF24(data.Dataset):
         else:
             # get test video list
             video_list = self.test_videos[self.split - 1]
+        self.video_list = video_list
         self.num_videos = len(video_list)
         
         if self.debug:

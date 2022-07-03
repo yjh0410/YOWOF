@@ -158,7 +158,7 @@ class STMEncoder(nn.Module):
         ])
 
         # out layer
-        self.out_layer = Conv(in_dim * len_clip, in_dim, k=1, act_type='relu', norm_type='BN')
+        self.out_layer = nn.Conv2d(in_dim, in_dim, kernel_size=1)
 
 
     def forward(self, feats):
@@ -187,10 +187,12 @@ class STMEncoder(nn.Module):
             # [B, K, C, H, W] -> List[K, B, C, H, W]
             feats = [feats[:, k, :, :, :] for k in range(K)]
 
-        # output: List[K, B, C, H, W] -> [B, KC, H, W] -> [B, C, H, W]
-        out_feat = self.out_layer(torch.cat(feats, dim=1))
+        # output: List[K, B, C, H, W] -> [B, C, K, H, W]
+        feats = torch.stack(feats, dim=2)
+        # [B, C, K, H, W] -> [B, C, H, W]
+        out_feat = torch.mean(feats, dim=2)
 
-        return out_feat
+        return self.out_layer(out_feat)
 
 
 # Channel Fusion and Attetion Mechanism
@@ -207,12 +209,8 @@ class CFAM(nn.Module):
 
         self.qkv_conv = nn.Conv2d(in_dim, 3*in_dim, kernel_size=1, bias=False)
         self.attend = nn.Softmax(dim = -1)
-        self.out = nn.Sequential(
-            nn.Dropout2d(dropout),
-            nn.Conv2d(in_dim, in_dim, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(in_dim),
-            nn.ReLU(inplace=True)
-        )
+        self.conv = Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
+        self.out = nn.Sequential(nn.Dropout2d(dropout), nn.Conv2d(in_dim, in_dim, kernel_size=1))
 
 
     def forward(self, x):
@@ -235,7 +233,6 @@ class CFAM(nn.Module):
         # [B, C, C] x [B, C, N] -> [B, C, N]
         y = torch.matmul(attn, v)
         y = y.view(B, C, H, W)
+        y = x + self.conv(y)
 
-        return x + self.out(y)
-
-        
+        return self.out(y)

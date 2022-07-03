@@ -68,7 +68,7 @@ class UCFEvaluator(object):
             # inference with video stream
             detections = {}
             for fid in range(1, num_frames+1):
-                image_file = os.path.join(video_path, '{:0>5}.png'.format(fid))
+                image_file = os.path.join(video_path, '{:0>5}.jpg'.format(fid))
                 cur_frame = cv2.imread(image_file)
                 
                 assert cur_frame is not None
