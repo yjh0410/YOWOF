@@ -71,7 +71,7 @@ model_config = {
         # input
         'train_size': 320,
         'test_size': 320,
-        'len_clip': 16,
+        'len_clip': 8,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -88,10 +88,9 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50',
-        'freeze': False,
-        'norm_type': 'BN',
-        'stride': 32,
         'pretrained': True,
+        'res5_dilation': False,
+        'stride': 32,
         # neck
         'neck': 'spp_block',
         'pooling_size': [5, 9, 13],
@@ -100,9 +99,10 @@ model_config = {
         'neck_norm': 'BN',
         'neck_depthwise': False,
         # temp-motion encoder
-        'encoder_depth': 2,
+        'dropout': 0.1,
+        'encoder_depth': 1,
         # head
-        'head_dim': 256,
+        'head_dim': 512,
         'head_norm': 'BN',
         'head_act': 'relu',
         'num_cls_heads': 2,
@@ -112,11 +112,12 @@ model_config = {
         'conf_thresh': 0.05,
         'nms_thresh': 0.6,
         # anchor box
-        'anchor_size': [[8, 8], 
+        'anchor_size': [[8, 8],
                         [16, 16],
                         [32, 32], 
                         [64, 64], 
-                        [128, 128]],
+                        [128, 128],
+                        [256, 256]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
@@ -127,15 +128,15 @@ model_config = {
         'alpha': 0.25,
         'gamma': 2.0,
         'loss_cls_weight': 1.0,
-        'loss_reg_weight': 1.0,
+        'loss_reg_weight': 3.0,
 
     },
 
-    'yowof-r50-D': {
+    'yowof-r50-DC5': {
         # input
         'train_size': 320,
         'test_size': 320,
-        'len_clip': 16,
+        'len_clip': 8,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -152,9 +153,9 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet50-d',
-        'norm_type': 'BN',
-        'stride': 16,
         'pretrained': True,
+        'res5_dilation': True,
+        'stride': 16,
         # neck
         'neck': 'spp_block',
         'pooling_size': [5, 9, 13],
@@ -163,10 +164,10 @@ model_config = {
         'neck_norm': 'BN',
         'neck_depthwise': False,
         # temp-motion encoder
-        'encoder_expand_ratio': 1.0,
         'dropout': 0.1,
+        'encoder_depth': 1,
         # head
-        'head_dim': 256,
+        'head_dim': 512,
         'head_norm': 'BN',
         'head_act': 'relu',
         'num_cls_heads': 2,
@@ -180,7 +181,8 @@ model_config = {
                         [16, 16],
                         [32, 32], 
                         [64, 64], 
-                        [128, 128]],
+                        [128, 128],
+                        [256, 256]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
@@ -191,7 +193,7 @@ model_config = {
         'alpha': 0.25,
         'gamma': 2.0,
         'loss_cls_weight': 1.0,
-        'loss_reg_weight': 1.0,
+        'loss_reg_weight': 3.0,
 
     },
 

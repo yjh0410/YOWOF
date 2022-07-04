@@ -12,7 +12,7 @@ __all__ = ['ResNet', 'resnet18', 'resnet50', 'resnet101']
 
 model_urls = {
     'resnet18': 'https://download.openmmlab.com/mmaction/recognition/tsn/hvu/action/tsn_r18_1x1x8_100e_hvu_action_rgb_20201027-011b282b.pth',
-    'resnet50': 'https://download.openmmlab.com/mmaction/recognition/tsn/tsn_r50_320p_1x1x8_50e_activitynet_video_rgb/tsn_r50_320p_1x1x8_50e_activitynet_video_rgb_20210301-7f8da0c6.pth',
+    'resnet50': 'https://download.openmmlab.com/mmaction/recognition/tsn/tsn_r50_video_1x1x8_100e_kinetics600_rgb/tsn_r50_video_1x1x8_100e_kinetics600_rgb_20201015-4db3c461.pth',
     'resnet101': 'https://download.openmmlab.com/mmaction/recognition/tsn/tsn_r101_1x1x5_50e_mmit_rgb/tsn_r101_1x1x5_50e_mmit_rgb_20200618-642f450d.pth'
 }
 
@@ -363,7 +363,7 @@ def build_resnet(model_name='resnet50', pretrained=False, res5_dilation=True):
 if __name__ == '__main__':
     import time
 
-    model, feat_dim = build_resnet(model_name='resnet101', pretrained=True, res5_dilation=True)
+    model, feat_dim = build_resnet(model_name='resnet50', pretrained=True, res5_dilation=True)
     print(feat_dim)
     device = torch.device("cuda")
     model = model.to(device)
