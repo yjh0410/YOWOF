@@ -71,10 +71,6 @@ def build_model(args,
         for m in model.backbone.parameters():
             m.requires_grad = False
 
-        for m in model.neck.parameters():
-            m.requires_grad = False
-
-
     # keep training       
     if resume is not None:
         print('keep training: ', resume)

@@ -34,7 +34,7 @@ dataset_config = {
         'train_split': 1,
         'test_split': 1,
         # freeze
-        'freeze_backbone': False,
+        'freeze_backbone': True,
         # train config
         'optimizer': 'adamw',
         'momentum': 0.9,
