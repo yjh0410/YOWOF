@@ -62,7 +62,7 @@ model_config = {
         'alpha': 0.25,
         'gamma': 2.0,
         'loss_cls_weight': 1.0,
-        'loss_reg_weight': 1.0,
+        'loss_reg_weight': 3.0,
 
     },
 
