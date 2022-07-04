@@ -131,7 +131,7 @@ class STCEncoder(nn.Module):
         self.len_clip = len_clip
         self.out_dim = out_dim
 
-
+        # input proj
         self.input_proj = nn.Conv2d(in_dim * len_clip, out_dim, kernel_size=1)
 
         # SSAM
@@ -146,9 +146,12 @@ class STCEncoder(nn.Module):
             for _ in range(depth)
         ])
 
-        # fuse SSAM & CSAM output
-        self.fuse_convs = nn.ModuleList([
-            Conv(out_dim*2, out_dim, k=1, act_type='relu', norm_type='BN')
+        # fuse conv
+        self.fuse_csam = nn.ModuleList([
+            nn.Sequential(
+                Conv(out_dim*2, out_dim, k=1, act_type='relu', norm_type='BN'),
+                CSAM(out_dim, dropout)
+            )
             for _ in range(depth)
         ])
 
@@ -164,11 +167,12 @@ class STCEncoder(nn.Module):
         input_feats = torch.cat(feats, dim=1)
         # [B, KC, H, W] -> [B, C, H, W]
         x = self.input_proj(input_feats)
+        kf_feats = feats[-1]
 
-        for ssam, csam, fuse in zip(self.ssam, self.csam, self.fuse_convs):
+        for ssam, csam, fuse in zip(self.ssam, self.csam, self.fuse_csam):
             # SSAM & CSAM
-            x1 = ssam(x)
-            x2 = csam(x)
-            x = fuse(torch.cat([x1, x2], dim=1))
+            x = ssam(x)
+            x = csam(x)
+            kf_feats = fuse(torch.cat([x, kf_feats], dim=1))
 
-        return self.output(x)
+        return self.output(kf_feats)
