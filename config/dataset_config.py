@@ -37,8 +37,8 @@ dataset_config = {
         'freeze_backbone': False,
         # train config
         'optimizer': 'sgd',
-        'weight_decay': 0,
         'momentum': 0.9,
+        'weight_decay': 5e-4,
         'max_epoch': 10,
         'lr_epoch': [3, 5, 7],
         'batch_size': 16,
