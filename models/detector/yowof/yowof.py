@@ -63,8 +63,9 @@ class YOWOF(nn.Module):
         # TM-Encoder
         self.stm_encoder = STMEncoder(
             in_dim=cfg['head_dim'],
-            expand_ratio=cfg['encoder_expand_ratio'],
-            len_clip=cfg['len_clip']
+            spatial_size=[img_size//cfg['stride']]*2,
+            len_clip=cfg['len_clip'],
+            dropout=cfg['dropout']
         )
 
         # head

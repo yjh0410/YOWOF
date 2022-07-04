@@ -3,9 +3,29 @@ import torch.nn as nn
 from ...basic.conv import Conv
 
 
+# FFN
+class FeedForward(nn.Module):
+    def __init__(self, dim, hidden_dim, dropout = 0., act='relu'):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv1d(dim, hidden_dim, kernel_size=1),
+            nn.GELU() if act =='gelu' else nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Conv1d(hidden_dim, dim, kernel_size=1),
+            nn.Dropout(dropout)
+        )
+        self.norm = nn.InstanceNorm1d(dim)
+
+    def forward(self, x):
+        """
+            x: [B, C, N]
+        """
+        return self.norm(self.net(x)) + x
+
+
 # Channel Self Attetion Module
 class CSAM(nn.Module):
-    def __init__(self, in_dim):
+    def __init__(self, in_dim, dropout=0.1):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
@@ -15,10 +35,13 @@ class CSAM(nn.Module):
 
         # attention
         self.attend = nn.Softmax(dim = -1)
-        self.linear = Conv(in_dim, in_dim, k=1, act_type=None, norm_type='BN')
+        self.ffn = FeedForward(in_dim, in_dim*4, dropout=dropout)
 
         # output
-        self.out = Conv(in_dim, in_dim, k=1, act_type=None, norm_type='BN')
+        self.out = nn.Sequential(
+            nn.Dropout2d(dropout),
+            nn.Conv2d(in_dim, in_dim, kernel_size=1)
+        )
 
 
     def forward(self, x):
@@ -37,135 +60,80 @@ class CSAM(nn.Module):
         # attention: [B, C, C] x [B, C, N] -> [B, C, N]
         attn = self.attend(dots)
         y = torch.matmul(attn, v)
+        y = self.ffn(y)
 
+        # [B, C, N] -> [B, C, H, W]
         y = y.view(B, C, H, W)
-        y = y + self.linear(y)
-
-        return y + self.out(y)
-
-
-# Motion Encoder
-class MotionEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
-        """
-            in_dim: (Int) -> dim of single feature
-            K: (Int) -> length of video clip
-        """
-        super().__init__()
-        self.in_dim = in_dim
-        self.expand_ratio = expand_ratio
-        self.len_clip = len_clip
-
-        # input projection
-        inter_dim = int(in_dim * expand_ratio)
-        self.input_proj = nn.ModuleList([
-            nn.Conv2d(in_dim, inter_dim, kernel_size=1)
-            for _ in range(len_clip)
-        ])
-
-        self.smooth_layers = nn.ModuleList([
-            nn.Conv2d(inter_dim, inter_dim, kernel_size=1)
-            for _ in range(len_clip - 1)
-        ])
-
-        # fuse conv
-        self.fuse_conv = nn.Sequential(
-            Conv(inter_dim * (len_clip - 1), in_dim, k=1, act_type='relu', norm_type='BN'),
-            Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
-        )
-
-        # CSAM
-        self.csam = CSAM(in_dim)
-
-        # output conv
-        self.out_conv = Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
-
-    
-    def forward(self, feats):
-        """
-            feats: List(Tensor) [K, B, C, H, W]
-        """
-        input_feats = []
-        # List[K, B, C, H, W] -> List[K, B, C', H, W]
-        for feat, layer in zip(feats, self.input_proj):
-            input_feats.append(layer(feat))
-
-        motion_feats = []
-        for idx in range(len(feats) - 1):
-            feat_t1 = input_feats[idx]
-            feat_t2 = input_feats[idx + 1]
-            smooth = self.smooth_layers[idx]
-            motion_feat = smooth(feat_t2) - feat_t1
-            motion_feats.append(motion_feat)
-
-        # List[K-1, B, C', H, W] -> [B, (K-1)C', H, W]
-        mfeats = torch.cat(motion_feats, dim=1)
-        # [B, (K-1)C', H, W] -> [B, C, H, W]
-        feats = self.fuse_conv(mfeats)
-
-        # Channel Self Attention Module
-        feats = self.csam(feats)
 
         # output
-        out_feats = self.out_conv(feats)
+        y = y + self.out(y)
 
-        return out_feats
+        return y
 
 
-# Spatio-Temporal Encoder
-class SpatioTemporalEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
+# Spatio-Temporal Attention Module
+class STAM(nn.Module):
+    def __init__(self, in_dim, spatial_size, len_clip=1, dropout=0.1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
         """
         super().__init__()
         self.in_dim = in_dim
-        self.expand_ratio = expand_ratio
         self.len_clip = len_clip
+        self.scale = in_dim ** -0.5
 
-        # fuse conv
-        self.fuse_conv = nn.Sequential(
-            Conv(in_dim * len_clip, in_dim, k=1, act_type='relu', norm_type='BN'),
-            Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
+        # spatio-temporal query: [C, N], N=HW
+        self.st_query = nn.Embedding(in_dim, spatial_size[0]*spatial_size[1])
+
+        # attention
+        self.attend = nn.Softmax(dim = -1)
+        self.ffn = FeedForward(in_dim, in_dim*4, dropout=dropout)
+
+        # output
+        self.out = nn.Sequential(
+            nn.Dropout2d(dropout),
+            nn.Conv2d(in_dim, in_dim, kernel_size=1)
         )
-
-        # CSAM
-        self.csam = CSAM(in_dim)
-
-        # output conv
-        self.out_conv = Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
 
 
     def forward(self, feats):
         """
             feats: List(Tensor) [K, B, C, H, W]
         """
-        # List[K, B, C, H, W] -> [B, KC, H, W]
+        # List[K, B, C, H, W] -> [B, KC, H, W] -> [B, KC, N]
         sfeats = torch.cat(feats, dim=1)
- 
-        # fuse [B, KC, H, W] -> [B, C, H, W]
-        feats = self.fuse_conv(sfeats)
+        B, _, H, W = sfeats.size()
+        sfeats = sfeats.flatten(-2)
 
-        # Channel Self Attention Module
-        feats = self.csam(feats)
+        # [C, N] -> [B, C, N] -> [B, C, N]
+        st_query = self.st_query.weight.unsqueeze(0).repeat(B, 1, 1)
+
+        # [B, C, N] x [B, N, KC] -> [B, C, KC]
+        dots = torch.matmul(st_query, sfeats.transpose(-1, -2)) * self.scale
+        attn = self.attend(dots)
+        # attention: [B, C, KC] x [B, KC, N] -> [B, C, N]
+        st_query = torch.matmul(attn, sfeats)
+        st_query = self.ffn(st_query)
+ 
+        # [B, C, N] -> [B, C, H, W]
+        st_query = st_query.view(B, -1, H, W)
 
         # output
-        out_feats = self.out_conv(feats)
+        st_query = st_query + self.out(st_query)
 
-        return out_feats
+        return st_query
 
 
 # STM Encoder
 class STMEncoder(nn.Module):
-    def __init__(self, in_dim, expand_ratio=0.5, len_clip=1):
+    def __init__(self, in_dim, spatial_size=[10, 10], len_clip=1, dropout=0.):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
         """
         super().__init__()
         self.in_dim = in_dim
-        self.expand_ratio = expand_ratio
         self.len_clip = len_clip
 
         # input proj
@@ -174,18 +142,15 @@ class STMEncoder(nn.Module):
             for _ in range(len_clip)
         ])
 
-        # SpatioTemporalEncoder
-        self.st_encoder = SpatioTemporalEncoder(in_dim, expand_ratio, len_clip)
-
-        # Motion Encoder
-        self.mt_encoder = MotionEncoder(in_dim, expand_ratio, len_clip)
+        # STAM
+        self.stam = STAM(in_dim, spatial_size, len_clip, dropout)
 
         # CSAM
-        self.csam = CSAM(in_dim)
+        self.csam = CSAM(in_dim, dropout)
 
         # fuse layer
         self.fuse_conv = nn.Sequential(
-            Conv(in_dim * 3, in_dim, k=1, act_type='relu', norm_type='BN'),
+            Conv(in_dim * 2, in_dim, k=1, act_type='relu', norm_type='BN'),
             Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
         )
 
@@ -201,20 +166,17 @@ class STMEncoder(nn.Module):
         for feat, layer in zip(feats, self.input_proj):
             input_feats.append(layer(feat))
 
-        # spat-temp encoder
-        spattemp_feats = self.st_encoder(input_feats)
+        # STAM: [B, C, H, W]
+        spattemp_feats = self.stam(input_feats)
 
-        # motion encoder
-        motion_feats = self.mt_encoder(input_feats)
-
-        # fuse conv
-        feats = torch.cat([input_feats[-1], spattemp_feats, motion_feats], dim=1)
+        # fuse conv: [B, 2C, H, W] -> [B, C, H, W]
+        feats = torch.cat([input_feats[-1], spattemp_feats], dim=1)
         feats = self.fuse_conv(feats)
 
-        # Channel Self Attention Module
+        # CSAM: [B, C, H, W]
         feats = self.csam(feats)
 
-        # output
+        # output: [B, C, H, W]
         out_feats = self.out_conv(feats)
 
         return out_feats
