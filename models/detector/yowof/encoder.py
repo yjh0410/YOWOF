@@ -119,39 +119,6 @@ class SSAM(nn.Module):
         return y
 
 
-# Temporal Self Attetion Module
-class TSAM(nn.Module):
-    def __init__(self, in_dim):
-        super().__init__()
-        self.in_dim = in_dim
-
-        # query, key, value
-        self.attn = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Conv2d(in_dim, in_dim, kernel_size=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_dim, in_dim, kernel_size=1),
-        )
-        self.attend = nn.Sigmoid()
-
-        # output
-        self.out = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=1),
-            nn.BatchNorm2d(in_dim),
-            nn.ReLU(inplace=True)
-        )
-
-    def forward(self, x):
-        """
-            x: (Tensor) [B, KC, H, W]
-        """
-        # [B, KC, H, W] -> [B, KC, 1, 1]
-        attn = self.attend(self.attn(x))
-        x = x * attn
-
-        return x + self.out(x)
-
-
 # STC Encoder
 class STCEncoder(nn.Module):
     def __init__(self, in_dim, out_dim, len_clip=1, dropout=0., depth=1):
@@ -166,12 +133,6 @@ class STCEncoder(nn.Module):
 
 
         self.input_proj = nn.Conv2d(in_dim * len_clip, out_dim, kernel_size=1)
-
-        # TSAM
-        self.tsam = nn.ModuleList([
-            TSAM(out_dim)
-            for _ in range(depth)
-        ])
 
         # SSAM
         self.ssam = nn.ModuleList([
@@ -204,9 +165,7 @@ class STCEncoder(nn.Module):
         # [B, KC, H, W] -> [B, C, H, W]
         x = self.input_proj(input_feats)
 
-        for tsam, ssam, csam, fuse in zip(self.tsam, self.ssam, self.csam, self.fuse_convs):
-            # TSAM
-            x = tsam(x)
+        for ssam, csam, fuse in zip(self.ssam, self.csam, self.fuse_convs):
             # SSAM & CSAM
             x1 = ssam(x)
             x2 = csam(x)
