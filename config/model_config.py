@@ -23,9 +23,9 @@ model_config = {
                          {'name': 'PadImage'}],
         # model
         'backbone': 'resnet18',
-        'norm_type': 'BN',
-        'stride': 32,
         'pretrained': True,
+        'res5_dilation': False,
+        'stride': 32,
         # neck
         'neck': 'spp_block',
         'pooling_size': [5, 9, 13],
@@ -35,8 +35,9 @@ model_config = {
         'neck_depthwise': False,
         # temp-motion encoder
         'dropout': 0.1,
+        'encoder_depth': 1,
         # head
-        'head_dim': 256,
+        'head_dim': 512,
         'head_norm': 'BN',
         'head_act': 'relu',
         'num_cls_heads': 2,

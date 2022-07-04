@@ -8,7 +8,7 @@ import torch.nn as nn
 from ...backbone import build_backbone
 from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
-from .encoder import STMEncoder
+from .encoder import STCEncoder
 from .loss import Criterion
 
 
@@ -52,7 +52,7 @@ class YOWOF(nn.Module):
         self.backbone, bk_dim = build_backbone(
             model_name=cfg['backbone'], 
             pretrained=trainable,
-            norm_type=cfg['norm_type']
+            res5_dilation=cfg['res5_dilation']
             )
         # neck
         self.neck = build_neck(
@@ -61,11 +61,12 @@ class YOWOF(nn.Module):
             out_dim=cfg['head_dim']
             )                         
         # TM-Encoder
-        self.stm_encoder = STMEncoder(
+        self.stm_encoder = STCEncoder(
             in_dim=cfg['head_dim'],
-            spatial_size=[img_size//cfg['stride']]*2,
+            out_dim=cfg['head_dim'],
             len_clip=cfg['len_clip'],
-            dropout=cfg['dropout']
+            dropout=cfg['dropout'],
+            depth=cfg['encoder_depth']
         )
 
         # head
