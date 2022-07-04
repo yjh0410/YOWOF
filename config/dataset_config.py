@@ -12,14 +12,14 @@ dataset_config = {
         # freeze
         'freeze_backbone': False,
         # train config
-        'optimizer': 'sgd',
-        'weight_decay': 1e-4,
+        'optimizer': 'adamw',
         'momentum': 0.9,
-        'max_epoch': 10,
-        'lr_epoch': [3, 5, 7],
-        'batch_size': 128,
+        'weight_decay': 1e-4,
+        'max_epoch': 12,
+        'lr_epoch': [6, 10],
+        'batch_size': 16,
         'accumulate': 1,
-        'base_lr': 0.01 / 32.,
+        'base_lr': 2.5e-5,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
