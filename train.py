@@ -1,4 +1,6 @@
-from __future__ import division
+import cv2
+cv2.setNumThreads(0)
+cv2.ocl.setUseOpenCL(False)
 
 import os
 import random
@@ -6,10 +8,6 @@ import time
 import argparse
 import numpy as np
 from copy import deepcopy
-import cv2
-cv2.setNumThreads(0)
-cv2.ocl.setUseOpenCL(False)
-
 import torch
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist

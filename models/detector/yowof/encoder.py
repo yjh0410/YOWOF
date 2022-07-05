@@ -150,13 +150,11 @@ class STCEncoder(nn.Module):
         self.fuse_csam = nn.ModuleList([
             nn.Sequential(
                 Conv(out_dim*2, out_dim, k=1, act_type='relu', norm_type='BN'),
-                CSAM(out_dim, dropout)
+                CSAM(out_dim, dropout),
+                Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
             )
             for _ in range(depth)
         ])
-
-        # output
-        self.output = Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
 
 
     def forward(self, feats):
@@ -175,4 +173,4 @@ class STCEncoder(nn.Module):
             x = csam(x)
             kf_feats = fuse(torch.cat([x, kf_feats], dim=1))
 
-        return self.output(kf_feats)
+        return kf_feats

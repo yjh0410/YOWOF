@@ -25,8 +25,7 @@ class YOWOF(nn.Module):
                  conf_thresh = 0.05,
                  nms_thresh = 0.6,
                  topk = 1000,
-                 trainable = False,
-                 dropout = 0.):
+                 trainable = False):
         super(YOWOF, self).__init__()
         self.cfg = cfg
         self.device = device

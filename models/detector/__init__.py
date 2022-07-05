@@ -17,10 +17,8 @@ def build_model(args,
 
     # Basic config
     if trainable:
-        dropout = m_cfg['dropout']
         img_size = m_cfg['train_size']
     else:
-        dropout = 0.
         img_size = m_cfg['test_size']
 
     # build YOWOF
@@ -33,7 +31,6 @@ def build_model(args,
                       nms_thresh=m_cfg['nms_thresh'],
                       topk=args.topk,
                       trainable=trainable,
-                      dropout=dropout
                       )
 
     # set inference mode
