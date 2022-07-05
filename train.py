@@ -251,6 +251,7 @@ def train():
                     scaler.update()
                     optimizer.zero_grad()
                     del video_clips, targets
+                    torch.cuda.empty_cache()
                     
             else:
                 # Backward
@@ -261,6 +262,7 @@ def train():
                     optimizer.step()
                     optimizer.zero_grad()
                     del video_clips, targets
+                    torch.cuda.empty_cache()
 
             # ema
             if args.ema:
