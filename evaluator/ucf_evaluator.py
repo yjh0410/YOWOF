@@ -27,7 +27,7 @@ class UCFEvaluator(object):
         self.transform = transform
         self.metric = metric
         self.save_dir = save_dir
-        self.num_classes = 21
+        self.num_classes = 24
         self.class_names = UCF24_CLASSES
         self.frame_map = 0.0
         self.video_map = {'@0.5': 0.0,
