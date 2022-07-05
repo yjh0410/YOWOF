@@ -121,7 +121,7 @@ class SSAM(nn.Module):
 
 # STC Encoder
 class STCEncoder(nn.Module):
-    def __init__(self, in_dim, out_dim, len_clip=1, dropout=0., depth=1):
+    def __init__(self, in_dim, en_dim, len_clip=1, dropout=0., depth=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -129,29 +129,29 @@ class STCEncoder(nn.Module):
         super().__init__()
         self.in_dim = in_dim
         self.len_clip = len_clip
-        self.out_dim = out_dim
+        self.en_dim = en_dim
 
         # input proj
-        self.input_proj = nn.Conv2d(in_dim * len_clip, out_dim, kernel_size=1)
+        self.input_proj = nn.Conv2d(in_dim * len_clip, en_dim, kernel_size=1)
 
         # SSAM
         self.ssam = nn.ModuleList([
-            SSAM(out_dim, dropout)
+            SSAM(en_dim, dropout)
             for _ in range(depth)
         ])
 
         # CSAM
         self.csam = nn.ModuleList([
-            CSAM(out_dim, dropout)
+            CSAM(en_dim, dropout)
             for _ in range(depth)
         ])
 
         # fuse conv
         self.fuse_csam = nn.ModuleList([
             nn.Sequential(
-                Conv(out_dim*2, out_dim, k=1, act_type='relu', norm_type='BN'),
-                CSAM(out_dim, dropout),
-                Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
+                Conv(in_dim + en_dim, in_dim, k=1, act_type='relu', norm_type='BN'),
+                CSAM(in_dim, dropout),
+                Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
             )
             for _ in range(depth)
         ])

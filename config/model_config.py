@@ -4,8 +4,8 @@
 model_config = {
     'yowof-r18': {
         # input
-        'train_size': 640,
-        'test_size': 640,
+        'train_size': 384,
+        'test_size': 384,
         'len_clip': 8,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
@@ -36,6 +36,7 @@ model_config = {
         # temp-motion encoder
         'dropout': 0.1,
         'encoder_depth': 2,
+        'encoder_dim': 512,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
@@ -51,8 +52,7 @@ model_config = {
                         [32, 32], 
                         [64, 64], 
                         [128, 128],
-                        [256, 256],
-                        [512, 512]],
+                        [256, 256]],
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
