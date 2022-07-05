@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import random
 import cv2
 import pickle
 
@@ -23,6 +22,9 @@ JHMDB_CLASSES = (
     'stand',        'swing_baseball', 'throw',       'walk',
     'wave'
 )
+
+cv2.setNumThreads(0)
+cv2.ocl.setUseOpenCL(False)
 
 
 class JHMDB(data.Dataset):

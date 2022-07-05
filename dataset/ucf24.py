@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import random
 import cv2
 import pickle
 
@@ -23,6 +22,9 @@ UCF24_CLASSES = (
     'Skiing',         'Skijet',            'SoccerJuggling',    'Surfing',
     'TennisSwing',    'TrampolineJumping', 'VolleyballSpiking', 'WalkingWithDog'
 )
+
+cv2.setNumThreads(0)
+cv2.ocl.setUseOpenCL(False)
 
 
 class UCF24(data.Dataset):
