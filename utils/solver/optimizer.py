@@ -37,6 +37,6 @@ def build_optimizer(model,
         # checkpoint state dict
         checkpoint_state_dict = checkpoint.pop("optimizer")
         optimizer.load_state_dict(checkpoint_state_dict)
-        start_epoch = checkpoint.pop("epoch") + 1
+        start_epoch = checkpoint.pop("epoch")
                                 
     return optimizer, start_epoch
