@@ -3,46 +3,17 @@ import torch.nn as nn
 from ...basic.conv import Conv
 
 
-# FFN
-class FeedForward(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout = 0., act='relu'):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(dim, hidden_dim),
-            nn.GELU() if act =='gelu' else nn.ReLU(inplace=True),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout)
-        )
-        self.norm = nn.LayerNorm(dim)
-
-    def forward(self, x):
-        """
-            x: [B, N, C]
-        """
-        return self.norm(self.net(x)) + x
-
-
 # Channel Self Attetion Module
 class CSAM(nn.Module):
-    def __init__(self, in_dim, dropout=0.1):
+    def __init__(self, in_dim):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
 
-        # query, key, value
-        self.qkv_conv = nn.Conv2d(in_dim, 3*in_dim, kernel_size=1, bias=False)
+        self.gamma = nn.Parameter(torch.zeros(1))
 
         # attention
         self.attend = nn.Softmax(dim = -1)
-
-        # output
-        self.out = nn.Sequential(
-            nn.Conv2d(in_dim, in_dim, kernel_size=1),
-            nn.ReLU(inplace=True),
-            nn.Dropout2d(dropout),
-            nn.InstanceNorm2d(in_dim)
-        )
 
 
     def forward(self, x):
@@ -51,77 +22,148 @@ class CSAM(nn.Module):
         """
         B, C, H, W = x.size()
 
-        qkv = self.qkv_conv(x)
-        q, k, v = torch.chunk(qkv, chunks=3, dim=1)
-        # [B, C, H, W] -> [B, C, N], N = HW
-        q, k, v = q.flatten(-2), k.flatten(-2), v.flatten(-2)
+        # query
+        q = x.view(B, C, -1)
+        # key
+        k = x.view(B, C, -1).transpose(-1, -2)
+        # value
+        v = x.view(B, C, -1)
 
-        # [B, C, N] x [B, N, C] -> [B, C, C]
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        # attention: [B, C, C] x [B, C, N] -> [B, C, N]
-        attn = self.attend(dots)
-        y = torch.matmul(attn, v)
+        # self attention
+        attn = self.attend(torch.matmul(q, k) * self.scale)
+        out = torch.matmul(attn, v)
 
         # [B, C, N] -> [B, C, H, W]
-        y = y.view(B, C, H, W)
+        out = out.view(B, C, H, W)
 
         # output
-        y = y + self.out(y)
+        out = self.gamma * out + x
 
-        return y
+        return out
+
+
+# Channel Cross Attetion Module
+class CCAM(nn.Module):
+    def __init__(self, in_dim):
+        super().__init__()
+        self.in_dim = in_dim
+        self.scale = in_dim ** -0.5
+
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        # attention
+        self.attend = nn.Softmax(dim = -1)
+
+
+    def forward(self, query, key, value):
+        """
+            query: (Tensor) [B, C, H, W]
+            key:   (Tensor) [B, C, H, W]
+            value: (Tensor) [B, C, H, W]
+        """
+        B, C, H, W = query.size()
+
+        # query: [B, C, N]
+        q = query.view(B, C, -1)
+        # key: [B, N, C]
+        k = key.view(B, C, -1).transpose(-1, -2)
+        # value: [B, C, N]
+        v = value.view(B, C, -1)
+
+        # self attention
+        attn = self.attend(torch.matmul(q, k) * self.scale)
+        out = torch.matmul(attn, v)
+
+        # [B, C, N] -> [B, C, H, W]
+        out = out.view(B, C, H, W)
+
+        # output
+        out = self.gamma * out + query
+
+        return out
 
 
 # Spatial Self Attetion Module
 class SSAM(nn.Module):
-    def __init__(self, in_dim, dropout=0.1):
+    def __init__(self, in_dim):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
 
-        # query, key, value
-        self.qkv = nn.Linear(in_dim, 3*in_dim, bias=False)
+        self.gamma = nn.Parameter(torch.zeros(1))
 
         # attention
         self.attend = nn.Softmax(dim = -1)
-        self.ffn = FeedForward(in_dim, in_dim*4, dropout=dropout)
-
-        # output
-        self.out = nn.Sequential(
-            nn.Linear(in_dim, in_dim),
-            nn.Dropout(dropout),
-            nn.LayerNorm(in_dim)
-        )
 
     def forward(self, x):
         """
             x: (Tensor) [B, C, H, W]
         """
         B, C, H, W = x.size()
-        # [B, C, H, W] -> [B, C, N] -> [B, N, C]
-        x = x.flatten(-2).permute(0, 2, 1).contiguous()
 
-        qkv = self.qkv(x)
-        q, k, v = torch.chunk(qkv, chunks=3, dim=-1)
+        # query: [B, N, C]
+        q = x.view(B, C, -1).transpose(-1, -2)
+        # key: [B, C, N]
+        k = x.view(B, C, -1) 
+        # value: [B, N, C]
+        v = x.view(B, C, -1).transpose(-1, -2)
 
-        # [B, N, C] x [B, C, N] -> [B, N, N]
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        # attention: [B, N, N] x [B, N, C] -> [B, N, C]
-        attn = self.attend(dots)
-        y = torch.matmul(attn, v)
-        y = self.ffn(y)
-
-        # output
-        y = y + self.out(y)
+        # self attention: [B, N, N]
+        attn = self.attend(torch.matmul(q, k) * self.scale)
+        out = torch.matmul(attn, v)
 
         # [B, N, C] -> [B, C, N] -> [B, C, H, W]
-        y = y.permute(0, 2, 1).contiguous().view(B, C, H, W)
+        out = out.transpose(-1, -2).view(B, C, H, W)
 
-        return y
+        # output
+        out = self.gamma * out + x
+
+        return out
+
+
+# Spatial Cross Attetion Module
+class SCAM(nn.Module):
+    def __init__(self, in_dim):
+        super().__init__()
+        self.in_dim = in_dim
+        self.scale = in_dim ** -0.5
+
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        # attention
+        self.attend = nn.Softmax(dim = -1)
+
+    def forward(self, query, key, value):
+        """
+            query: (Tensor) [B, C, H, W]
+            key:   (Tensor) [B, C, H, W]
+            value: (Tensor) [B, C, H, W]
+        """
+        B, C, H, W = query.size()
+
+        # query: [B, N, C]
+        q = query.view(B, C, -1).transpose(-1, -2)
+        # key: [B, C, N]
+        k = key.view(B, C, -1) 
+        # value: [B, N, C]
+        v = value.view(B, C, -1).transpose(-1, -2)
+
+        # self attention: [B, N, N]
+        attn = self.attend(torch.matmul(q, k) * self.scale)
+        out = torch.matmul(attn, v)
+
+        # [B, N, C] -> [B, C, N] -> [B, C, H, W]
+        out = out.transpose(-1, -2).view(B, C, H, W)
+
+        # output
+        out = self.gamma * out + query
+
+        return out
 
 
 # STC Encoder
 class STCEncoder(nn.Module):
-    def __init__(self, in_dim, en_dim, len_clip=1, dropout=0., depth=1):
+    def __init__(self, in_dim, len_clip=1, depth=1):
         """
             in_dim: (Int) -> dim of single feature
             K: (Int) -> length of video clip
@@ -129,30 +171,24 @@ class STCEncoder(nn.Module):
         super().__init__()
         self.in_dim = in_dim
         self.len_clip = len_clip
-        self.en_dim = en_dim
 
         # input proj
-        self.input_proj = nn.Conv2d(in_dim * len_clip, en_dim, kernel_size=1)
+        self.input_proj = nn.Conv2d(in_dim * len_clip, in_dim, kernel_size=1)
 
         # SSAM
-        self.ssam = nn.ModuleList([
-            SSAM(en_dim, dropout)
-            for _ in range(depth)
-        ])
+        self.ssam = nn.ModuleList([SSAM(in_dim) for _ in range(depth)])
 
         # CSAM
-        self.csam = nn.ModuleList([
-            CSAM(en_dim, dropout)
-            for _ in range(depth)
-        ])
+        self.csam = nn.ModuleList([CSAM(in_dim) for _ in range(depth)])
 
-        # fuse conv
-        self.fuse_csam = nn.ModuleList([
-            nn.Sequential(
-                Conv(in_dim + en_dim, in_dim, k=1, act_type='relu', norm_type='BN'),
-                CSAM(in_dim, dropout),
+        # SCAM
+        self.scam = nn.ModuleList([SCAM(in_dim) for _ in range(depth)])
+
+        # CCAM
+        self.ccam = nn.ModuleList([CCAM(in_dim) for _ in range(depth)])
+
+        self.fuse_conv = nn.ModuleList([
                 Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
-            )
             for _ in range(depth)
         ])
 
@@ -167,10 +203,14 @@ class STCEncoder(nn.Module):
         x = self.input_proj(input_feats)
         kf_feats = feats[-1]
 
-        for ssam, csam, fuse in zip(self.ssam, self.csam, self.fuse_csam):
+        for ssam, csam, scam, ccam, smooth in zip(self.ssam, self.csam, self.scam, self.ccam, self.fuse_conv):
             # SSAM & CSAM
             x = ssam(x)
             x = csam(x)
-            kf_feats = fuse(torch.cat([x, kf_feats], dim=1))
+            # SCAM & CCAM
+            kf_feats = scam(kf_feats, x, x)
+            kf_feats = ccam(kf_feats, x, x)
+            # smooth
+            kf_feats = smooth(kf_feats)
 
         return kf_feats
