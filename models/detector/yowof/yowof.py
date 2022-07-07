@@ -63,7 +63,8 @@ class YOWOF(nn.Module):
         self.stm_encoder = STCEncoder(
             in_dim=cfg['head_dim'],
             len_clip=cfg['len_clip'],
-            depth=cfg['encoder_depth']
+            depth=cfg['encoder_depth'],
+            dropout=cfg['dropout']
         )
 
         # head
