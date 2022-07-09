@@ -273,7 +273,7 @@ class YOWOF(nn.Module):
             anchor_boxes = anchor_boxes[indices]
 
         # decode box
-        bboxes = self.decode_boxes(anchor_boxes[None], reg_pred[None])[0] # [N, 4]
+        bboxes = self.decode_boxes(anchor_boxes, reg_pred) # [N, 4]
         # normalize box
         bboxes = torch.clamp(bboxes / img_size, 0., 1.)
         

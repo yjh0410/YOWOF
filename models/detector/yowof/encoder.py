@@ -10,8 +10,6 @@ class CSAM(nn.Module):
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
 
-        self.gamma = nn.Parameter(torch.zeros(1))
-
         self.attend = nn.Softmax(dim = -1)
         self.ffn = nn.Sequential(
             nn.Conv2d(in_dim, in_dim*4, kernel_size=1),
@@ -44,7 +42,7 @@ class CSAM(nn.Module):
         out = out.view(B, C, H, W)
 
         # output
-        out = self.ffn(out) * self.gamma + x
+        out = self.ffn(out) + x
 
         return out
 
@@ -55,8 +53,6 @@ class CCAM(nn.Module):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
-
-        self.gamma = nn.Parameter(torch.zeros(1))
 
         # attention
         self.attend = nn.Softmax(dim = -1)
@@ -93,7 +89,7 @@ class CCAM(nn.Module):
         out = out.view(B, C, H, W)
 
         # output
-        out = self.norm(out) * self.gamma + query
+        out = self.norm(out) + query
 
         return out
 
@@ -104,8 +100,6 @@ class SSAM(nn.Module):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
-
-        self.gamma = nn.Parameter(torch.zeros(1))
 
         # attention
         self.attend = nn.Softmax(dim = -1)
@@ -139,7 +133,7 @@ class SSAM(nn.Module):
         out = out.transpose(-1, -2).view(B, C, H, W)
 
         # output
-        out = self.ffn(out) * self.gamma + x
+        out = self.ffn(out) + x
 
         return out
 
@@ -150,8 +144,6 @@ class SCAM(nn.Module):
         super().__init__()
         self.in_dim = in_dim
         self.scale = in_dim ** -0.5
-
-        self.gamma = nn.Parameter(torch.zeros(1))
 
         # attention
         self.attend = nn.Softmax(dim = -1)
@@ -188,7 +180,7 @@ class SCAM(nn.Module):
         out = out.transpose(-1, -2).view(B, C, H, W)
 
         # output
-        out = self.ffn(out) * self.gamma + query
+        out = self.ffn(out) + query
 
         return out
 
@@ -220,6 +212,7 @@ class STCEncoder(nn.Module):
         self.ccam = nn.ModuleList([CCAM(in_dim, dropout) for _ in range(depth)])
 
         self.smooth = nn.ModuleList([
+                Conv(in_dim*2, in_dim, k=1, act_type='relu', norm_type='BN'),
                 Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
             for _ in range(depth)
         ])
@@ -240,9 +233,9 @@ class STCEncoder(nn.Module):
             x = ssam(x)
             x = csam(x)
             # SCAM & CCAM
-            kf_feats = scam(kf_feats, x, x)
-            kf_feats = ccam(kf_feats, x, x)
+            kf_feats_s = scam(kf_feats, x, x)
+            kf_feats_c = ccam(kf_feats, x, x)
             # smooth
-            kf_feats = smooth(kf_feats)
+            kf_feats = smooth(torch.cat([kf_feats_s, kf_feats_c], dim=1))
 
         return kf_feats
