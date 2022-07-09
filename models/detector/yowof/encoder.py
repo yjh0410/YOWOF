@@ -212,8 +212,10 @@ class STCEncoder(nn.Module):
         self.ccam = nn.ModuleList([CCAM(in_dim, dropout) for _ in range(depth)])
 
         self.smooth = nn.ModuleList([
+            nn.Sequential(
                 Conv(in_dim*2, in_dim, k=1, act_type='relu', norm_type='BN'),
                 Conv(in_dim, in_dim, k=3, p=1, act_type='relu', norm_type='BN')
+            )
             for _ in range(depth)
         ])
 

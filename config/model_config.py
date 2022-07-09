@@ -35,7 +35,7 @@ model_config = {
         'neck_depthwise': False,
         # temp-motion encoder
         'dropout': 0.1,
-        'encoder_depth': 3,
+        'encoder_depth': 1,
         # head
         'head_dim': 512,
         'head_norm': 'BN',
