@@ -55,7 +55,6 @@ class YOWOF(nn.Module):
         # TM-Encoder
         self.stm_encoder = STCEncoder(
             in_dim=bk_dim,
-            en_dim=cfg['en_dim'],
             out_dim=cfg['head_dim'],
             len_clip=cfg['len_clip'],
             depth=cfg['depth'],

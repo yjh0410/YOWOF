@@ -159,6 +159,7 @@ class Conv(nn.Module):
                  p=0,                  # padding
                  s=1,                  # padding
                  d=1,                  # dilation
+                 g=1,
                  act_type='',          # activation
                  norm_type='',         # normalization
                  padding_mode='ZERO',  # padding mode: "ZERO" or "SAME"
@@ -182,7 +183,7 @@ class Conv(nn.Module):
                 convs.append(get_activation(act_type))
 
         else:
-            convs.append(get_conv2d(c1, c2, k=k, p=p, s=s, d=d, g=1, padding_mode=padding_mode, bias=add_bias))
+            convs.append(get_conv2d(c1, c2, k=k, p=p, s=s, d=d, g=g, padding_mode=padding_mode, bias=add_bias))
             if norm_type:
                 convs.append(get_norm(norm_type, c2))
             if act_type:

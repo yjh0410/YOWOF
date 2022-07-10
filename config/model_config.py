@@ -87,7 +87,6 @@ model_config = {
         # temp-motion encoder
         'dropout': 0.1,
         'depth': 1,
-        'en_dim': 512,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
