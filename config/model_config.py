@@ -29,13 +29,13 @@ model_config = {
         # temp-motion encoder
         'dropout': 0.1,
         'depth': 1,
-        'en_dim': 1024,
+        'en_dim': 512,
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'head_act': 'relu',
-        'num_cls_heads': 2,
-        'num_reg_heads': 2,
+        'num_cls_heads': 4,
+        'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
         'conf_thresh': 0.05,
@@ -60,7 +60,7 @@ model_config = {
 
     },
 
-    'yowof-r50': {
+    'yowof-r18-DC5': {
         # input
         'train_size': 320,
         'test_size': 320,
@@ -80,26 +80,20 @@ model_config = {
                          {'name': 'Normalize'},
                          {'name': 'PadImage'}],
         # model
-        'backbone': 'resnet18-d',
+        'backbone': 'resnet18',
         'pretrained': True,
         'res5_dilation': True,
         'stride': 16,
-        # neck
-        'neck': 'spp_block',
-        'pooling_size': [5, 9, 13],
-        'expand_ratio': 0.5,
-        'neck_act': 'relu',
-        'neck_norm': 'BN',
-        'neck_depthwise': False,
         # temp-motion encoder
         'dropout': 0.1,
-        'encoder_depth': 1,
+        'depth': 1,
+        'en_dim': 512,
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'head_act': 'relu',
-        'num_cls_heads': 2,
-        'num_reg_heads': 2,
+        'num_cls_heads': 4,
+        'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
         'conf_thresh': 0.05,
