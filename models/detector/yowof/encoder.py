@@ -102,8 +102,6 @@ class STCEncoder(nn.Module):
         self.in_dim = in_dim
         self.len_clip = len_clip
 
-        # input proj
-
         # Spatio-Temporal
         self.st_input_proj = nn.Conv2d(in_dim * len_clip, en_dim, kernel_size=1)
         self.st_ssam = nn.ModuleList([SSAM(en_dim, dropout) for _ in range(depth)])
@@ -126,7 +124,8 @@ class STCEncoder(nn.Module):
         self.fuse = nn.Sequential(
                 Conv(in_dim + en_dim * 2, out_dim, k=1, act_type='relu', norm_type='BN'),
                 Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN'),
-                CSAM(out_dim, dropout)
+                CSAM(out_dim, dropout),
+                Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
                 )
 
 
