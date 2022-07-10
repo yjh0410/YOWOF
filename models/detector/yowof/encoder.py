@@ -1,3 +1,4 @@
+from turtle import forward
 import torch
 import torch.nn as nn
 from ...basic.conv import Conv
@@ -91,75 +92,37 @@ class SSAM(nn.Module):
         return out
 
 
-# STC Encoder
 class STCEncoder(nn.Module):
     def __init__(self, in_dim, en_dim, out_dim, len_clip=1, depth=1, dropout=0.):
-        """
-            in_dim: (Int) -> dim of single feature
-            len_clip: (Int) -> length of video clip
-        """
         super().__init__()
         self.in_dim = in_dim
         self.len_clip = len_clip
 
-        # Spatio-Temporal
-        self.st_input_proj = nn.Conv2d(in_dim * len_clip, en_dim, kernel_size=1)
-        self.st_ssam = nn.ModuleList([SSAM(en_dim, dropout) for _ in range(depth)])
-        self.st_csam = nn.ModuleList([CSAM(en_dim, dropout) for _ in range(depth)])
-        self.st_smooth = nn.ModuleList([
-            Conv(en_dim, en_dim, k=3, p=1, act_type='relu', norm_type='BN')
-            for _ in range(depth)
+        # input proj
+        self.input_proj = nn.ModuleList([
+            nn.Conv2d(in_dim, out_dim, kernel_size=1)
+            for _ in range(len_clip)
             ])
 
-        # Motion
-        self.mt_input_proj = nn.Conv2d(in_dim * (len_clip - 1), en_dim, kernel_size=1)
-        self.mt_ssam = nn.ModuleList([SSAM(en_dim, dropout) for _ in range(depth)])
-        self.mt_csam = nn.ModuleList([CSAM(en_dim, dropout) for _ in range(depth)])
-        self.mt_smooth = nn.ModuleList([
-            Conv(en_dim, en_dim, k=3, p=1, act_type='relu', norm_type='BN')
-            for _ in range(depth)
-            ])
-
-        # fuse
-        self.fuse = nn.Sequential(
-                Conv(in_dim + en_dim * 2, out_dim, k=1, act_type='relu', norm_type='BN'),
-                Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN'),
-                CSAM(out_dim, dropout),
-                Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
-                )
+        self.group_conv = nn.Conv2d(out_dim * len_clip, out_dim, kernel_size=3, padding=1, groups=out_dim)
 
 
     def forward(self, feats):
         """
             feats: (List) [K, B, C, H, W]
         """
-        # key frame feature
-        kf_feats = feats[-1]
-        # (List)[K, B, C, H, W] -> [B, KC, H, W]
-        x_st = torch.cat(feats, dim=1)
-        # [B, KC, H, W] -> [B, C, H, W]
-        x_st = self.st_input_proj(x_st)
+        feats = [layer(feat) for feat, layer in zip(feats, self.input_proj)]
+        # (List) [K, B, C, H, W] -> [B, K, C, H, W]
+        x = torch.stack(feats, dim=1)
+        B, K, C, H, W = x.size()
 
-        # (List)[K, B, C, H, W] -> [K, B, C, H, W]
-        x_mt = torch.stack(feats)
-        x_mt = x_mt[1:] - x_mt[:-1]
-        x_mt = x_mt.transpose(1, 0).flatten(1,2)
-        x_mt = self.mt_input_proj(x_mt)
+        # [B, K, C, H, W] -> [B, C, K, H, W]
+        x = torch.transpose(x, 1, 2).contiguous()
 
-        for st_ssam, st_csam, st_smooth,\
-            mt_ssam, mt_csam, mt_smooth in zip(self.st_ssam, self.st_csam, self.st_smooth,\
-                                               self.mt_ssam, self.mt_csam, self.mt_smooth):
-            # spatio-temporal
-            x_s = st_ssam(x_st)
-            x_c = st_csam(x_st)
-            x_st = st_smooth(x_s + x_c)
+        # flatten: [B, CK, H, W]
+        x = x.view(B, -1, H, W)
 
-            # motion
-            m_s = mt_ssam(x_mt)
-            m_c = mt_csam(x_mt)
-            x_mt = mt_smooth(m_s + m_c)
+        # [B, CK, H, W] -> [B, C, H, W]
+        x = self.group_conv(x)
 
-        # fuse
-        kf_feats = self.fuse(torch.cat([kf_feats, x_st, x_mt], dim=1))
-
-        return kf_feats
+        return x
