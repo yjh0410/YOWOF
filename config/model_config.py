@@ -4,8 +4,8 @@
 model_config = {
     'yowof-r18': {
         # input
-        'train_size': 416,
-        'test_size': 416,
+        'train_size': 320,
+        'test_size': 320,
         'len_clip': 8,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
@@ -26,6 +26,64 @@ model_config = {
         'pretrained': True,
         'res5_dilation': False,
         'stride': 32,
+        # temp-motion encoder
+        'dropout': 0.1,
+        'depth': 1,
+        'en_dim': 1024,
+        # head
+        'head_dim': 512,
+        'head_norm': 'BN',
+        'head_act': 'relu',
+        'num_cls_heads': 2,
+        'num_reg_heads': 2,
+        'head_depthwise': False,
+        # post process
+        'conf_thresh': 0.05,
+        'nms_thresh': 0.6,
+        # anchor box
+        'anchor_size': [[16, 16],
+                        [32, 32], 
+                        [64, 64], 
+                        [128, 128],
+                        [256, 256]],
+        # matcher
+        'matcher': 'uniform_matcher',
+        'topk': 4,
+        'iou_t': 0.15,
+        'igt': 0.7,
+        'ctr_clamp': 32,
+        # loss
+        'alpha': 0.25,
+        'gamma': 2.0,
+        'loss_cls_weight': 1.0,
+        'loss_reg_weight': 3.0,
+
+    },
+
+    'yowof-r50': {
+        # input
+        'train_size': 320,
+        'test_size': 320,
+        'len_clip': 8,
+        'format': 'RGB',
+        'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
+        'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
+        'transforms': [{'name': 'DistortTransform',
+                         'hue': 0.1,
+                         'saturation': 1.5,
+                         'exposure': 1.5},
+                         {'name': 'RandomHorizontalFlip'},
+                         {'name': 'RandomShift', 'max_shift': 32},
+                         {'name': 'JitterCrop', 'jitter_ratio': 0.3},
+                         {'name': 'ToTensor'},
+                         {'name': 'Resize'},
+                         {'name': 'Normalize'},
+                         {'name': 'PadImage'}],
+        # model
+        'backbone': 'resnet18-d',
+        'pretrained': True,
+        'res5_dilation': True,
+        'stride': 16,
         # neck
         'neck': 'spp_block',
         'pooling_size': [5, 9, 13],

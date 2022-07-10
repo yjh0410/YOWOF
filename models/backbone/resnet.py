@@ -48,9 +48,11 @@ class BasicBlock(nn.Module):
         if groups != 1 or base_width != 64:
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
-            raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
+            # raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
+            stride=1
+            downsample = None
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.conv1 = conv3x3(inplanes, planes, stride, dilation=dilation)
         self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
@@ -363,7 +365,7 @@ def build_resnet(model_name='resnet50', pretrained=False, res5_dilation=True):
 if __name__ == '__main__':
     import time
 
-    model, feat_dim = build_resnet(model_name='resnet50', pretrained=True, res5_dilation=True)
+    model, feat_dim = build_resnet(model_name='resnet18', pretrained=True, res5_dilation=True)
     print(feat_dim)
     device = torch.device("cuda")
     model = model.to(device)

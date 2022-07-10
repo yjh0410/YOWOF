@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 
 from ...backbone import build_backbone
-from ...neck import build_neck
 from ...head.decoupled_head import DecoupledHead
 from .encoder import STCEncoder
 from .loss import Criterion
@@ -53,17 +52,13 @@ class YOWOF(nn.Module):
             pretrained=trainable,
             res5_dilation=cfg['res5_dilation']
             )
-        # neck
-        self.neck = build_neck(
-            cfg=cfg, 
-            in_dim=bk_dim, 
-            out_dim=cfg['head_dim']
-            )                         
         # TM-Encoder
         self.stm_encoder = STCEncoder(
-            in_dim=cfg['head_dim'],
+            in_dim=bk_dim,
+            en_dim=cfg['en_dim'],
+            out_dim=cfg['head_dim'],
             len_clip=cfg['len_clip'],
-            depth=cfg['encoder_depth'],
+            depth=cfg['depth'],
             dropout=cfg['dropout']
         )
 
@@ -227,7 +222,6 @@ class YOWOF(nn.Module):
         # backbone
         for i in range(len(x)):
             feat = self.backbone(x[i])
-            feat = self.neck(feat)
 
             backbone_feats.append(feat)
 
@@ -292,7 +286,6 @@ class YOWOF(nn.Module):
         img_size = x.shape[-1]
         # backbone
         cur_bk_feat = self.backbone(x)
-        cur_bk_feat = self.neck(cur_bk_feat)
 
         # push the current feature
         self.clip_feats.append(cur_bk_feat)
@@ -405,7 +398,6 @@ class YOWOF(nn.Module):
             # backbone
             for i in range(len(video_clips)):
                 feat = self.backbone(video_clips[i])
-                feat = self.neck(feat)
 
                 backbone_feats.append(feat)
 
