@@ -1,4 +1,3 @@
-from turtle import forward
 import torch
 import torch.nn as nn
 from ...basic.conv import Conv
@@ -54,45 +53,50 @@ class STCEncoder(nn.Module):
         self.in_dim = in_dim
         self.len_clip = len_clip
 
-        # input proj
-        self.input_proj = nn.ModuleList([
-            nn.Conv2d(in_dim, out_dim, kernel_size=1)
-            for _ in range(len_clip)
-            ])
+        # # input proj
+        # self.input_proj = nn.ModuleList([
+        #     nn.Conv2d(in_dim, out_dim, kernel_size=1)
+        #     for _ in range(len_clip)
+        #     ])
 
-        self.group_conv = nn.Sequential(
-            Conv(out_dim * len_clip, out_dim, k=1, g=out_dim, act_type=None, norm_type=None),
-            Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
-        )
+        # self.group_conv = nn.Sequential(
+        #     Conv(out_dim * len_clip, out_dim, k=1, g=out_dim, act_type=None, norm_type=None),
+        #     Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
+        # )
 
-        self.fuse = nn.Sequential(
-            Conv(out_dim*2, out_dim, k=1, act_type='relu', norm_type='BN'),
-            Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN'),
-            CSAM(out_dim, dropout),
-            Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
-        )
+        # self.fuse = nn.Sequential(
+        #     Conv(out_dim*2, out_dim, k=1, act_type='relu', norm_type='BN'),
+        #     Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN'),
+        #     CSAM(out_dim, dropout),
+        #     Conv(out_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
+        # )
+
+        self.output = Conv(in_dim, out_dim, k=3, p=1, act_type='relu', norm_type='BN')
 
 
     def forward(self, feats):
         """
             feats: (List) [K, B, C, H, W]
         """
-        feats = [layer(feat) for feat, layer in zip(feats, self.input_proj)]
-        kf_feat = feats[-1]
-        # (List) [K, B, C, H, W] -> [B, K, C, H, W]
-        x = torch.stack(feats, dim=1)
-        B, K, C, H, W = x.size()
+        # feats = [layer(feat) for feat, layer in zip(feats, self.input_proj)]
+        # kf_feat = feats[-1]
+        # # (List) [K, B, C, H, W] -> [B, K, C, H, W]
+        # x = torch.stack(feats, dim=1)
+        # B, K, C, H, W = x.size()
 
-        # [B, K, C, H, W] -> [B, C, K, H, W]
-        x = torch.transpose(x, 1, 2).contiguous()
+        # # [B, K, C, H, W] -> [B, C, K, H, W]
+        # x = torch.transpose(x, 1, 2).contiguous()
 
-        # flatten: [B, CK, H, W]
-        x = x.view(B, -1, H, W)
+        # # flatten: [B, CK, H, W]
+        # x = x.view(B, -1, H, W)
 
-        # [B, CK, H, W] -> [B, C, H, W]
-        x = self.group_conv(x)
+        # # [B, CK, H, W] -> [B, C, H, W]
+        # x = self.group_conv(x)
 
-        # fuse
-        x = self.fuse(torch.cat([kf_feat, x], dim=1))
+        # # fuse
+        # x = self.fuse(torch.cat([kf_feat, x], dim=1))
+
+        feats = torch.cat(feats, dim=1)
+        x = self.output(feats)
 
         return x
