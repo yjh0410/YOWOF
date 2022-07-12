@@ -217,8 +217,8 @@ class STCEncoder(nn.Module):
             x = ts(feats)
 
             # SSAM & CSAM
-            x = ssam(x)
             x = csam(x)
+            x = ssam(x)
             # channel fuse
             kf_feat = fuse(torch.cat([kf_feat, x], dim=1))
 
