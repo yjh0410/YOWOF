@@ -17,9 +17,9 @@ dataset_config = {
         'weight_decay': 1e-4,
         'max_epoch': 12,
         'lr_epoch': [6, 10],
-        'batch_size': 16,
+        'batch_size': 64,
         'accumulate': 1,
-        'base_lr': 2.5e-5,
+        'base_lr': 1e-4,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
