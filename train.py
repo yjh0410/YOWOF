@@ -313,7 +313,7 @@ def train():
                     print('eval ...')
                     # set eval mode
                     model_eval.trainable = False
-                    model_eval.stream_infernce = True
+                    model_eval.set_inference_mode(mode='stream')
                     model_eval.eval()
 
                     # evaluate
@@ -336,7 +336,7 @@ def train():
 
                     # set train mode.
                     model_eval.trainable = True
-                    model_eval.stream_infernce = False
+                    model_eval.set_inference_mode(mode='clip')
                     model_eval.train()
         
             if args.distributed:

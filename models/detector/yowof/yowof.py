@@ -66,8 +66,7 @@ class YOWOF(nn.Module):
             hidden_dims=[cfg['head_dim']]*2,
             kernel_size=3,
             num_layers=2,
-            return_all_layers=False,
-            inf_full_seq=trainable
+            return_all_layers=False
         )
 
         # head
@@ -222,7 +221,16 @@ class YOWOF(nn.Module):
 
         return scores, labels, bboxes
     
-    
+
+    def set_inference_mode(self, mode='stream'):
+        if mode == 'stream':
+            self.stream_infernce = True
+            self.stm_encoder.inf_full_seq = False
+        elif mode == 'clip':
+            self.stream_infernce = False
+            self.stm_encoder.inf_full_seq = True
+
+
     def inference_video_clip(self, x):
         backbone_feats = []
         img_size = x[0].shape[-1]
