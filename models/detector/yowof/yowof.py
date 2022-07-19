@@ -312,7 +312,7 @@ class YOWOF(nn.Module):
         cur_feat = self.stm_encoder(self.clip_feats)
 
         # head
-        cls_feats, reg_feats = self.head(cur_feat[0][-1][-1])
+        cls_feats, reg_feats = self.head(cur_feat[0][-1])
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)

@@ -9,7 +9,7 @@ def FLOPs_and_Params(model, img_size, len_clip, device, stream=False):
     if stream:
         # set eval mode
         model.trainable = False
-        model.stream_infernce = True
+        model.set_inference_mode(mode='stream')
         model.initialization = True
         model.eval()
         
@@ -27,7 +27,7 @@ def FLOPs_and_Params(model, img_size, len_clip, device, stream=False):
 
         # set train mode.
         model.trainable = True
-        model.stream_infernce = False
+        model.set_inference_mode(mode='clip')
         model.initialization = False
         model.train()
 

@@ -163,6 +163,7 @@ class ConvLSTM(nn.Module):
             return self.inference_full_sequence(feats, hidden_state)
         else:
             if self.initialization:
+                print('init clip')
                 self.return_all_layers = True
                 (
                     layer_output_list,
@@ -180,7 +181,7 @@ class ConvLSTM(nn.Module):
                 self.last_state_list = last_state_list
 
 
-            return layer_output_list[-1]
+            return layer_output_list, last_state_list
 
 
 if __name__ == '__main__':
