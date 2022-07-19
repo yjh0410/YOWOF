@@ -232,6 +232,10 @@ class YOWOF(nn.Module):
 
 
     def inference_video_clip(self, x):
+        # check state of convlstm
+        self.stm_encoder.initialization = True
+
+        # prepare
         backbone_feats = []
         img_size = x[0].shape[-1]
 
