@@ -186,7 +186,7 @@ class ConvLSTM(nn.Module):
 if __name__ == '__main__':
     feats = [torch.randn(2, 16, 10, 10) for _ in range(8)]
 
-    inf_full_seq = False
+    inf_full_seq = True
 
     convlstms = ConvLSTM(in_dim=16,
                          hidden_dims=[8, 8],
@@ -199,6 +199,7 @@ if __name__ == '__main__':
 
     if inf_full_seq:
         outputs = convlstms(feats)
+        print(outputs[0][-2][-1].shape)
     else:
         outputs = convlstms(feats)
         output = convlstms(feats)

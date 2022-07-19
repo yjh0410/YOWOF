@@ -8,6 +8,7 @@ import torch.nn as nn
 from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
 from .encoder import STCEncoder
+from .convlstm import ConvLSTM
 from .loss import Criterion
 
 
@@ -53,12 +54,20 @@ class YOWOF(nn.Module):
             res5_dilation=cfg['res5_dilation']
             )
         # TM-Encoder
-        self.stm_encoder = STCEncoder(
+        # self.stm_encoder = STCEncoder(
+        #     in_dim=bk_dim,
+        #     out_dim=cfg['head_dim'],
+        #     len_clip=cfg['len_clip'],
+        #     depth=cfg['depth'],
+        #     dropout=cfg['dropout']
+        # )
+        self.stm_encoder = ConvLSTM(
             in_dim=bk_dim,
-            out_dim=cfg['head_dim'],
-            len_clip=cfg['len_clip'],
-            depth=cfg['depth'],
-            dropout=cfg['dropout']
+            hidden_dims=[cfg['head_dim']]*2,
+            kernel_size=3,
+            num_layers=2,
+            return_all_layers=False,
+            inf_full_seq=trainable
         )
 
         # head
@@ -228,7 +237,7 @@ class YOWOF(nn.Module):
         feat = self.stm_encoder(backbone_feats)
 
         # head
-        cls_feats, reg_feats = self.head(feat)
+        cls_feats, reg_feats = self.head(feat[0][-1][-1])
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -295,7 +304,7 @@ class YOWOF(nn.Module):
         cur_feat = self.stm_encoder(self.clip_feats)
 
         # head
-        cls_feats, reg_feats = self.head(cur_feat)
+        cls_feats, reg_feats = self.head(cur_feat[0][-1][-1])
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -404,7 +413,7 @@ class YOWOF(nn.Module):
             feat = self.stm_encoder(backbone_feats)
 
             # detection head
-            cls_feats, reg_feats = self.head(feat)
+            cls_feats, reg_feats = self.head(feat[0][-1][-1])
 
             obj_pred = self.obj_pred_(reg_feats)
             cls_pred = self.cls_pred_(cls_feats)
