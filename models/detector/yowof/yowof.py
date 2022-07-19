@@ -66,7 +66,8 @@ class YOWOF(nn.Module):
             hidden_dims=[cfg['head_dim']]*2,
             kernel_size=3,
             num_layers=2,
-            return_all_layers=False
+            return_all_layers=False,
+            inf_full_seq=trainable
         )
 
         # head
