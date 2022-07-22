@@ -199,7 +199,7 @@ if __name__ == '__main__':
 
     if inf_full_seq:
         outputs = convlstms(feats)
-        print(outputs[0][-2][-1].shape)
+        print(outputs[0][-1][-1].shape)
     else:
         outputs = convlstms(feats)
         output = convlstms(feats)
