@@ -26,7 +26,7 @@ model_config = {
         'pretrained': True,
         'res5_dilation': False,
         'stride': 32,
-        # conv sltm
+        # conv lstm
         'ksize': 3,
         'num_layers': 3,
         # head
