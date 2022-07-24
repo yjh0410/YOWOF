@@ -26,9 +26,9 @@ model_config = {
         'pretrained': True,
         'res5_dilation': False,
         'stride': 32,
-        # temp-motion encoder
-        'dropout': 0.1,
-        'depth': 1,
+        # conv sltm
+        'ksize': 3,
+        'num_layers': 3,
         # head
         'head_dim': 256,
         'head_norm': 'BN',

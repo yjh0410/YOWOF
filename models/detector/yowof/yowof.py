@@ -63,9 +63,9 @@ class YOWOF(nn.Module):
         # )
         self.stm_encoder = ConvLSTM(
             in_dim=bk_dim,
-            hidden_dims=[cfg['head_dim']]*2,
-            kernel_size=3,
-            num_layers=2,
+            hidden_dims=[cfg['head_dim']]*cfg['num_layers'],
+            kernel_size=cfg['ksize'],
+            num_layers=cfg['num_layers'],
             return_all_layers=False,
             inf_full_seq=trainable
         )
