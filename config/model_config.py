@@ -28,7 +28,7 @@ model_config = {
         'stride': 32,
         # conv lstm
         'ksize': 3,
-        'num_layers': 3,
+        'num_layers': 2,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
