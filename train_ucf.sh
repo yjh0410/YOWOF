@@ -2,11 +2,11 @@
 python train.py \
         --cuda \
         -d ucf24 \
-        -v yowof-r18 \
+        -v yowof-r50 \
         --num_workers 4 \
         --eval_epoch 2 \
         --eval \
-        # --fp16 \
+        --fp16 \
         # --ema \
         # -p ./weights/pretrained/yolof-rt-R18/yolof-rt-R18_29.2.pth
 
