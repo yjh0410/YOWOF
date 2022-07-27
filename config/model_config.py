@@ -120,7 +120,7 @@ model_config = {
         # input
         'train_size': 320,
         'test_size': 320,
-        'len_clip': 8,
+        'len_clip': 16,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
         'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
@@ -140,29 +140,21 @@ model_config = {
         'pretrained': True,
         'res5_dilation': False,
         'stride': 32,
-        # neck
-        'neck': 'spp_block',
-        'pooling_size': [5, 9, 13],
-        'expand_ratio': 0.5,
-        'neck_act': 'relu',
-        'neck_norm': 'BN',
-        'neck_depthwise': False,
-        # temp-motion encoder
-        'dropout': 0.1,
-        'encoder_depth': 1,
+        # conv lstm
+        'ksize': 3,
+        'num_layers': 2,
         # head
-        'head_dim': 512,
+        'head_dim': 256,
         'head_norm': 'BN',
         'head_act': 'relu',
-        'num_cls_heads': 2,
-        'num_reg_heads': 2,
+        'num_cls_heads': 4,
+        'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
         'conf_thresh': 0.05,
         'nms_thresh': 0.6,
         # anchor box
-        'anchor_size': [[8, 8],
-                        [16, 16],
+        'anchor_size': [[16, 16],
                         [32, 32], 
                         [64, 64], 
                         [128, 128],
