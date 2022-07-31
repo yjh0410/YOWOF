@@ -53,15 +53,9 @@ class YOWOF(nn.Module):
             pretrained=trainable,
             res5_dilation=cfg['res5_dilation']
             )
-        # TM-Encoder
-        # self.stm_encoder = STCEncoder(
-        #     in_dim=bk_dim,
-        #     out_dim=cfg['head_dim'],
-        #     len_clip=cfg['len_clip'],
-        #     depth=cfg['depth'],
-        #     dropout=cfg['dropout']
-        # )
-        self.stm_encoder = ConvLSTM(
+
+        # ConvLSTM
+        self.conv_lstm = ConvLSTM(
             in_dim=bk_dim,
             hidden_dims=[cfg['head_dim']]*cfg['num_layers'],
             kernel_size=cfg['ksize'],
@@ -226,15 +220,15 @@ class YOWOF(nn.Module):
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
             self.stream_infernce = True
-            self.stm_encoder.inf_full_seq = False
+            self.conv_lstm.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
-            self.stm_encoder.inf_full_seq = True
+            self.conv_lstm.inf_full_seq = True
 
 
     def inference_video_clip(self, x):
         # check state of convlstm
-        self.stm_encoder.initialization = True
+        self.conv_lstm.initialization = True
 
         # prepare
         backbone_feats = []
@@ -247,7 +241,7 @@ class YOWOF(nn.Module):
             backbone_feats.append(feat)
 
         # spatio-temporal-motion encoder
-        feat = self.stm_encoder(backbone_feats)
+        feat = self.conv_lstm(backbone_feats)
 
         # head
         cls_feats, reg_feats = self.head(feat[0][-1][-1])
@@ -314,7 +308,7 @@ class YOWOF(nn.Module):
         del self.clip_feats[0]
 
         # spatio-temporal-motion encoder
-        cur_feat = self.stm_encoder(self.clip_feats)
+        cur_feat = self.conv_lstm(self.clip_feats)
 
         # head
         cls_feats, reg_feats = self.head(cur_feat[0][-1])
@@ -423,7 +417,7 @@ class YOWOF(nn.Module):
                 backbone_feats.append(feat)
 
             # spatio-temporal-motion encoder
-            feat = self.stm_encoder(backbone_feats)
+            feat = self.conv_lstm(backbone_feats)
 
             # detection head
             cls_feats, reg_feats = self.head(feat[0][-1][-1])
