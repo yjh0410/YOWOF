@@ -55,10 +55,11 @@ class BasicBlock(nn.Module):
         self.conv1 = conv3x3(inplanes, planes, stride, dilation=dilation)
         self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
+        self.conv2 = conv3x3(planes, planes, dilation=dilation)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
         self.stride = stride
+
 
     def forward(self, x: Tensor) -> Tensor:
         identity = x
@@ -365,17 +366,18 @@ def build_resnet(model_name='resnet50', pretrained=False, res5_dilation=True):
 if __name__ == '__main__':
     import time
 
-    model, feat_dim = build_resnet(model_name='resnet18', pretrained=True, res5_dilation=True)
+    model, feat_dim = build_resnet(model_name='resnet18', pretrained=False, res5_dilation=True)
     print(feat_dim)
-    device = torch.device("cuda")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model = model.to(device)
 
     x = torch.randn(1, 3, 320, 320).to(device)
     for i in range(1):
         # star time
-        torch.cuda.synchronize()
         t0 = time.time()
         y = model(x)
         print(y.size())
-        torch.cuda.synchronize()
         print('time', time.time() - t0)
