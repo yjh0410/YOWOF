@@ -7,6 +7,7 @@ from torch.hub import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional
 
 
+
 __all__ = ['ResNet', 'resnet18', 'resnet50', 'resnet101']
 
 
@@ -174,11 +175,15 @@ class ResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # C2
         self.layer1 = self._make_layer(block, 64, layers[0])
+        # C3
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
+        # C4
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
                                        dilate=replace_stride_with_dilation[1])
+        # C5
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
 

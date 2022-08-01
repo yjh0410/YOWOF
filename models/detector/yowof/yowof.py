@@ -1,5 +1,6 @@
 # This is a frame-level model which is set as the Baseline
 
+from cv2 import exp
 import numpy as np
 import math
 import torch
@@ -7,8 +8,8 @@ import torch.nn as nn
 
 from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
-from .encoder import STCEncoder
-from .convlstm import ConvLSTM
+from ...basic.convlstm import ConvLSTM
+from .encoder import DilatedEncoder
 from .loss import Criterion
 
 
@@ -53,6 +54,14 @@ class YOWOF(nn.Module):
             pretrained=trainable,
             res5_dilation=cfg['res5_dilation']
             )
+        self.neck = DilatedEncoder(
+            in_dim=bk_dim,
+            out_dim=cfg['neck_dim'],
+            expand_ratio=cfg['expand_ratio'],
+            dilation_list=cfg['dilation_list'],
+            act_type=cfg['neck_act'],
+            norm_type=cfg['neck_norm']
+        )
 
         # ConvLSTM
         self.conv_lstm = ConvLSTM(
@@ -238,6 +247,7 @@ class YOWOF(nn.Module):
         # backbone
         for i in range(len(x)):
             feat = self.backbone(x[i])
+            feat = self.neck(feat)
 
             backbone_feats.append(feat)
 
@@ -302,6 +312,7 @@ class YOWOF(nn.Module):
         img_size = x.shape[-1]
         # backbone
         cur_bk_feat = self.backbone(x)
+        cur_bk_feat = self.neck(cur_bk_feat)
 
         # push the current feature
         self.clip_feats.append(cur_bk_feat)
@@ -414,6 +425,7 @@ class YOWOF(nn.Module):
             # backbone
             for i in range(len(video_clips)):
                 feat = self.backbone(video_clips[i])
+                feat = self.neck(feat)
 
                 backbone_feats.append(feat)
 

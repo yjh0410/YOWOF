@@ -4,8 +4,8 @@
 model_config = {
     'yowof-r18': {
         # input
-        'train_size': 320,
-        'test_size': 320,
+        'train_size': 384,
+        'test_size': 384,
         'len_clip': 16,
         'format': 'RGB',
         'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
@@ -26,6 +26,13 @@ model_config = {
         'pretrained': True,
         'res5_dilation': False,
         'stride': 32,
+        # neck
+        'neck': 'dilated_encoder',
+        'dilation_list': [1, 2, 3, 4],
+        'expand_ratio': 0.25,
+        'neck_dim': 512,
+        'neck_act': 'relu',
+        'neck_norm': 'BN',
         # conv lstm
         'ksize': 3,
         'dilation': 1,
