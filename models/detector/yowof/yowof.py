@@ -65,7 +65,7 @@ class YOWOF(nn.Module):
 
         # ConvLSTM
         self.conv_lstm = ConvLSTM(
-            in_dim=bk_dim,
+            in_dim=cfg['neck_dim'],
             hidden_dims=[cfg['head_dim']]*cfg['num_layers'],
             kernel_size=cfg['ksize'],
             dilation=cfg['dilation'],
