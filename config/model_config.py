@@ -28,6 +28,7 @@ model_config = {
         'stride': 32,
         # conv lstm
         'ksize': 3,
+        'dilation': 1,
         'num_layers': 2,
         # head
         'head_dim': 256,
@@ -85,6 +86,7 @@ model_config = {
         'stride': 16,
         # conv lstm
         'ksize': 3,
+        'dilation': 2,
         'num_layers': 2,
         # head
         'head_dim': 256,
