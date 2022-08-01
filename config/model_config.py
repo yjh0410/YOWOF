@@ -29,8 +29,8 @@ model_config = {
         # neck
         'neck': 'dilated_encoder',
         'dilation_list': [1, 2, 3, 4],
-        'expand_ratio': 0.25,
-        'neck_dim': 512,
+        'expand_ratio': 0.5,
+        'neck_dim': 256,
         'neck_act': 'relu',
         'neck_norm': 'BN',
         # conv lstm
