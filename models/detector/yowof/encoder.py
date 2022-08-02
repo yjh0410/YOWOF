@@ -1,76 +1,119 @@
+import math
 import torch
 import torch.nn as nn
-
 from ...basic.conv import Conv
-from utils import weight_init
 
 
-# Dilated Encoder
-class Bottleneck(nn.Module):
-    def __init__(self, 
-                 in_dim, 
-                 dilation=1, 
-                 expand_ratio=0.25,
-                 act_type='relu',
-                 norm_type='BN'):
-        super(Bottleneck, self).__init__()
-        inter_dim = int(in_dim * expand_ratio)
-        self.branch = nn.Sequential(
-            Conv(in_dim, inter_dim, k=1, act_type=act_type, norm_type=norm_type),
-            Conv(inter_dim, inter_dim, k=3, p=dilation, d=dilation, act_type=act_type, norm_type=norm_type),
-            Conv(inter_dim, in_dim, k=1, act_type=act_type, norm_type=norm_type)
+# Channel Self Attetion Module
+class CSAM(nn.Module):
+    """ Channel attention module """
+    def __init__(self):
+        super(CSAM, self).__init__()
+        self.gamma = nn.Parameter(torch.zeros(1))
+        self.softmax  = nn.Softmax(dim=-1)
+
+
+    def forward(self, x):
+        """
+            inputs :
+                x : input feature maps( B x C x H x W )
+            returns :
+                out : attention value + input feature
+                attention: B X C X C
+        """
+        B, C, H, W = x.size()
+        # query / key / value
+        query = x.view(B, C, -1)
+        key = x.view(B, C, -1).permute(0, 2, 1)
+        value = x.view(B, C, -1)
+
+        # attention matrix
+        energy = torch.bmm(query, key)
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
+        attention = self.softmax(energy_new)
+
+        # attention
+        out = torch.bmm(attention, value)
+        out = out.view(B, C, H, W)
+
+        # output
+        out = self.gamma*out + x
+
+        return out
+
+
+# Spatial Self Attetion Module
+class SSAM(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.gamma = nn.Parameter(torch.zeros(1))
+        self.softmax  = nn.Softmax(dim=-1)
+
+
+    def forward(self, x):
+        """
+            inputs :
+                x : input feature maps( B x C x H x W )
+            returns :
+                out : attention value + input feature
+                attention: B X HW X HW
+        """
+        B, C, H, W = x.size()
+        # query / key / value
+        query = x.view(B, C, -1).permute(0, 2, 1).contiguous()
+        key = x.view(B, C, -1)
+        value = x.view(B, C, -1).permute(0, 2, 1).contiguous()
+
+        # attention matrix
+        energy = torch.bmm(query, key)
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
+        attention = self.softmax(energy_new)
+
+        # attention
+        out = torch.bmm(attention, value)
+        out = out.permute(0, 2, 1).contiguous().view(B, C, H, W)
+
+        # output
+        out = self.gamma*out + x
+
+        return out
+
+
+class ChannelEncoder(nn.Module):
+    def __init__(self, in_dim, out_dim, act_type='', norm_type=''):
+        super().__init__()
+        self.fuse_convs = nn.Sequential(
+            Conv(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
+            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            CSAM(),
+            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type)
         )
 
     def forward(self, x):
-        return x + self.branch(x)
+        """
+            x: [B, CN, H, W]
+        """
+        # [B, CN, H, W] -> [B, C, H, W]
+        x = self.fuse_convs(x)
+
+        return x
 
 
-class DilatedEncoder(nn.Module):
-    """ DilateEncoder """
-    def __init__(self, 
-                 in_dim, 
-                 out_dim, 
-                 expand_ratio=0.25, 
-                 dilation_list=[2, 4, 6, 8],
-                 act_type='relu',
-                 norm_type='BN'):
-        super(DilatedEncoder, self).__init__()
-        self.projector = nn.Sequential(
-            Conv(in_dim, out_dim, k=1, act_type=None, norm_type=norm_type),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=None, norm_type=norm_type)
+class SpatialEncoder(nn.Module):
+    def __init__(self, in_dim, out_dim, act_type='', norm_type=''):
+        super().__init__()
+        self.fuse_convs = nn.Sequential(
+            Conv(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
+            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            SSAM(),
+            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type)
         )
-        encoders = []
-        for d in dilation_list:
-            encoders.append(Bottleneck(in_dim=out_dim, 
-                                       dilation=d, 
-                                       expand_ratio=expand_ratio, 
-                                       act_type=act_type,
-                                       norm_type=norm_type))
-        self.encoders = nn.Sequential(*encoders)
-
-        self._init_weight()
-
-    def _init_weight(self):
-        for m in self.projector:
-            if isinstance(m, nn.Conv2d):
-                weight_init.c2_xavier_fill(m)
-                weight_init.c2_xavier_fill(m)
-            if isinstance(m, (nn.GroupNorm, nn.BatchNorm2d, nn.SyncBatchNorm)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-        for m in self.encoders.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.normal_(m.weight, mean=0, std=0.01)
-                if hasattr(m, 'bias') and m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-
-            if isinstance(m, (nn.GroupNorm, nn.BatchNorm2d, nn.SyncBatchNorm)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        x = self.projector(x)
-        x = self.encoders(x)
+        """
+            x: [B, CN, H, W]
+        """
+        # [B, CN, H, W] -> [B, C, H, W]
+        x = self.fuse_convs(x)
 
         return x

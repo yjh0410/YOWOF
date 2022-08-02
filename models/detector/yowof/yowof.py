@@ -1,15 +1,14 @@
 # This is a frame-level model which is set as the Baseline
-
-from cv2 import exp
 import numpy as np
 import math
 import torch
 import torch.nn as nn
 
+from ...basic.conv import Conv
 from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
 from ...basic.convlstm import ConvLSTM
-from .encoder import DilatedEncoder
+from .encoder import SpatialEncoder, ChannelEncoder
 from .loss import Criterion
 
 
@@ -54,24 +53,32 @@ class YOWOF(nn.Module):
             pretrained=trainable,
             res5_dilation=cfg['res5_dilation']
             )
-        self.neck = DilatedEncoder(
-            in_dim=bk_dim,
-            out_dim=cfg['neck_dim'],
-            expand_ratio=cfg['expand_ratio'],
-            dilation_list=cfg['dilation_list'],
-            act_type=cfg['neck_act'],
-            norm_type=cfg['neck_norm']
-        )
 
-        # ConvLSTM
-        self.conv_lstm = ConvLSTM(
-            in_dim=cfg['neck_dim'],
+        # Temporal Encoder
+        self.temporal_encoder = ConvLSTM(
+            in_dim=bk_dim,
             hidden_dims=[cfg['head_dim']]*cfg['num_layers'],
             kernel_size=cfg['ksize'],
             dilation=cfg['dilation'],
             num_layers=cfg['num_layers'],
             return_all_layers=False,
             inf_full_seq=trainable
+        )
+
+        # Spatial Encoder
+        self.spatial_encoder = SpatialEncoder(
+            in_dim=bk_dim,
+            out_dim=cfg['head_dim'],
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
+        )
+
+        # Channel fusion
+        self.channel_encoder = ChannelEncoder(
+            in_dim=cfg['head_dim']*2,
+            out_dim=cfg['head_dim'],
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
         )
 
         # head
@@ -82,6 +89,7 @@ class YOWOF(nn.Module):
             act_type=cfg['head_act'],
             norm_type=cfg['head_norm']
             )
+
         # pred
         self.obj_pred_ = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
         self.cls_pred_ = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
@@ -230,15 +238,15 @@ class YOWOF(nn.Module):
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
             self.stream_infernce = True
-            self.conv_lstm.inf_full_seq = False
+            self.temporal_encoder.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
-            self.conv_lstm.inf_full_seq = True
+            self.temporal_encoder.inf_full_seq = True
 
 
     def inference_video_clip(self, x):
         # check state of convlstm
-        self.conv_lstm.initialization = True
+        self.temporal_encoder.initialization = True
 
         # prepare
         backbone_feats = []
@@ -247,15 +255,21 @@ class YOWOF(nn.Module):
         # backbone
         for i in range(len(x)):
             feat = self.backbone(x[i])
-            feat = self.neck(feat)
 
             backbone_feats.append(feat)
 
-        # spatio-temporal-motion encoder
-        feat = self.conv_lstm(backbone_feats)
+        # temporal encoder
+        feat, _ = self.temporal_encoder(backbone_feats)
+        tp_feat = feat[-1][-1]
+
+        # spatial encoder
+        kf_feat = self.spatial_encoder(backbone_feats[-1])
+
+        # channel encoder
+        feat = self.channel_encoder(torch.cat([kf_feat, tp_feat], dim=1))
 
         # head
-        cls_feats, reg_feats = self.head(feat[0][-1][-1])
+        cls_feats, reg_feats = self.head(feat)
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -312,18 +326,24 @@ class YOWOF(nn.Module):
         img_size = x.shape[-1]
         # backbone
         cur_bk_feat = self.backbone(x)
-        cur_bk_feat = self.neck(cur_bk_feat)
 
         # push the current feature
         self.clip_feats.append(cur_bk_feat)
         # delete the oldest feature
         del self.clip_feats[0]
 
-        # spatio-temporal-motion encoder
-        cur_feat = self.conv_lstm(self.clip_feats)
+        # temporal encoder
+        cur_feat, _ = self.temporal_encoder(self.clip_feats)
+        cur_tp_feat = cur_feat[-1]
+
+        # spatial encoder
+        cur_kf_feat = self.spatial_encoder(cur_bk_feat)
+
+        # channel encoder
+        cur_feat = self.channel_encoder(torch.cat([cur_kf_feat, cur_tp_feat], dim=1))
 
         # head
-        cls_feats, reg_feats = self.head(cur_feat[0][-1])
+        cls_feats, reg_feats = self.head(cur_feat)
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -425,15 +445,21 @@ class YOWOF(nn.Module):
             # backbone
             for i in range(len(video_clips)):
                 feat = self.backbone(video_clips[i])
-                feat = self.neck(feat)
 
                 backbone_feats.append(feat)
 
-            # spatio-temporal-motion encoder
-            feat = self.conv_lstm(backbone_feats)
+            # temporal encoder
+            feat, _ = self.temporal_encoder(backbone_feats)
+            tp_feat = feat[-1][-1]
+
+            # spatial encoder
+            kf_feat = self.spatial_encoder(backbone_feats[-1])
+
+            # channel encoder
+            feat = self.channel_encoder(torch.cat([kf_feat, tp_feat], dim=1))
 
             # detection head
-            cls_feats, reg_feats = self.head(feat[0][-1][-1])
+            cls_feats, reg_feats = self.head(feat)
 
             obj_pred = self.obj_pred_(reg_feats)
             cls_pred = self.cls_pred_(cls_feats)
