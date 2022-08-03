@@ -37,8 +37,8 @@ model_config = {
         'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
-        'conf_thresh': 0.05,
-        'nms_thresh': 0.6,
+        'conf_thresh': 0.1,
+        'nms_thresh': 0.5,
         # anchor box
         'anchor_size': [[16, 16],
                         [32, 32], 
