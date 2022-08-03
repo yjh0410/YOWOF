@@ -180,7 +180,10 @@ def train():
 
     # lr scheduler
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer=optimizer, milestones=d_cfg['lr_epoch'])
+        optimizer=optimizer,
+        milestones=d_cfg['lr_epoch'],
+        gamma=d_cfg['lr_decay_ratio']
+        )
 
     # warmup scheduler
     warmup_scheduler = build_warmup(
