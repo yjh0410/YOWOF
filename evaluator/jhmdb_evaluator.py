@@ -235,8 +235,8 @@ class JHMDBEvaluator(object):
                     fn -= 1
                 else:
                     fp += 1
-                pr[i + 1, 0] = float(tp) / float(tp + fp)
-                pr[i + 1, 1] = float(tp) / float(tp + fn)
+                pr[i + 1, 0] = float(tp) / max(float(tp + fp), 1.0)
+                pr[i + 1, 1] = float(tp) / max(float(tp + fn), 1.0)
 
             results[label] = pr
 
