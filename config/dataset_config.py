@@ -12,14 +12,15 @@ dataset_config = {
         # freeze
         'freeze_backbone': False,
         # train config
+        'batch_size': 16,
+        'accumulate': 1,
+        'len_clip': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,
         'max_epoch': 12,
         'lr_epoch': [6, 10],
-        'batch_size': 16,
-        'accumulate': 1,
-        'base_lr': 2.5e-5,
+        'base_lr': 2e-5,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
@@ -29,21 +30,22 @@ dataset_config = {
     'jhmdb': {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/JHMDB',
-        'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
+        # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
         'anno_file': 'JHMDB-GT.pkl',
         'train_split': 1,
         'test_split': 1,
         # freeze
         'freeze_backbone': False,
         # train config
+        'batch_size': 16,
+        'accumulate': 1,
+        'len_clip': 32,
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,
         'max_epoch': 12,
         'lr_epoch': [6, 10],
-        'batch_size': 16,
-        'accumulate': 1,
-        'base_lr': 2.5e-5,
+        'base_lr': 2e-5,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,

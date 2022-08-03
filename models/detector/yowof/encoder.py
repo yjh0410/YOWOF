@@ -86,7 +86,9 @@ class ChannelEncoder(nn.Module):
             Conv(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
             Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
             CSAM(),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type)
+            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            nn.Dropout(0.1, inplace=False),
+            nn.Conv2d(out_dim, out_dim, kernel_size=1)
         )
 
     def forward(self, x):
@@ -106,7 +108,9 @@ class SpatialEncoder(nn.Module):
             Conv(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
             Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
             SSAM(),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type)
+            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            nn.Dropout(0.1, inplace=False),
+            nn.Conv2d(out_dim, out_dim, kernel_size=1)
         )
 
     def forward(self, x):

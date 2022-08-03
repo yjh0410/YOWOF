@@ -23,15 +23,17 @@ def build_model(args,
 
     # build YOWOF
     if 'yowof' in args.version:
-        model = YOWOF(cfg=m_cfg,
-                      device=device,
-                      img_size=img_size,
-                      num_classes=num_classes, 
-                      conf_thresh=m_cfg['conf_thresh'],
-                      nms_thresh=m_cfg['nms_thresh'],
-                      topk=args.topk,
-                      trainable=trainable,
-                      )
+        model = YOWOF(
+            cfg=m_cfg,
+            device=device,
+            img_size=img_size,
+            len_clip=d_cfg['len_clip'],
+            num_classes=num_classes,
+            conf_thresh=m_cfg['conf_thresh'],
+            nms_thresh=m_cfg['nms_thresh'],
+            topk=args.topk,
+            trainable=trainable
+            )
 
     # set inference mode
     if not trainable:

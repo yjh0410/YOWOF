@@ -21,6 +21,7 @@ class YOWOF(nn.Module):
                  cfg,
                  device,
                  img_size,
+                 len_clip = 16,
                  num_classes = 20, 
                  conf_thresh = 0.05,
                  nms_thresh = 0.6,
@@ -31,7 +32,7 @@ class YOWOF(nn.Module):
         self.device = device
         self.img_size = img_size
         self.stride = cfg['stride']
-        self.len_clip = cfg['len_clip']
+        self.len_clip = len_clip
         self.num_classes = num_classes
         self.trainable = trainable
         self.conf_thresh = conf_thresh

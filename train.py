@@ -162,7 +162,7 @@ def train():
         FLOPs_and_Params(
             model=model_copy,
             img_size=m_cfg['test_size'],
-            len_clip=m_cfg['len_clip'],
+            len_clip=d_cfg['len_clip'],
             device=device,
             stream=True)
         del model_copy
@@ -303,8 +303,8 @@ def train():
                     weight_name = '{}_epoch_{}.pth'.format(args.version, epoch + 1)
                     checkpoint_path = os.path.join(path_to_save, weight_name)
                     torch.save({'model': model_eval.state_dict(),
-                                'optimizer': optimizer.state_dict(),
-                                'lr_scheduler': lr_scheduler.state_dict(),
+                                # 'optimizer': optimizer.state_dict(),
+                                # 'lr_scheduler': lr_scheduler.state_dict(),
                                 'epoch': epoch,
                                 'args': args}, 
                                 checkpoint_path)                      
@@ -328,8 +328,8 @@ def train():
                         weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_frame_map)
                         checkpoint_path = os.path.join(path_to_save, weight_name)
                         torch.save({'model': model_eval.state_dict(),
-                                    'optimizer': optimizer.state_dict(),
-                                    'lr_scheduler': lr_scheduler.state_dict(),
+                                    # 'optimizer': optimizer.state_dict(),
+                                    # 'lr_scheduler': lr_scheduler.state_dict(),
                                     'epoch': epoch,
                                     'args': args}, 
                                     checkpoint_path)                      

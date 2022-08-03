@@ -37,14 +37,14 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
         # dataset
         dataset = UCF24(cfg=d_cfg,
                         img_size=m_cfg['train_size'],
-                        len_clip=m_cfg['len_clip'],
+                        len_clip=d_cfg['len_clip'],
                         is_train=is_train,
                         transform=train_transform,
                         debug=False)
         # evaluator
         evaluator = UCFEvaluator(
                         cfg=d_cfg,
-                        len_clip=m_cfg['len_clip'],
+                        len_clip=d_cfg['len_clip'],
                         img_size=m_cfg['test_size'],
                         thresh=0.5,
                         transform=val_transform,
@@ -57,14 +57,14 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
         # dataset
         dataset = JHMDB(cfg=d_cfg,
                         img_size=m_cfg['train_size'],
-                        len_clip=m_cfg['len_clip'],
+                        len_clip=d_cfg['len_clip'],
                         is_train=is_train,
                         transform=train_transform,
                         debug=False)
         # evaluator
         evaluator = JHMDBEvaluator(
                         cfg=d_cfg,
-                        len_clip=m_cfg['len_clip'],
+                        len_clip=d_cfg['len_clip'],
                         img_size=m_cfg['test_size'],
                         thresh=0.5,
                         transform=val_transform,
