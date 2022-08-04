@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-from ...basic.conv import Conv
+from ...basic.conv import Conv2d
 
 
 # Channel Self Attetion Module
@@ -83,10 +83,10 @@ class ChannelEncoder(nn.Module):
     def __init__(self, in_dim, out_dim, act_type='', norm_type=''):
         super().__init__()
         self.fuse_convs = nn.Sequential(
-            Conv(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            Conv2d(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
+            Conv2d(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
             CSAM(),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            Conv2d(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
             nn.Dropout(0.1, inplace=False),
             nn.Conv2d(out_dim, out_dim, kernel_size=1)
         )
@@ -105,10 +105,10 @@ class SpatialEncoder(nn.Module):
     def __init__(self, in_dim, out_dim, act_type='', norm_type=''):
         super().__init__()
         self.fuse_convs = nn.Sequential(
-            Conv(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            Conv2d(in_dim, out_dim, k=1, act_type=act_type, norm_type=norm_type),
+            Conv2d(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
             SSAM(),
-            Conv(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
+            Conv2d(out_dim, out_dim, k=3, p=1, act_type=act_type, norm_type=norm_type),
             nn.Dropout(0.1, inplace=False),
             nn.Conv2d(out_dim, out_dim, kernel_size=1)
         )
