@@ -152,8 +152,6 @@ class TemporalEncoder(nn.Module):
             Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type)
         )
 
-        self.avgpool = nn.AdaptiveAvgPool3d((1, None, None))
-
 
     def forward(self, x):
         """
@@ -174,7 +172,7 @@ class TemporalEncoder(nn.Module):
         x = self.max_pool_3(x)
         x = self.layer_3(x) + x
 
-        y = self.avgpool(x)
+        y = torch.mean(x, dim=2)
 
 
         return y.squeeze(2) # [B, C_out, H, W]
