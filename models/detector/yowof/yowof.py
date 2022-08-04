@@ -4,7 +4,7 @@ import math
 import torch
 import torch.nn as nn
 
-from ...basic.conv import Conv
+from ...basic.conv import Conv2d
 from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
 from ...basic.convlstm import ConvLSTM

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ..basic.conv import Conv
+from ..basic.conv import Conv2d
 
 
 class DecoupledHead(nn.Module):
@@ -16,13 +16,13 @@ class DecoupledHead(nn.Module):
 
         print('==============================')
         print('Head: Decoupled Head')
-        self.cls_feats = nn.Sequential(*[Conv(head_dim, 
+        self.cls_feats = nn.Sequential(*[Conv2d(head_dim, 
                                             head_dim, 
                                             k=3, p=1, s=1, 
                                             act_type=act_type, 
                                             norm_type=norm_type,
                                             depthwise=depthwise) for _ in range(num_cls_heads)])
-        self.reg_feats = nn.Sequential(*[Conv(head_dim, 
+        self.reg_feats = nn.Sequential(*[Conv2d(head_dim, 
                                             head_dim, 
                                             k=3, p=1, s=1, 
                                             act_type=act_type, 
