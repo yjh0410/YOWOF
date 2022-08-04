@@ -12,8 +12,8 @@ dataset_config = {
         # freeze
         'freeze_backbone': False,
         # train config
-        'batch_size': 64,
-        'accumulate': 2,
+        'batch_size': 32,
+        'accumulate': 1,
         'len_clip': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
