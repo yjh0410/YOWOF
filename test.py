@@ -221,7 +221,7 @@ if __name__ == '__main__':
         dataset = UCF24(
             cfg=d_cfg,
             img_size=args.img_size,
-            len_clip=m_cfg['len_clip'],
+            len_clip=d_cfg['len_clip'],
             is_train=False,
             transform=None,
             debug=False
@@ -234,7 +234,7 @@ if __name__ == '__main__':
         dataset = JHMDB(
             cfg=d_cfg,
             img_size=args.img_size,
-            len_clip=m_cfg['len_clip'],
+            len_clip=d_cfg['len_clip'],
             is_train=False,
             transform=None,
             debug=False
