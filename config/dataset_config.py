@@ -17,7 +17,7 @@ dataset_config = {
         'len_clip': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
-        'weight_decay': 5e-4,
+        'weight_decay': 1e-4,
         'max_epoch': 10,
         'lr_epoch': [6, 8],
         'base_lr': 2e-5,
