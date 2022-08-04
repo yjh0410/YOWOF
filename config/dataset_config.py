@@ -14,7 +14,7 @@ dataset_config = {
         # train config
         'batch_size': 16,
         'accumulate': 1,
-        'len_clip': 32,
+        'len_clip': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 5e-4,
