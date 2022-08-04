@@ -4,11 +4,9 @@ import math
 import torch
 import torch.nn as nn
 
-from ...basic.conv import Conv2d
 from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
-from ...basic.convlstm import ConvLSTM
-from .encoder import SpatialEncoder, ChannelEncoder
+from .encoder import TemporalEncoder, ChannelEncoder
 from .loss import Criterion
 
 
@@ -56,31 +54,12 @@ class YOWOF(nn.Module):
             )
 
         # Temporal Encoder
-        self.temporal_encoder = ConvLSTM(
+        self.temporal_encoder = TemporalEncoder(
             in_dim=bk_dim,
-            hidden_dims=[cfg['head_dim']]*cfg['num_layers'],
-            kernel_size=cfg['ksize'],
-            dilation=cfg['dilation'],
-            num_layers=cfg['num_layers'],
-            return_all_layers=False,
-            inf_full_seq=trainable
+            out_dim=cfg['head_dim'],
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
         )
-
-        # # Spatial Encoder
-        # self.spatial_encoder = SpatialEncoder(
-        #     in_dim=bk_dim,
-        #     out_dim=cfg['head_dim'],
-        #     act_type=cfg['head_act'],
-        #     norm_type=cfg['head_norm']
-        # )
-
-        # # Channel fusion
-        # self.channel_encoder = ChannelEncoder(
-        #     in_dim=cfg['head_dim']*2,
-        #     out_dim=cfg['head_dim'],
-        #     act_type=cfg['head_act'],
-        #     norm_type=cfg['head_norm']
-        # )
 
         # head
         self.head = DecoupledHead(
@@ -239,16 +218,11 @@ class YOWOF(nn.Module):
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
             self.stream_infernce = True
-            self.temporal_encoder.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
-            self.temporal_encoder.inf_full_seq = True
 
 
     def inference_video_clip(self, x):
-        # check state of convlstm
-        self.temporal_encoder.initialization = True
-
         # prepare
         backbone_feats = []
         img_size = x[0].shape[-1]
@@ -260,14 +234,7 @@ class YOWOF(nn.Module):
             backbone_feats.append(feat)
 
         # temporal encoder
-        feats, _ = self.temporal_encoder(backbone_feats)
-        feat = feats[-1][-1]
-
-        # # spatial encoder
-        # kf_feat = self.spatial_encoder(backbone_feats[-1])
-
-        # # channel encoder
-        # feat = self.channel_encoder(torch.cat([kf_feat, tp_feat], dim=1))
+        feat = self.temporal_encoder(torch.stack(backbone_feats, dim=2))
 
         # head
         cls_feats, reg_feats = self.head(feat)
@@ -334,14 +301,7 @@ class YOWOF(nn.Module):
         del self.clip_feats[0]
 
         # temporal encoder
-        cur_feats, _ = self.temporal_encoder(self.clip_feats)
-        cur_feat = cur_feats[-1]
-
-        # # spatial encoder
-        # cur_kf_feat = self.spatial_encoder(cur_bk_feat)
-
-        # # channel encoder
-        # cur_feat = self.channel_encoder(torch.cat([cur_kf_feat, cur_tp_feat], dim=1))
+        cur_feat = self.temporal_encoder(torch.stack(self.clip_feats, dim=2))
 
         # head
         cls_feats, reg_feats = self.head(cur_feat)
@@ -450,14 +410,7 @@ class YOWOF(nn.Module):
                 backbone_feats.append(feat)
 
             # temporal encoder
-            feats, _ = self.temporal_encoder(backbone_feats)
-            feat = feats[-1][-1]
-
-            # # spatial encoder
-            # kf_feat = self.spatial_encoder(backbone_feats[-1])
-
-            # # channel encoder
-            # feat = self.channel_encoder(torch.cat([kf_feat, tp_feat], dim=1))
+            feat = self.temporal_encoder(torch.stack(backbone_feats, dim=2))
 
             # detection head
             cls_feats, reg_feats = self.head(feat)

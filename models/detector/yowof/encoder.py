@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-from ...basic.conv import Conv2d
+from ...basic.conv import Conv2d, Conv3d
 
 
 # Channel Self Attetion Module
@@ -121,3 +121,60 @@ class SpatialEncoder(nn.Module):
         x = self.fuse_convs(x)
 
         return x
+
+
+class TemporalEncoder(nn.Module):
+    def __init__(self, in_dim, out_dim, act_type='relu', norm_type='BN'):
+        super().__init__()
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+
+        self.stem = nn.Sequential(
+            Conv3d(in_dim, out_dim, k=3, p=1, s=(2, 1, 1), act_type=act_type, norm_type=norm_type),
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type)
+        )
+
+        self.max_pool_1 = nn.MaxPool3d((2, 1, 1))
+        self.layer_1 = nn.Sequential(
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type),
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type)
+        )
+
+        self.max_pool_2 = nn.MaxPool3d((2, 1, 1))
+        self.layer_2 = nn.Sequential(
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type),
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type)
+        )
+
+        self.max_pool_3 = nn.MaxPool3d((2, 1, 1))
+        self.layer_3 = nn.Sequential(
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type),
+            Conv3d(out_dim, out_dim, k=3, p=1, s=1, act_type=act_type, norm_type=norm_type)
+        )
+
+        self.avgpool = nn.AdaptiveAvgPool3d((1, None, None))
+
+
+    def forward(self, x):
+        """
+        Input:
+            x: (Tensor) [B, C_in, T, H, W]
+        Output:
+            y: (Tensor) [B, C_out, 1, H, W]
+        """
+
+        x = self.stem(x)
+
+        x = self.max_pool_1(x)
+        x = self.layer_1(x) + x
+
+        x = self.max_pool_2(x)
+        x = self.layer_2(x) + x
+
+        x = self.max_pool_3(x)
+        x = self.layer_3(x) + x
+
+        y = self.avgpool(x)
+
+
+        return y.squeeze(2) # [B, C_out, H, W]
