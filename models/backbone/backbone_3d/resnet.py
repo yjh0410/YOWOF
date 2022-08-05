@@ -259,6 +259,7 @@ class ResNet_Part(nn.Module):
 
 
 def load_weight(model, arch):
+    print('Loading pretrained weight ...')
     # checkpoint state dict
     url = model_urls[arch]
     checkpoint = load_state_dict_from_url(url=url, map_location="cpu", check_hash=True)
