@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-import math
-import os
+from torch.hub import load_state_dict_from_url
 from functools import partial
 
 __all__ = [
@@ -261,7 +260,7 @@ class ResNet_Part(nn.Module):
 def load_weight(model, arch):
     # checkpoint state dict
     url = model_urls[arch]
-    checkpoint = torch.hub.load_state_dict_from_url(url=url, map_location="cpu", check_hash=True)
+    checkpoint = load_state_dict_from_url(url=url, map_location="cpu", check_hash=True)
     checkpoint_state_dict = checkpoint.pop('state_dict')
 
     # model state dict
