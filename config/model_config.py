@@ -20,15 +20,15 @@ model_config = {
                          {'name': 'Resize'},
                          {'name': 'Normalize'},
                          {'name': 'PadImage'}],
-        # model
-        'backbone': 'resnet18',
+        # backbone
+        ## 2D
+        'backbone_2d': 'resnet18',
         'pretrained': True,
-        'res5_dilation': False,
         'stride': 32,
-        # conv lstm
-        'ksize': 3,
-        'dilation': 1,
-        'num_layers': 2,
+        ## 3D
+        'backbone_3d': 'resnet18',
+        'pretrained': True,
+        'backbone_3d_part': True,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
@@ -47,7 +47,7 @@ model_config = {
                         [256, 256]],
         # matcher
         'matcher': 'uniform_matcher',
-        'topk': 4,
+        'topk': 1,
         'iou_t': 0.15,
         'igt': 0.7,
         'ctr_clamp': 32,

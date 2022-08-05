@@ -1,12 +1,14 @@
 # This is a frame-level model which is set as the Baseline
+from os import truncate
 import numpy as np
 import math
 import torch
 import torch.nn as nn
 
-from ...backbone import build_backbone
+from ...backbone import build_backbone_2d
+from ...backbone import build_backbone_3d
 from ...head.decoupled_head import DecoupledHead
-from .encoder import TemporalEncoder, ChannelEncoder
+from .encoder import ChannelEncoder
 from .loss import Criterion
 
 
@@ -46,16 +48,21 @@ class YOWOF(nn.Module):
         self.anchor_boxes = self.generate_anchors(img_size)
 
         # ------------------ Network ---------------------
-        # backbone
-        self.backbone, bk_dim = build_backbone(
-            model_name=cfg['backbone'], 
-            pretrained=trainable,
-            res5_dilation=cfg['res5_dilation']
+        # 2D backbone
+        self.backbone_2d, bk_dim_2d = build_backbone_2d(
+            model_name=cfg['backbone_2d'], 
+            pretrained=trainable
             )
+        # 3D backbone
+        self.backbone_3d, bk_dim_3d = build_backbone_3d(
+            model_name=cfg['backbone_3d'],
+            pretrained=trainable,
+            part=cfg['backbone_3d_part']
+        )
 
-        # Temporal Encoder
-        self.temporal_encoder = TemporalEncoder(
-            in_dim=bk_dim,
+        # Channel Encoder
+        self.channel_encoder = ChannelEncoder(
+            in_dim=bk_dim_2d + bk_dim_3d,
             out_dim=cfg['head_dim'],
             act_type=cfg['head_act'],
             norm_type=cfg['head_norm']
@@ -222,19 +229,25 @@ class YOWOF(nn.Module):
             self.stream_infernce = False
 
 
-    def inference_video_clip(self, x):
+    def inference_video_clip(self, video_clips):
         # prepare
-        backbone_feats = []
-        img_size = x[0].shape[-1]
+        backbone_2d_feats = []
+        img_size = video_clips[0].shape[-1]
 
-        # backbone
-        for i in range(len(x)):
-            feat = self.backbone(x[i])
+        # 2D backbone
+        for i in range(len(video_clips)):
+            if i == len(video_clips) - 1:
+                feat, feat_2d = self.backbone_2d(video_clips[i], truncate=False)
+            else:
+                feat = self.backbone_2d(video_clips[i], truncate=True)
 
-            backbone_feats.append(feat)
+            backbone_2d_feats.append(feat)
 
-        # temporal encoder
-        feat = self.temporal_encoder(torch.stack(backbone_feats, dim=2))
+        # 3D backbone
+        feat_3d = self.backbone_3d(torch.stack(backbone_2d_feats, dim=2))
+
+        # channel encoder
+        feat = self.channel_encoder(torch.cat([feat_2d, feat_3d], dim=1))
 
         # head
         cls_feats, reg_feats = self.head(feat)
@@ -287,21 +300,24 @@ class YOWOF(nn.Module):
         # post-process
         scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-        return backbone_feats, scores, labels, bboxes
+        return backbone_2d_feats, scores, labels, bboxes
 
 
     def inference_single_frame(self, x):
         img_size = x.shape[-1]
         # backbone
-        cur_bk_feat = self.backbone(x)
+        cur_feat, cur_feat_2d = self.backbone_2d(x, truncate=False)
 
         # push the current feature
-        self.clip_feats.append(cur_bk_feat)
+        self.clip_feats.append(cur_feat)
         # delete the oldest feature
         del self.clip_feats[0]
 
-        # temporal encoder
-        cur_feat = self.temporal_encoder(torch.stack(self.clip_feats, dim=2))
+        # 3D backbone
+        cur_feat_3d = self.backbone_3d(torch.stack(self.clip_feats, dim=2))
+
+        # channel encoder
+        cur_feat = self.channel_encoder(torch.cat([cur_feat_2d, cur_feat_3d], dim=1))
 
         # head
         cls_feats, reg_feats = self.head(cur_feat)
@@ -354,7 +370,7 @@ class YOWOF(nn.Module):
         # post-process
         scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-        return cur_bk_feat, scores, labels, bboxes
+        return cur_feat_2d, scores, labels, bboxes
 
 
     @torch.no_grad()
@@ -402,15 +418,21 @@ class YOWOF(nn.Module):
         if not self.trainable:
             return self.inference(video_clips)
         else:
-            backbone_feats = []
-            # backbone
+            backbone_2d_feats = []
+            # 2D backbone
             for i in range(len(video_clips)):
-                feat = self.backbone(video_clips[i])
+                if i == len(video_clips) - 1:
+                    feat, feat_2d = self.backbone_2d(video_clips[i], truncate=False)
+                else:
+                    feat = self.backbone_2d(video_clips[i], truncate=True)
 
-                backbone_feats.append(feat)
+                backbone_2d_feats.append(feat)
 
-            # temporal encoder
-            feat = self.temporal_encoder(torch.stack(backbone_feats, dim=2))
+            # 3D backbone
+            feat_3d = self.backbone_3d(torch.stack(backbone_2d_feats, dim=2))
+
+            # channel encoder
+            feat = self.channel_encoder(torch.cat([feat_2d, feat_3d], dim=1))
 
             # detection head
             cls_feats, reg_feats = self.head(feat)

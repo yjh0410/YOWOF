@@ -1,5 +1,6 @@
 # Copyright: Torchvision
 
+from os import truncate
 import torch
 from torch import Tensor
 import torch.nn as nn
@@ -205,7 +206,7 @@ class ResNet(nn.Module):
                     nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
 
         # freeze
-        self._freeze()
+        # self._freeze()
 
     def _make_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int,
                     stride: int = 1, dilate: bool = False) -> nn.Sequential:
@@ -237,29 +238,33 @@ class ResNet(nn.Module):
             if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
                 parameter.requires_grad_(False)
         
-    def _forward_impl(self, x: Tensor) -> Tensor:
+    def _forward_impl(self, x: Tensor, truncate: bool) -> Tensor:
         # See note [TorchScript super()]
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
+        c2 = self.layer1(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        if truncate:
+            return c2
+        else:
+            c3 = self.layer2(c2)
+            c4 = self.layer3(c3)
+            c5 = self.layer4(c4)
 
-        return x
+            return c2, c5
 
-    def forward(self, x: Tensor) -> Tensor:
-        return self._forward_impl(x)
+    def forward(self, x: Tensor, truncate: bool) -> Tensor:
+        return self._forward_impl(x, truncate)
 
 
 def load_weight(model, arch, progress):
     # checkpoint state dict
     checkpoint = load_state_dict_from_url(
         model_urls[arch],
-        progress=progress
+        progress=progress,
+        map_location='cpu'
         )
     checkpoint_state_dict = checkpoint.pop('state_dict')
 
@@ -352,17 +357,17 @@ def resnet101(pretrained: bool = False, progress: bool = True, **kwargs: Any) ->
 
 
 # build 2D resnet
-def build_resnet(model_name='resnet50', pretrained=False, res5_dilation=True):
+def build_resnet_2d(model_name='resnet50', pretrained=False):
     if model_name == 'resnet18':
-        model = resnet18(pretrained, res5_dilation=res5_dilation)
+        model = resnet18(pretrained)
         feat = 512
 
     elif model_name == 'resnet50':
-        model = resnet50(pretrained, res5_dilation=res5_dilation)
+        model = resnet50(pretrained)
         feat = 2048
 
     elif model_name == 'resnet101':
-        model = resnet50(pretrained, res5_dilation=res5_dilation)
+        model = resnet50(pretrained)
         feat = 2048
 
     return model, feat
@@ -371,7 +376,7 @@ def build_resnet(model_name='resnet50', pretrained=False, res5_dilation=True):
 if __name__ == '__main__':
     import time
 
-    model, feat_dim = build_resnet(model_name='resnet18', pretrained=False, res5_dilation=True)
+    model, feat_dim = build_resnet_2d(model_name='resnet18', pretrained=True, res5_dilation=True)
     print(feat_dim)
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -383,6 +388,6 @@ if __name__ == '__main__':
     for i in range(1):
         # star time
         t0 = time.time()
-        y = model(x)
+        y = model(x, truncate=False)
         print(y.size())
         print('time', time.time() - t0)
