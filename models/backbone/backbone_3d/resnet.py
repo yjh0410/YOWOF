@@ -367,8 +367,8 @@ if __name__ == '__main__':
         device = torch.device("cpu")
     model = model.to(device)
 
-    x = torch.randn(1, 64, 64, 32, 32).to(device)
-    for i in range(1):
+    x = torch.randn(1, 64, 16, 56, 56).to(device)
+    for i in range(10):
         # star time
         t0 = time.time()
         y = model(x)
