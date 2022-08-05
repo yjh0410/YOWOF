@@ -361,7 +361,10 @@ def build_resnet_3d(model_name='resnet18', pretrained=False, part=False):
 if __name__ == '__main__':
     import time
     model, feat = build_resnet_3d(model_name='resnet18', pretrained=True, part=True)
-    device = torch.device("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
     model = model.to(device)
 
     x = torch.randn(1, 64, 64, 32, 32).to(device)
