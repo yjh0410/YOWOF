@@ -429,7 +429,6 @@ class YOWOF(nn.Module):
                 backbone_2d_feats.append(feat)
 
             # 3D backbone
-            print(torch.stack(backbone_2d_feats, dim=2).device)
             feat_3d = self.backbone_3d(torch.stack(backbone_2d_feats, dim=2))
 
             # channel encoder
