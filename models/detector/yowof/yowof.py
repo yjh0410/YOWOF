@@ -51,12 +51,12 @@ class YOWOF(nn.Module):
         # 2D backbone
         self.backbone_2d, bk_dim_2d = build_backbone_2d(
             model_name=cfg['backbone_2d'], 
-            pretrained=trainable
+            pretrained=cfg['pretrained_2d'] and trainable
             )
         # 3D backbone
         self.backbone_3d, bk_dim_3d = build_backbone_3d(
             model_name=cfg['backbone_3d'],
-            pretrained=trainable,
+            pretrained=cfg['pretrained_3d'] and trainable,
             part=cfg['backbone_3d_part']
         )
 
@@ -430,7 +430,7 @@ class YOWOF(nn.Module):
 
             # 3D backbone
             print(torch.stack(backbone_2d_feats, dim=2).device)
-            feat_3d = self.backbone_3d(torch.stack(backbone_2d_feats, dim=2).cpu())
+            feat_3d = self.backbone_3d(torch.stack(backbone_2d_feats, dim=2))
 
             # channel encoder
             feat = self.channel_encoder(torch.cat([feat_2d, feat_3d], dim=1))

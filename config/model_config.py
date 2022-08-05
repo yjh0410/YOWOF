@@ -23,11 +23,11 @@ model_config = {
         # backbone
         ## 2D
         'backbone_2d': 'resnet18',
-        'pretrained': True,
+        'pretrained_2d': True,
         'stride': 32,
         ## 3D
         'backbone_3d': 'resnet18',
-        'pretrained': False,
+        'pretrained_3d': False,
         'backbone_3d_part': True,
         # head
         'head_dim': 256,
