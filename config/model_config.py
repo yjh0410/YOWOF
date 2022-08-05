@@ -27,7 +27,7 @@ model_config = {
         'stride': 32,
         ## 3D
         'backbone_3d': 'resnet18',
-        'pretrained': True,
+        'pretrained': False,
         'backbone_3d_part': True,
         # head
         'head_dim': 256,
