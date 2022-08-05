@@ -32,6 +32,7 @@ def conv3x3x3(in_planes, out_planes, stride=1):
 
 
 def downsample_basic_block(x, planes, stride):
+    print(x.device)
     out = F.avg_pool3d(x, kernel_size=1, stride=stride)
     zero_pads = torch.Tensor(
         out.size(0), planes - out.size(1), out.size(2), out.size(3),
@@ -39,7 +40,6 @@ def downsample_basic_block(x, planes, stride):
     # if isinstance(out.data, torch.cuda.FloatTensor):
     zero_pads = zero_pads.cuda()
 
-    print(zero_pads.device)
     out = Variable(torch.cat([out.data, zero_pads], dim=1))
 
     return out
