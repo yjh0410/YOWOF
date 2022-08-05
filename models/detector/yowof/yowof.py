@@ -59,7 +59,6 @@ class YOWOF(nn.Module):
             pretrained=trainable,
             part=cfg['backbone_3d_part']
         )
-        self.backbone_3d.to(device)
 
         # Channel Encoder
         self.channel_encoder = ChannelEncoder(
