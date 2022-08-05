@@ -3,7 +3,6 @@ from .backbone_3d.resnet import build_resnet_3d
 
 
 def build_backbone_2d(model_name='resnet18', pretrained=False):
-    """ Build ResNet"""
     print('==============================')
     print('2D Backbone: {}'.format(model_name.upper()))
     print('--pretrained: {}'.format(pretrained))
@@ -22,7 +21,6 @@ def build_backbone_2d(model_name='resnet18', pretrained=False):
 
 
 def build_backbone_3d(model_name='resnet18', pretrained=False, part=False):
-    """ Build ResNet"""
     print('==============================')
     print('3D Backbone: {}'.format(model_name.upper()))
     print('--pretrained: {}'.format(pretrained))
