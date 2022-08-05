@@ -36,8 +36,10 @@ def downsample_basic_block(x, planes, stride):
     zero_pads = torch.Tensor(
         out.size(0), planes - out.size(1), out.size(2), out.size(3),
         out.size(4)).zero_()
-    # if isinstance(out.data, torch.cuda.FloatTensor):
-    zero_pads.to(x.device)
+    print(out.data.device)
+    if isinstance(out.data, torch.cuda.FloatTensor):
+        zero_pads = zero_pads.cuda()
+
     out = Variable(torch.cat([out.data, zero_pads], dim=1))
 
     return out
