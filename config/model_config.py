@@ -26,7 +26,7 @@ model_config = {
         'pretrained_2d': True,
         'stride': 32,
         # conv lstm
-        'conv_lstm_hdm': 512,
+        'conv_lstm_hdm': 256,
         'conv_lstm_ks': 3,
         'conv_lstm_nl': 2,
         # head
