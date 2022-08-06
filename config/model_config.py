@@ -40,7 +40,7 @@ model_config = {
         'loss_obj_weight': 5.0,
         'loss_noobj_weight': 1.0,
         'loss_cls_weight': 1.0,
-        'loss_reg_weight': 1.0,
+        'loss_reg_weight': 2.0,
 
     },
 
