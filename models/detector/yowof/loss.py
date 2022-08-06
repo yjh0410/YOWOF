@@ -103,31 +103,30 @@ class Criterion(object):
                         matched_tgt_box,
                         box_mode="xyxy",
                         iou_type='giou')
-        loss_box = (1.0 - ious).sum() / batch_size
+        loss_box = (1.0 - ious).sum() / batch_size * self.loss_reg_weight
 
         # cls loss
         matched_pred_cls = pred_cls[foreground_mask]
         matched_tgt_cls = gt_cls[foreground_mask]
         loss_cls = self.cls_loss(matched_pred_cls, matched_tgt_cls)
-        loss_cls = loss_cls.sum() / batch_size
+        loss_cls = loss_cls.sum() / batch_size * self.loss_cls_weight
 
         # conf loss
-        gt_ious = torch.zeros_like(gt_conf)
-        gt_ious[foreground_mask] = ious.clone().detach().clamp(0.)
-        gt_conf = gt_conf * gt_ious
-        loss = self.conf_loss(pred_conf.sigmoid(), gt_conf)
         ## obj & noobj
         obj_mask = (gt_conf > 0.)
         noobj_mask = (gt_conf == 0.)
+        ## gt conf with iou-aware
+        gt_ious = torch.zeros_like(gt_conf)
+        gt_ious[foreground_mask] = ious.clone().detach().clamp(0.)
+        gt_conf = gt_conf * gt_ious
         ## weighted loss of conf
+        loss = self.conf_loss(pred_conf.sigmoid(), gt_conf)
         loss_conf = loss * obj_mask * self.loss_obj_weight + \
                     loss * noobj_mask * self.loss_noobj_weight
         loss_conf = loss_conf.sum() / batch_size
 
         # total loss
-        losses = self.loss_obj_weight * loss_conf + \
-                 self.loss_cls_weight * loss_cls + \
-                 self.loss_reg_weight * loss_box
+        losses = loss_conf + loss_cls + loss_box
 
         loss_dict = dict(
                 loss_conf = loss_conf,
