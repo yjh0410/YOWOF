@@ -3,20 +3,18 @@ import torch.nn as nn
 
 
 class ConvLSTMCell(nn.Module):
-    def __init__(self, in_dim, hidden_dim, kernel_size, dilation, bias=True):
+    def __init__(self, in_dim, hidden_dim, kernel_size, bias=True):
         super().__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
         self.kernel_size = kernel_size
-        self.dilation = dilation
         self.bias = bias
 
         self.conv = nn.Conv2d(
             in_dim + hidden_dim,
             4 * hidden_dim,
             kernel_size=kernel_size,
-            padding=dilation,
-            dilation=dilation,
+            padding=kernel_size // 2,
             bias=bias)
 
     def init_hidden(self, batch_size, fmp_size):
@@ -52,35 +50,33 @@ class ConvLSTMCell(nn.Module):
 
 
 class ConvLSTM(nn.Module):
-    def __init__(self, in_dim, hidden_dims, kernel_size, dilation, num_layers,
+    def __init__(self, in_dim, hidden_dim, kernel_size, num_layers,
                  bias=True, return_all_layers=False, inf_full_seq=True,
                  ):
         super().__init__()
         self.in_dim = in_dim
-        self.hidden_dims = hidden_dims
+        self.hidden_dims = [hidden_dim] * num_layers
         self.kernel_size = kernel_size
-        self.dilation = dilation
         self.num_layers = num_layers
         self.bias = bias
         self.return_all_layers = return_all_layers
         self.inf_full_seq = inf_full_seq
         self.initialization = True
 
-        assert len(hidden_dims) == num_layers
+        assert len(self.hidden_dims) == num_layers
 
         cell_list = nn.ModuleList()
         for i in range(self.num_layers):
             if i == 0:
                 cur_in_dim = in_dim
             else:
-                cur_in_dim = hidden_dims[i - 1]
+                cur_in_dim = self.hidden_dims[i - 1]
 
             cell_list.append(
                 ConvLSTMCell(
                     in_dim=cur_in_dim,
                     hidden_dim=self.hidden_dims[i],
                     kernel_size=kernel_size,
-                    dilation=dilation,
                     bias=self.bias)
                     )
 
