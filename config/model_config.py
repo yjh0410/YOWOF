@@ -28,7 +28,7 @@ model_config = {
         'conv_lstm_ks': 3,
         'conv_lstm_nl': 2,
         # head
-        'head_dim': 1024,
+        'head_dim': 512,
         'head_norm': 'BN',
         'head_act': 'lrelu',
         # post process
