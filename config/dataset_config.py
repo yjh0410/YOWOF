@@ -12,12 +12,12 @@ dataset_config = {
         # freeze
         'freeze_backbone': False,
         # train config
-        'batch_size': 16,
-        'accumulate': 1,
+        'batch_size': 8,
+        'accumulate': 16,
         'len_clip': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
-        'weight_decay': 1e-4,
+        'weight_decay': 5e-4,
         'max_epoch': 10,
         'lr_epoch': [2, 3, 4, 5],
         'base_lr': 1e-4,

@@ -128,6 +128,39 @@ def sigmoid_focal_loss(logits, targets, alpha=0.25, gamma=2.0, reduction='none')
     return loss
 
 
+def softmax_focal_loss(logits, targets, alpha=0.25, gamma=2.0, reduction='none'):
+    """
+    Input:
+        logits: (Tensor) [M, C]
+        targets: (Tensor) [M,]
+        alpha: (Float) alpha of focal loss
+        gamma: (Float) gamma of focal loss
+        reduction: (Str)
+    """
+
+    preds = torch.softmax(logits, dim=-1)
+    targets_one_hot = F.one_hot(targets, num_classes=preds.shape[-1])
+    ce_loss = F.binary_cross_entropy(
+        input=preds,
+        target=targets, 
+        reduction="none"
+        )
+    p_t = preds * targets + (1.0 - preds) * (1.0 - targets)
+    loss = ce_loss * ((1.0 - p_t) ** gamma)
+
+    if alpha >= 0:
+        alpha_t = alpha * targets + (1.0 - alpha) * (1.0 - targets)
+        loss = alpha_t * loss
+
+    if reduction == "mean":
+        loss = loss.mean()
+
+    elif reduction == "sum":
+        loss = loss.sum()
+
+    return loss
+
+
 def get_total_grad_norm(parameters, norm_type=2):
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     norm_type = float(norm_type)

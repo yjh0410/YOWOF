@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
 from .matcher import YoloMatcher
-from utils.box_ops import *
+from utils.box_ops import get_ious
 from utils.misc import sigmoid_focal_loss
 from utils.vis_tools import vis_targets
-from utils.distributed_utils import get_world_size, is_dist_avail_and_initialized
 
 
 
