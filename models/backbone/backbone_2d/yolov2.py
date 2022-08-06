@@ -131,7 +131,7 @@ class YOLOv2(nn.Module):
 
         # output
         self.convsets_2 = Conv_BN_LeakyReLU(1280, 1024, ksize=3, padding=1)
-        self.pred = nn.Conv2d(1024, 425, kernel_size=1)
+        self.pred = nn.Conv2d(1024, 425, kernel_size=1) # 425 = 5x(80 + 5)
         
 
     def forward(self, x):

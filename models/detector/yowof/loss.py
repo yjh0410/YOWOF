@@ -94,7 +94,7 @@ class Criterion(object):
         gt_bboxes = gt_bboxes.view(-1, 4).to(device).float()  # [BM, 4]
 
         # fore mask
-        foreground_mask = (gt_conf > 0)
+        foreground_mask = (gt_conf > 0.)
 
         # box loss
         matched_pred_box = pred_box[foreground_mask]
