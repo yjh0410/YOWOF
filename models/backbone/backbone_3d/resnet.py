@@ -186,76 +186,10 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        # if x.size(2) == 2:
-        #     x = self.avgpool(x)
+        if x.size(2) > 1:
+            x = torch.mean(x, dim=2, keepdim=True)
 
         return x
-
-
-class ResNet_Part(nn.Module):
-
-    def __init__(self,
-                 block,
-                 layers,
-                 shortcut_type='B'):
-        self.inplanes = 64
-        super(ResNet_Part, self).__init__()
-
-        self.layer2 = self._make_layer(
-            block, 128, layers[0], shortcut_type, stride=2)
-        self.layer3 = self._make_layer(
-            block, 256, layers[1], shortcut_type, stride=2)
-        self.layer4 = self._make_layer(
-            block, 512, layers[2], shortcut_type, stride=2)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv3d):
-                m.weight = nn.init.kaiming_normal_(m.weight, mode='fan_out')
-            elif isinstance(m, nn.BatchNorm3d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-    def _make_layer(self, block, planes, blocks, shortcut_type, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            if shortcut_type == 'A':
-                downsample = partial(
-                    downsample_basic_block,
-                    planes=planes * block.expansion,
-                    stride=stride)
-            else:
-                downsample = nn.Sequential(
-                    nn.Conv3d(
-                        self.inplanes,
-                        planes * block.expansion,
-                        kernel_size=1,
-                        stride=stride,
-                        bias=False), nn.BatchNorm3d(planes * block.expansion))
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
-
-
-    def forward(self, x):
-        """
-        Input:
-            x: (Tensor) [B, C_in, T, H, W]
-        Output:
-            y: (Tensor) [B, C_out, H, W]
-        """
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
-        # [B, C, T, H, W] -> [B, C, H, W]
-        y = torch.mean(x, dim=2)
-
-        return y
 
 
 def load_weight(model, arch):
@@ -290,13 +224,10 @@ def load_weight(model, arch):
     return model
 
 
-def resnet18(pretrained=False, part=False, **kwargs):
-    """Constructs a ResNet-18 model.
-    """
-    if not part:
-        model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-    else:
-        model = ResNet_Part(BasicBlock, [2, 2, 2], **kwargs)
+def resnet18(pretrained=False, **kwargs):
+    """Constructs a 3D ResNet-18 model."""
+
+    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
     if pretrained:
         model = load_weight(model, 'resnet18')
@@ -304,39 +235,33 @@ def resnet18(pretrained=False, part=False, **kwargs):
     return model
 
 
-def resnet34(pretrained=False, part=False, **kwargs):
-    """Constructs a ResNet-34 model.
-    """
-    if not part:
-        model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
-    else:
-        model = ResNet_Part(BasicBlock, [4, 6, 3], **kwargs)
+def resnet34(pretrained=False, **kwargs):
+    """Constructs a 3D ResNet-34 model."""
+
+    model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
+
     if pretrained:
         model = load_weight(model, 'resnet34')
 
     return model
 
 
-def resnet50(pretrained=False, part=False, **kwargs):
-    """Constructs a ResNet-50 model.
-    """
-    if not part:
-        model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-    else:
-        model = ResNet_Part(Bottleneck, [4, 6, 3], **kwargs)
+def resnet50(pretrained=False, **kwargs):
+    """Constructs a 3D ResNet-50 model. """
+
+    model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
+
     if pretrained:
         model = load_weight(model, 'resnet50')
 
     return model
 
 
-def resnet101(pretrained=False, part=False, **kwargs):
-    """Constructs a ResNet-101 model.
-    """
-    if not part:
-        model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
-    else:
-        model = ResNet_Part(Bottleneck, [4, 23, 3], **kwargs)
+def resnet101(pretrained=False, **kwargs):
+    """Constructs a 3D ResNet-101 model."""
+
+    model = ResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
+
     if pretrained:
         model = load_weight(model, 'resnet101')
 
@@ -344,17 +269,17 @@ def resnet101(pretrained=False, part=False, **kwargs):
 
 
 # build 3D resnet
-def build_resnet_3d(model_name='resnet18', pretrained=False, part=False):
+def build_resnet_3d(model_name='resnet18', pretrained=False):
     if model_name == 'resnet18':
-        model = resnet18(pretrained=pretrained, shortcut_type='A', part=part)
+        model = resnet18(pretrained=pretrained, shortcut_type='A')
         feat = 512
 
     elif model_name == 'resnet50':
-        model = resnet50(pretrained=pretrained, shortcut_type='B', part=part)
+        model = resnet50(pretrained=pretrained, shortcut_type='B')
         feat = 2048
 
     elif model_name == 'resnet101':
-        model = resnet101(pretrained=pretrained, shortcut_type='b', part=part)
+        model = resnet101(pretrained=pretrained, shortcut_type='b')
         feat = 2048
 
     return model, feat
@@ -362,7 +287,7 @@ def build_resnet_3d(model_name='resnet18', pretrained=False, part=False):
 
 if __name__ == '__main__':
     import time
-    model, feat = build_resnet_3d(model_name='resnet18', pretrained=True, part=True)
+    model, feat = build_resnet_3d(model_name='resnet18', pretrained=True)
     if torch.cuda.is_available():
         device = torch.device("cuda")
     else:

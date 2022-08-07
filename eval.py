@@ -106,8 +106,7 @@ if __name__ == '__main__':
         m_cfg=m_cfg,
         device=device, 
         num_classes=num_classes, 
-        trainable=False,
-        inference='stream'
+        trainable=False
         )
 
     # load trained weight

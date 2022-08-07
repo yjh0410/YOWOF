@@ -140,7 +140,6 @@ def train():
                       device=device, 
                       num_classes=num_classes, 
                       trainable=True,
-                      coco_pretrained=args.coco_pretrained,
                       resume=args.resume)
     model = net
     model = model.to(device).train()
@@ -161,10 +160,9 @@ def train():
         model_copy = deepcopy(model_without_ddp)
         FLOPs_and_Params(
             model=model_copy,
-            img_size=m_cfg['test_size'],
+            img_size=d_cfg['test_size'],
             len_clip=d_cfg['len_clip'],
-            device=device,
-            stream=True)
+            device=device)
         del model_copy
         
     # optimizer
@@ -226,7 +224,7 @@ def train():
                 warmup_scheduler.set_lr(optimizer, lr=base_lr, base_lr=base_lr)
 
             # to device
-            video_clips = [video_clip.to(device) for video_clip in video_clips]
+            video_clips = video_clips.to(device)
 
             # inference
             if args.fp16:

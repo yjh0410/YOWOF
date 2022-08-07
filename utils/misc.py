@@ -18,25 +18,25 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
         m_cfg: model config
     """
     # transform
-    trans_config = m_cfg['transforms']
+    trans_config = d_cfg['transforms']
     print('==============================')
     print('TrainTransforms: {}'.format(trans_config))
     train_transform = TrainTransforms(trans_config=trans_config,
-                                      img_size=m_cfg['train_size'],
-                                      pixel_mean=m_cfg['pixel_mean'],
-                                      pixel_std=m_cfg['pixel_std'],
-                                      format=m_cfg['format'])
-    val_transform = ValTransforms(img_size=m_cfg['test_size'],
-                                  pixel_mean=m_cfg['pixel_mean'],
-                                  pixel_std=m_cfg['pixel_std'],
-                                  format=m_cfg['format'])
+                                      img_size=d_cfg['train_size'],
+                                      pixel_mean=d_cfg['pixel_mean'],
+                                      pixel_std=d_cfg['pixel_std'],
+                                      format=d_cfg['format'])
+    val_transform = ValTransforms(img_size=d_cfg['test_size'],
+                                  pixel_mean=d_cfg['pixel_mean'],
+                                  pixel_std=d_cfg['pixel_std'],
+                                  format=d_cfg['format'])
     # dataset
     
     if args.dataset == 'ucf24':
         num_classes = 24
         # dataset
         dataset = UCF24(cfg=d_cfg,
-                        img_size=m_cfg['train_size'],
+                        img_size=d_cfg['train_size'],
                         len_clip=d_cfg['len_clip'],
                         is_train=is_train,
                         transform=train_transform,
@@ -45,7 +45,7 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
         evaluator = UCFEvaluator(
                         cfg=d_cfg,
                         len_clip=d_cfg['len_clip'],
-                        img_size=m_cfg['test_size'],
+                        img_size=d_cfg['test_size'],
                         thresh=0.5,
                         transform=val_transform,
                         metric='frame_map',
@@ -56,7 +56,7 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
         num_classes = 21
         # dataset
         dataset = JHMDB(cfg=d_cfg,
-                        img_size=m_cfg['train_size'],
+                        img_size=d_cfg['train_size'],
                         len_clip=d_cfg['len_clip'],
                         is_train=is_train,
                         transform=train_transform,
@@ -65,7 +65,7 @@ def build_dataset(d_cfg, m_cfg, args, is_train=False):
         evaluator = JHMDBEvaluator(
                         cfg=d_cfg,
                         len_clip=d_cfg['len_clip'],
-                        img_size=m_cfg['test_size'],
+                        img_size=d_cfg['test_size'],
                         thresh=0.5,
                         transform=val_transform,
                         metric='frame_map',
@@ -195,27 +195,24 @@ def load_weight(device, model, path_to_ckpt):
 
 class CollateFunc(object):
     def __call__(self, batch):
-        batch_target_clips = []
+        batch_key_target = []
         batch_video_clips = []
 
-        len_clip = len(batch[0][0])
-        for fid in range(len_clip):
-            cur_fid_video_clip = []
-            cur_fid_target_clip = []
-            for sample in batch:
-                cur_fid_video_clip.append(sample[0][fid])
-                cur_fid_target_clip.append(sample[1][fid])
-            cur_fid_video_clip = torch.stack(cur_fid_video_clip, dim=0)  # [B, C, H, W]
-            batch_video_clips.append(cur_fid_video_clip)
-            batch_target_clips.append(cur_fid_target_clip)
+        for sample in batch:
+            image_list = sample[0]
+            target_clip = sample[1]
 
-        # batch_clip_images: List[Tensor] -> [Tensor[B, C, H, W],
-        #                                     ..., 
-        #                                     Tensor[B, C, H, W]]
-        # batch_clip_targets: List[List] -> [List[B, N, 6],
-        #                                    ...,
-        #                                    List[B, N, 6]]
-        return batch_video_clips, batch_target_clips
+            # List [T, 3, H, W] -> [3, T, H, W]
+            video_clip = torch.stack(image_list, dim=1)
+            key_target = target_clip[-1]
+            
+            batch_video_clips.append(video_clip)
+            batch_key_target.append(key_target)
+
+        # List [B, 3, T, H, W] -> [B, 3, T, H, W]
+        batch_video_clips = torch.stack(batch_video_clips)
+        
+        return batch_video_clips, batch_key_target
 
 
 def is_parallel(model):

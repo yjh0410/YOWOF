@@ -9,8 +9,25 @@ dataset_config = {
         'anno_file': 'UCF101v2-GT.pkl',
         'train_split': 1,
         'test_split': 1,
-        # freeze
-        'freeze_backbone': False,
+        # input
+        'train_size': 224,
+        'test_size': 224,
+        'format': 'RGB',
+        'pixel_mean': [0., 0., 0.],          # imagenet pixel mean
+        'pixel_std': [255., 255., 255.],     # imagenet pixel std
+        'transforms': [{'name': 'DistortTransform',
+                         'hue': 0.1,
+                         'saturation': 1.5,
+                         'exposure': 1.5},
+                         {'name': 'RandomHorizontalFlip'},
+                         {'name': 'JitterCrop', 'jitter_ratio': 0.3},
+                         {'name': 'ToTensor'},
+                         {'name': 'Resize'},
+                         {'name': 'Normalize'},
+                         {'name': 'PadImage'}],
+        # freeze backbone
+        'freeze_backbone_2d': False,
+        'freeze_backbone_3d': False,
         # train config
         'batch_size': 8,
         'accumulate': 16,
@@ -41,8 +58,25 @@ dataset_config = {
         'anno_file': 'JHMDB-GT.pkl',
         'train_split': 1,
         'test_split': 1,
-        # freeze
-        'freeze_backbone': False,
+        # input
+        'train_size': 224,
+        'test_size': 224,
+        'format': 'RGB',
+        'pixel_mean': [0., 0., 0.],          # imagenet pixel mean
+        'pixel_std': [255., 255., 255.],     # imagenet pixel std
+        'transforms': [{'name': 'DistortTransform',
+                         'hue': 0.1,
+                         'saturation': 1.5,
+                         'exposure': 1.5},
+                         {'name': 'RandomHorizontalFlip'},
+                         {'name': 'JitterCrop', 'jitter_ratio': 0.3},
+                         {'name': 'ToTensor'},
+                         {'name': 'Resize'},
+                         {'name': 'Normalize'},
+                         {'name': 'PadImage'}],
+        # freeze backbone
+        'freeze_backbone_2d': True,
+        'freeze_backbone_3d': True,
         # train config
         'batch_size': 8,
         'accumulate': 16,

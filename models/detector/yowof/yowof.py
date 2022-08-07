@@ -3,12 +3,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from models.basic.conv import Conv2d
-
 from ...backbone import build_backbone_2d
 from ...backbone import build_backbone_3d
-from ...head.decoupled_head import DecoupledHead
-from ...basic.convlstm import ConvLSTM
 from .encoder import ChannelEncoder
 from .loss import Criterion
 
@@ -52,22 +48,23 @@ class YOWOF(nn.Module):
             model_name=cfg['backbone_2d'], 
             pretrained=cfg['pretrained_2d'] and trainable
             )
-
-        # temporal encoder
-        self.temporal_encoder = ConvLSTM(
-            in_dim=bk_dim_2d,
-            hidden_dim=cfg['conv_lstm_hdm'],
-            kernel_size=cfg['conv_lstm_ks'],
-            num_layers=cfg['conv_lstm_nl'],
-            return_all_layers=False,
-            inf_full_seq=trainable
+            
+        # 3D backbone
+        self.backbone_3d, bk_dim_3d = build_backbone_3d(
+            model_name=cfg['backbone_3d'],
+            pretrained=cfg['pretrained_2d'] and trainable
         )
 
-        # head
-        self.head = Conv2d(cfg['conv_lstm_hdm'], cfg['head_dim'], k=3, p=1, act_type=cfg['head_act'], norm_type=cfg['head_norm'])
+        # channel encoder
+        self.channel_encoder = ChannelEncoder(
+            in_dim=bk_dim_2d + bk_dim_3d,
+            out_dim=cfg['head_dim'],
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
+        )
 
         # output
-        self.pred = nn.Conv2d(cfg['head_dim'], self.num_anchors * (1 + num_classes + 4), kernel_size=3, padding=1)
+        self.pred = nn.Conv2d(cfg['head_dim'], self.num_anchors * (1 + num_classes + 4), kernel_size=1)
 
 
         if trainable:
@@ -200,32 +197,19 @@ class YOWOF(nn.Module):
         return scores, labels, bboxes
     
 
-    def set_inference_mode(self, mode='stream'):
-        if mode == 'stream':
-            self.stream_infernce = True
-            self.temporal_encoder.inf_full_seq = False
-        elif mode == 'clip':
-            self.stream_infernce = False
-            self.temporal_encoder.inf_full_seq = True
-
-
-    def inference_video_clip(self, x):
-        # prepare
-        backbone_feats = []
-        img_size = x[0].shape[-1]
-
+    @torch.no_grad()
+    def inference(self, video_clips):
+        """
+        Input:
+            video_clips: (Tensor) -> [B, 3, T, H, W].
+        """                        
+        key_frame = video_clips[:, :, -1, :, :]
         # backbone
-        for i in range(len(x)):
-            feat = self.backbone_2d(x[i])
+        feat_2d = self.backbone_2d(key_frame)               # [B, C1, H, W]
+        feat_3d = self.backbone_3d(video_clips).squeeze(2)  # [B, C2, H, W]
 
-            backbone_feats.append(feat)
-
-        # temporal encoder
-        feats, _ = self.temporal_encoder(backbone_feats)
-        feat = feats[-1][-1]
-
-        # head
-        feat = self.head(feat)
+        # channel encoder
+        feat = self.channel_encoder(torch.cat([feat_2d, feat_3d], dim=1))
 
         # pred
         pred = self.pred(feat)
@@ -255,7 +239,7 @@ class YOWOF(nn.Module):
         # decode box
         bboxes = self.decode_bbox(anchor_boxes, reg_pred) # [N, 4]
         # normalize box
-        bboxes = torch.clamp(bboxes / img_size, 0., 1.)
+        bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
         
         # to cpu
         scores = scores.cpu().numpy()
@@ -265,126 +249,25 @@ class YOWOF(nn.Module):
         # post-process
         scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-        return backbone_feats, scores, labels, bboxes
-
-
-    def inference_single_frame(self, x):
-        img_size = x.shape[-1]
-        # backbone
-        cur_bk_feat = self.backbone_2d(x)
-
-        # push the current feature
-        self.clip_feats.append(cur_bk_feat)
-        # delete the oldest feature
-        del self.clip_feats[0]
-
-        # temporal encoder
-        cur_feats, _ = self.temporal_encoder(self.clip_feats)
-        cur_feat = cur_feats[-1]
-
-        # head
-        cur_feat = self.head(cur_feat)
-
-        # pred
-        pred = self.pred(cur_feat)
-
-        B, K, C = pred.size(0), self.num_anchors, self.num_classes
-        # [B, K*C, H, W] -> [B, H, W, K*C] -> [B, M, C], M = HWK
-        conf_pred = pred[:, :K, :, :].permute(0, 2, 3, 1).contiguous().view(B, -1, 1)
-        cls_pred = pred[:, K:K*(1 + C), :, :].permute(0, 2, 3, 1).contiguous().view(B, -1, C)
-        reg_pred = pred[:, K*(1 + C):, :, :].permute(0, 2, 3, 1).contiguous().view(B, -1, 4)
-
-        # [1, M, C] -> [M, C]
-        conf_pred = conf_pred[0]
-        cls_pred = cls_pred[0]
-        reg_pred = reg_pred[0]
-                    
-        # scores
-        scores, labels = torch.max(torch.sigmoid(conf_pred) * torch.softmax(cls_pred, dim=-1), dim=-1)
-
-        # topk
-        anchor_boxes = self.anchor_boxes
-        if scores.shape[0] > self.topk:
-            scores, indices = torch.topk(scores, self.topk)
-            labels = labels[indices]
-            reg_pred = reg_pred[indices]
-            anchor_boxes = anchor_boxes[indices]
-
-        # decode box
-        bboxes = self.decode_bbox(anchor_boxes, reg_pred) # [N, 4]
-        # normalize box
-        bboxes = torch.clamp(bboxes / img_size, 0., 1.)
-        
-        # to cpu
-        scores = scores.cpu().numpy()
-        labels = labels.cpu().numpy()
-        bboxes = bboxes.cpu().numpy()
-
-        # post-process
-        scores, labels, bboxes = self.post_process(scores, labels, bboxes)
-
-        return cur_bk_feat, scores, labels, bboxes
-
-
-    @torch.no_grad()
-    def inference(self, x):
-        # Init inference, model processes a video clip
-        if not self.stream_infernce:
-            bk_feats, scores, labels, bboxes = self.inference_video_clip(x)
-
-            return scores, labels, bboxes
-            
-        else:
-            self.scores_list = []
-            self.bboxes_list = []
-            self.labels_list = []
-
-            if self.initialization:
-                # Init stage, detector process a video clip
-                # and output results of per frame
-                self.temporal_encoder.initialization = True
-                (   
-                    clip_feats,
-                    init_scores, 
-                    init_labels, 
-                    init_bboxes
-                    ) = self.inference_video_clip(x)
-                self.initialization = False
-                self.clip_feats = clip_feats
-
-                return init_scores, init_labels, init_bboxes
-            else:
-                # After init stage, detector process current frame
-                (
-                    cur_feats,
-                    cur_scores,
-                    cur_labels,
-                    cur_bboxes
-                    ) = self.inference_single_frame(x)
-
-                return cur_scores, cur_labels, cur_bboxes
+        return scores, labels, bboxes
 
 
     def forward(self, video_clips, targets=None, vis_data=False):
         """
-            video_clips: List[Tensor] -> [Tensor[B, C, H, W], ..., Tensor[B, C, H, W]].
+        Input:
+            video_clips: (Tensor) -> [B, 3, T, H, W].
+            targets: (List) -> [[x1, y1, x2, y2, label, frame_id], ...]
         """                        
         if not self.trainable:
             return self.inference(video_clips)
         else:
-            backbone_feats = []
+            key_frame = video_clips[:, :, -1, :, :]
             # backbone
-            for i in range(len(video_clips)):
-                feat = self.backbone_2d(video_clips[i])
+            feat_2d = self.backbone_2d(key_frame)               # [B, C1, H, W]
+            feat_3d = self.backbone_3d(video_clips).squeeze(2)  # [B, C2, H, W]
 
-                backbone_feats.append(feat)
-
-            # temporal encoder
-            feats, _ = self.temporal_encoder(backbone_feats)
-            feat = feats[-1][-1]
-
-            # head
-            feat = self.head(feat)
+            # channel encoder
+            feat = self.channel_encoder(torch.cat([feat_2d, feat_3d], dim=1))
 
             # pred
             pred = self.pred(feat)

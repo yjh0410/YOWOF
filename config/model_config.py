@@ -3,36 +3,20 @@
 
 model_config = {
     'yowof-d19': {
-        # input
-        'train_size': 224,
-        'test_size': 224,
-        'format': 'RGB',
-        'pixel_mean': [123.675, 116.28, 103.53],  # imagenet pixel mean
-        'pixel_std': [58.395, 57.12, 57.375],     # imagenet pixel std
-        'transforms': [{'name': 'DistortTransform',
-                         'hue': 0.1,
-                         'saturation': 1.5,
-                         'exposure': 1.5},
-                         {'name': 'RandomHorizontalFlip'},
-                         {'name': 'ToTensor'},
-                         {'name': 'Resize'},
-                         {'name': 'Normalize'},
-                         {'name': 'PadImage'}],
         # backbone
         ## 2D
         'backbone_2d': 'yolov2',
         'pretrained_2d': True,
         'stride': 32,
-        # conv lstm
-        'conv_lstm_hdm': 256,
-        'conv_lstm_ks': 3,
-        'conv_lstm_nl': 2,
+        ## 3D
+        'backbone_3d': 'resnet18',
+        'pretrained_3d': True,
         # head
-        'head_dim': 512,
+        'head_dim': 1024,
         'head_norm': 'BN',
         'head_act': 'lrelu',
         # post process
-        'conf_thresh': 0.1,
+        'conf_thresh': 0.2,
         'nms_thresh': 0.5,
         # matcher
         'ignore_thresh': 0.5,

@@ -189,7 +189,11 @@ class UCF24(data.Dataset):
         #                     ...]),
         #                array([[x1, y1, x2, y2, cls, fid], 
         #                     ...])]
-        return image_list, target_list
+
+        # List [T, 3, H, W] -> [3, T, H, W]
+        video_clip = torch.stack(image_list, dim=1)
+
+        return video_clip, target_list
 
 
 if __name__ == '__main__':
@@ -231,11 +235,11 @@ if __name__ == '__main__':
                     debug=True)
 
     for i in range(100):
-        image_list, target_list = dataset.pull_item(i)
+        video_clip, target_list = dataset[i]
 
         # vis images
         for idx in range(len_clip):
-            image = image_list[idx]
+            image = video_clip[:, idx, :, :]
             # to numpy
             image = image.permute(1, 2, 0).numpy()
             # to BGR format

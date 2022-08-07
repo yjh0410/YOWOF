@@ -181,14 +181,7 @@ class JHMDB(data.Dataset):
         # augment
         if self.transform:
             image_list, target_list = self.transform(image_list, target_list)
-        # image_list = [image_1, 
-        #               image_2, 
-        #               ..., 
-        #               image_K]
-        # target_list = [ndarray([[x1, y1, x2, y2, cls, fid], 
-        #                             ...]),
-        #                ndarray([[x1, y1, x2, y2, cls, fid], 
-        #                             ...]]
+
         return image_list, target_list
 
 
@@ -196,7 +189,7 @@ if __name__ == '__main__':
     from transforms import TrainTransforms, ValTransforms
     dataset_config={
         # dataset
-        'data_root': 'E:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
+        'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
         'anno_file': 'JHMDB-GT.pkl',
         'train_split': 1,
         'test_split': 1,

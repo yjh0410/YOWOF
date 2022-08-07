@@ -65,15 +65,14 @@ class Criterion(object):
             vis_targets(video_clips, targets)
 
         # target of key-frame
-        kf_target = targets[-1]
         device = outputs['conf_pred'].device
         batch_size = outputs['conf_pred'].shape[0]
             
         # reformat target
-        kf_target = [{
+        targets = [{
             'boxes': t[:, :4].float(),  # [Ni, 4]
             'labels': t[:, 4].long(),   # [Ni,]
-        } for t in kf_target]
+        } for t in targets]
 
 
         # Matcher for this frame
@@ -83,7 +82,7 @@ class Criterion(object):
             gt_bboxes
             ) = self.matcher(img_size=outputs['img_size'], 
                              stride=outputs['stride'], 
-                             targets=kf_target)
+                             targets=targets)
 
         pred_conf = outputs['conf_pred'].view(-1)                  # [BM,]
         pred_cls = outputs['cls_pred'].view(-1, self.num_classes)  # [BM, C]

@@ -16,7 +16,7 @@ class JHMDBEvaluator(object):
     def __init__(self,
                  cfg=None,
                  len_clip=1,
-                 img_size=320,
+                 img_size=224,
                  thresh=0.5,
                  transform=None,
                  metric='frame_map',
@@ -43,7 +43,21 @@ class JHMDBEvaluator(object):
             debug=False
             )
 
+
     @torch.no_grad()
+    def inference(self, device, model, image_list):
+        # preprocess
+        video_clip, _ = self.transform(image_list)
+
+        video_clip = torch.stack(image_list, dim=1)     # [3, T, H, W]
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
+
+        # inference
+        scores, labels, bboxes = model(video_clip)
+
+        return scores, labels, bboxes
+
+
     def evaluate(self, model):
         device = model.device
 
@@ -61,13 +75,11 @@ class JHMDBEvaluator(object):
             video_path = os.path.join(self.dataset.image_path, video_name)
             
             # prepare
-            model.initialization = True
-            frame_index = 0
-            init_video_clip = []
+            image_list = []
 
             # inference with video stream
             detections = {}
-            for fid in range(1, num_frames+1):
+            for fid in range(1, num_frames + 1):
                 image_file = os.path.join(video_path, '{:0>5}.png'.format(fid))
                 cur_frame = cv2.imread(image_file)
                 
@@ -75,62 +87,31 @@ class JHMDBEvaluator(object):
 
                 orig_h, orig_w = cur_frame.shape[:2]
                 orig_size = [orig_w, orig_h]
-                # update frame index
-                frame_index += 1
+
+                image_list.append(cur_frame)
                             
-                if model.initialization:
-                    if frame_index < model.len_clip:
-                        init_video_clip.append(cur_frame)
-                    else:
-                        init_video_clip.append(cur_frame)
-                        # preprocess
-                        xs, _ = self.transform(init_video_clip)
-
-                        # to device
-                        xs = [x.unsqueeze(0).to(device) for x in xs] 
-
-                        # inference with an init video clip
-                        init_scores, init_labels, init_bboxes = model(xs)
-
-                        # rescale
-                        init_bboxes = rescale_bboxes(init_bboxes, orig_size)
-
-                        model.initialization = False
-                        del init_video_clip
-
-                        # save key-frame detection results
-                        outputs = {}
-                        for c in range(self.num_classes):
-                            keep = (init_labels == c)
-                            c_scores = init_scores[keep]
-                            c_bboxes = init_bboxes[keep]
-                            output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
-                            outputs[c] = output
-                            
-                        detections[fid] = outputs
-
+                if len(image_list) < self.len_clip:
+                    continue
+                elif len(image_list) == self.len_clip:
+                    pass
                 else:
-                    # preprocess
-                    xs, _ = self.transform([cur_frame])
+                    del image_list[0]
 
-                    # to device
-                    xs = [x.unsqueeze(0).to(device) for x in xs] 
+                # inference
+                scores, labels, bboxes = self.inference(device, model, image_list)
 
-                    # inference with the current frame
-                    cur_scores, cur_labels, cur_bboxes = model(xs[0])
+                # rescale
+                bboxes = rescale_bboxes(bboxes, orig_size)
 
-                    # rescale
-                    cur_bboxes = rescale_bboxes(cur_bboxes, orig_size)
-
-                    # save per frame detection results
-                    outputs = {}
-                    for c in range(self.num_classes):
-                        keep = (cur_labels == c)
-                        c_scores = cur_scores[keep]
-                        c_bboxes = cur_bboxes[keep]
-                        output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
-                        outputs[c] = output
-                    detections[frame_index] = outputs
+                # save per frame detection results
+                outputs = {}
+                for c in range(self.num_classes):
+                    keep = (labels == c)
+                    c_scores = scores[keep]
+                    c_bboxes = bboxes[keep]
+                    output = np.concatenate([c_bboxes, c_scores[..., None]], axis=-1)
+                    outputs[c] = output
+                detections[fid] = outputs
 
             # save this video detection results
             os.makedirs(os.path.join(self.save_dir, video_name), exist_ok=True)          
@@ -235,8 +216,8 @@ class JHMDBEvaluator(object):
                     fn -= 1
                 else:
                     fp += 1
-                pr[i + 1, 0] = float(tp) / max(float(tp + fp), 1.0)
-                pr[i + 1, 1] = float(tp) / max(float(tp + fn), 1.0)
+                pr[i + 1, 0] = float(tp) / float(tp + fp + 1e-5)
+                pr[i + 1, 1] = float(tp) / float(tp + fn + 1e-5)
 
             results[label] = pr
 

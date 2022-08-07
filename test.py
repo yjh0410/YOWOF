@@ -11,7 +11,7 @@ from dataset.transforms import ValTransforms
 
 from utils.misc import load_weight
 from utils.box_ops import rescale_bboxes
-from utils.vis_tools import vis_video_frame
+from utils.vis_tools import vis_detection
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
@@ -27,14 +27,12 @@ def parse_args():
                         help='show the visulization results.')
     parser.add_argument('--cuda', action='store_true', default=False, 
                         help='use cuda.')
+    parser.add_argument('--save', action='store_true', default=False, 
+                        help='save detection results.')
     parser.add_argument('--save_folder', default='det_results/', type=str,
                         help='Dir to save results')
     parser.add_argument('-vs', '--vis_thresh', default=0.35, type=float,
                         help='threshold for visualization')
-    parser.add_argument('-inf', '--inference', default='clip', type=str,
-                        help='clip: infer with video clip; stream: infer with a video stream.')
-    parser.add_argument('-if', '--img_format', default='jpg', type=str,
-                        help='format of image.')
 
     # model
     parser.add_argument('-v', '--version', default='baseline', type=str,
@@ -53,108 +51,9 @@ def parse_args():
     return parser.parse_args()
 
 
-@torch.no_grad()
-def inference_with_video_stream(args, model, device, transform=None, class_names=None, class_colors=None):
-    # path to save 
-    save_path = os.path.join(
-        args.save_folder, args.version, 
-        args.dataset, 'video_streams')
-    os.makedirs(save_path, exist_ok=True)
-
-    # inference
-    num_videos = dataset.num_videos
-    for index in range(num_videos):
-        # load a video
-        video_name = dataset.load_video(index)
-        num_frames = dataset.nframes[video_name]
-        print('Video {:d}/{:d}: {}'.format(index+1, num_videos, video_name))
-        video_path = os.path.join(dataset.image_path, video_name)
-        
-        # prepare
-        model.initialization = True
-        frame_index = 0
-        init_video_clip = []
-
-        # inference with video stream
-        for fid in range(1, num_frames + 1):
-            image_file = os.path.join(video_path, '{:0>5}.{}'.format(fid, args.img_format))
-            cur_frame = cv2.imread(image_file)
-            
-            assert cur_frame is not None
-
-            orig_h, orig_w = cur_frame.shape[:2]
-            orig_size = [orig_w, orig_h]
-            # update frame index
-            frame_index += 1
-
-            if model.initialization:
-                if frame_index < model.len_clip:
-                    init_video_clip.append(cur_frame)
-                else:
-                    init_video_clip.append(cur_frame)
-                    # preprocess
-                    xs, _ = transform(init_video_clip)
-
-                    # to device
-                    xs = [x.unsqueeze(0).to(device) for x in xs] 
-
-                    # inference with an init video clip
-                    init_scores, init_labels, init_bboxes = model(xs)
-
-                    # rescale
-                    init_bboxes = rescale_bboxes(init_bboxes, orig_size)
-
-                    # vis init detection
-                    vis_results = vis_video_frame(
-                        frame=init_video_clip[-1],
-                        scores=init_scores,
-                        labels=init_labels,
-                        bboxes=init_bboxes,
-                        vis_thresh=args.vis_thresh,
-                        class_names=class_names,
-                        class_colors=class_colors
-                        )
-
-                    # save result
-                    cv2.imwrite(os.path.join(save_path, video_name,
-                        'init_video_clip.jpg'), vis_results)
-                    
-                    model.initialization = False
-                    del init_video_clip
-
-            else:
-                # preprocess
-                xs, _ = transform([cur_frame])
-
-                # to device
-                xs = [x.unsqueeze(0).to(device) for x in xs] 
-
-                # inference with the current frame
-                t0 = time.time()
-                cur_score, cur_label, cur_bboxes = model(xs[0])
-                t1 = time.time()
-
-                print('inference time: {:.3f}'.format(t1 - t0))
-                
-                # rescale
-                cur_bboxes = rescale_bboxes(cur_bboxes, orig_size)
-
-                # vis current detection results
-                vis_results = vis_video_frame(
-                    cur_frame, cur_score, cur_label, cur_bboxes, 
-                    args.vis_thresh, class_names, class_colors
-                )
-
-                cv2.imshow('current frame', vis_results)
-                cv2.waitKey(0)
-
-                # # save result
-                # cv2.imwrite(os.path.join(save_path, 
-                #     '{:0>5}.jpg'.format(index)), vis_results)
-
 
 @torch.no_grad()
-def inference_with_video_clip(args, model, device, dataset, transform=None, class_names=None, class_colors=None):
+def inference(args, model, device, dataset, transform=None, class_names=None, class_colors=None):
     # path to save 
     save_path = os.path.join(
         args.save_folder, args.dataset, 
@@ -164,26 +63,27 @@ def inference_with_video_clip(args, model, device, dataset, transform=None, clas
     # inference
     for index in range(len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
-        video_clip, _ = dataset[index]
+        image_list, _ = dataset[index]
 
-        orig_h, orig_w, _ = video_clip[0].shape
+        orig_h, orig_w, _ = image_list[0].shape
         orig_size = [orig_w, orig_h]
 
         # prepare
-        xs, _ = transform(video_clip)
-        xs = [x.unsqueeze(0).to(device) for x in xs] 
+        image_list, _ = transform(image_list)
+        video_clip = torch.stack(image_list, dim=1)     # [3, T, H, W]
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
 
         t0 = time.time()
         # inference
-        scores, labels, bboxes = model(xs)
+        scores, labels, bboxes = model(video_clip)
         print("inference time ", time.time() - t0, "s")
         
         # rescale
         bboxes = rescale_bboxes(bboxes, orig_size)
 
         # vis results of key-frame
-        vis_results = vis_video_frame(
-            frame=video_clip[-1],
+        vis_results = vis_detection(
+            frame=image_list[-1],
             scores=scores,
             labels=labels,
             bboxes=bboxes,
@@ -192,11 +92,13 @@ def inference_with_video_clip(args, model, device, dataset, transform=None, clas
             class_colors=class_colors
             )
 
-        cv2.imshow('key-frame frame', vis_results)
-        cv2.waitKey(0)
+        if args.show:
+            cv2.imshow('key-frame detection', vis_results)
+            cv2.waitKey(0)
 
-        # save result
-        cv2.imwrite(os.path.join(save_path,
+        if args.save:
+            # save result
+            cv2.imwrite(os.path.join(save_path,
             '{:0>5}.jpg'.format(index)), vis_results)
         
 
@@ -256,8 +158,7 @@ if __name__ == '__main__':
         m_cfg=m_cfg,
         device=device, 
         num_classes=num_classes, 
-        trainable=False,
-        inference=args.inference
+        trainable=False
         )
 
     # load trained weight
@@ -279,11 +180,10 @@ if __name__ == '__main__':
         )
 
     # run
-    if args.inference == 'clip':
-        inference_with_video_clip(
-            args=args, model=model, device=device, dataset=dataset, transform=transform, 
-            class_names=class_names, class_colors=class_colors)
-    elif args.inference == 'stream':
-        inference_with_video_stream(
-            args=args, model=model, device=device, transform=transform, 
-            class_names=class_names, class_colors=class_colors)
+    inference(args=args,
+              model=model,
+              device=device,
+              dataset=dataset,
+              transform=transform,
+              class_names=class_names,
+              class_colors=class_colors)
