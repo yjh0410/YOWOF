@@ -284,7 +284,7 @@ def train():
 
                 # other infor
                 log += '[time: {:.2f}]'.format(t1 - t0)
-                log += '[size: {}]'.format(m_cfg['train_size'])
+                log += '[size: {}]'.format(d_cfg['train_size'])
 
                 # print log infor
                 print(log, flush=True)
