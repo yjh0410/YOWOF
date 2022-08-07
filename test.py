@@ -174,9 +174,9 @@ if __name__ == '__main__':
     # transform
     transform = ValTransforms(
         img_size=args.img_size,
-        pixel_mean=m_cfg['pixel_mean'],
-        pixel_std=m_cfg['pixel_std'],
-        format=m_cfg['format']
+        pixel_mean=d_cfg['pixel_mean'],
+        pixel_std=d_cfg['pixel_std'],
+        format=d_cfg['format']
         )
 
     # run
