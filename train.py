@@ -127,7 +127,7 @@ def train():
     m_cfg = build_model_config(args)
 
     # dataset and evaluator
-    dataset, evaluator, num_classes = build_dataset(d_cfg, m_cfg, args, is_train=True)
+    dataset, evaluator, num_classes = build_dataset(d_cfg, args, is_train=True)
 
     # dataloader
     batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()
@@ -257,8 +257,8 @@ def train():
                     
             else:
                 # Backward
-                (losses / d_cfg['accumulate']).backward()
-
+                # (losses / d_cfg['accumulate']).backward()
+                losses.backward()
                 # Optimize
                 if ni % d_cfg['accumulate'] == 0:
                     optimizer.step()

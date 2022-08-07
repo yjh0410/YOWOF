@@ -14,10 +14,9 @@ from evaluator.ucf_evaluator import UCFEvaluator
 from evaluator.jhmdb_evaluator import JHMDBEvaluator
 
 
-def build_dataset(d_cfg, m_cfg, args, is_train=False):
+def build_dataset(d_cfg, args, is_train=False):
     """
         d_cfg: dataset config
-        m_cfg: model config
     """
     # transform
     trans_config = d_cfg['transforms']
@@ -141,6 +140,11 @@ def load_weight(device, model, path_to_ckpt):
     return model
 
 
+def is_parallel(model):
+    # Returns True if model is of type DP or DDP
+    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
+
+
 class CollateFunc(object):
     def __call__(self, batch):
         batch_key_target = []
@@ -161,11 +165,6 @@ class CollateFunc(object):
         batch_video_clips = torch.stack(batch_video_clips)
         
         return batch_video_clips, batch_key_target
-
-
-def is_parallel(model):
-    # Returns True if model is of type DP or DDP
-    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
 
 
 class ModelEMA(object):
@@ -209,10 +208,10 @@ class Sigmoid_FocalLoss(object):
             alpha_t = self.alpha * targets + (1.0 - self.alpha) * (1.0 - targets)
             loss = alpha_t * loss
 
-        if reduction == "mean":
+        if self.reduction == "mean":
             loss = loss.mean()
 
-        elif reduction == "sum":
+        elif self.reduction == "sum":
             loss = loss.sum()
 
         return loss

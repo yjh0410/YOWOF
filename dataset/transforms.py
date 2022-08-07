@@ -432,8 +432,8 @@ class TrainTransforms(object):
     def __init__(self, 
                  trans_config=None,
                  img_size=320, 
-                 pixel_mean=(123.675, 116.28, 103.53), 
-                 pixel_std=(58.395, 57.12, 57.375),
+                 pixel_mean=(0., 0., 0.), 
+                 pixel_std=(255., 255., 255.),
                  format='RGB'):
         self.trans_config = trans_config
         self.img_size = img_size
@@ -475,8 +475,8 @@ class TrainTransforms(object):
 class ValTransforms(object):
     def __init__(self, 
                  img_size=320, 
-                 pixel_mean=(123.675, 116.28, 103.53), 
-                 pixel_std=(58.395, 57.12, 57.375),
+                 pixel_mean=(0., 0., 0.), 
+                 pixel_std=(255., 255., 255.),
                  format='RGB'):
         self.img_size = img_size
         self.pixel_mean = pixel_mean
