@@ -32,7 +32,7 @@ dataset_config = {
         'batch_size': 8,
         'accumulate': 16,
         'len_clip': 16,
-        'optimizer': 'adamw',
+        'optimizer': 'adam',
         'momentum': 0.9,
         'weight_decay': 5e-4,
         'max_epoch': 10,

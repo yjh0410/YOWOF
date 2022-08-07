@@ -257,8 +257,8 @@ def train():
                     
             else:
                 # Backward
-                # (losses / d_cfg['accumulate']).backward()
-                losses.backward()
+                (losses / d_cfg['accumulate']).backward()
+
                 # Optimize
                 if ni % d_cfg['accumulate'] == 0:
                     optimizer.step()
