@@ -181,19 +181,8 @@ class UCF24(data.Dataset):
         # augment
         if self.transform:
             image_list, target_list = self.transform(image_list, target_list)
-        # image_list = [image_1, 
-        #               image_2, 
-        #               ..., 
-        #               image_K]
-        # target_list = [array([[x1, y1, x2, y2, cls, fid], 
-        #                     ...]),
-        #                array([[x1, y1, x2, y2, cls, fid], 
-        #                     ...])]
 
-        # List [T, 3, H, W] -> [3, T, H, W]
-        video_clip = torch.stack(image_list, dim=1)
-
-        return video_clip, target_list
+        return image_list, target_list
 
 
 if __name__ == '__main__':
