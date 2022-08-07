@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
+
 from copy import deepcopy
 import math
 
@@ -107,60 +109,6 @@ def build_dataloader(args, dataset, batch_size, collate_fn=None, worker_init_fn=
     return dataloader
     
 
-def sigmoid_focal_loss(logits, targets, alpha=0.25, gamma=2.0, reduction='none'):
-    p = torch.sigmoid(logits)
-    ce_loss = F.binary_cross_entropy_with_logits(input=logits, 
-                                                    target=targets, 
-                                                    reduction="none")
-    p_t = p * targets + (1.0 - p) * (1.0 - targets)
-    loss = ce_loss * ((1.0 - p_t) ** gamma)
-
-    if alpha >= 0:
-        alpha_t = alpha * targets + (1.0 - alpha) * (1.0 - targets)
-        loss = alpha_t * loss
-
-    if reduction == "mean":
-        loss = loss.mean()
-
-    elif reduction == "sum":
-        loss = loss.sum()
-
-    return loss
-
-
-def softmax_focal_loss(logits, targets, alpha=0.25, gamma=2.0, reduction='none'):
-    """
-    Input:
-        logits: (Tensor) [M, C]
-        targets: (Tensor) [M,]
-        alpha: (Float) alpha of focal loss
-        gamma: (Float) gamma of focal loss
-        reduction: (Str)
-    """
-
-    preds = torch.softmax(logits, dim=-1)
-    targets_one_hot = F.one_hot(targets, num_classes=preds.shape[-1])
-    ce_loss = F.binary_cross_entropy(
-        input=preds,
-        target=targets, 
-        reduction="none"
-        )
-    p_t = preds * targets + (1.0 - preds) * (1.0 - targets)
-    loss = ce_loss * ((1.0 - p_t) ** gamma)
-
-    if alpha >= 0:
-        alpha_t = alpha * targets + (1.0 - alpha) * (1.0 - targets)
-        loss = alpha_t * loss
-
-    if reduction == "mean":
-        loss = loss.mean()
-
-    elif reduction == "sum":
-        loss = loss.sum()
-
-    return loss
-
-
 def get_total_grad_norm(parameters, norm_type=2):
     parameters = list(filter(lambda p: p.grad is not None, parameters))
     norm_type = float(norm_type)
@@ -241,3 +189,73 @@ class ModelEMA(object):
                     v *= d
                     v += (1. - d) * msd[k].detach()
 
+
+class Sigmoid_FocalLoss(object):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction='none'):
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+        
+    def __call__(self, logits, targets):
+        p = torch.sigmoid(logits)
+        ce_loss = F.binary_cross_entropy_with_logits(input=logits, 
+                                                        target=targets, 
+                                                        reduction="none")
+        p_t = p * targets + (1.0 - p) * (1.0 - targets)
+        loss = ce_loss * ((1.0 - p_t) ** self.gamma)
+
+        if self.alpha >= 0:
+            alpha_t = self.alpha * targets + (1.0 - self.alpha) * (1.0 - targets)
+            loss = alpha_t * loss
+
+        if reduction == "mean":
+            loss = loss.mean()
+
+        elif reduction == "sum":
+            loss = loss.sum()
+
+        return loss
+
+
+class Softmax_FocalLoss(nn.Module):
+    def __init__(self, num_classes, alpha=None, gamma=2.0, reduction='none'):
+        super(Softmax_FocalLoss, self).__init__()
+        if alpha is None:
+            self.alpha = Variable(torch.ones(num_classes, 1))
+        else:
+            if isinstance(alpha, Variable):
+                self.alpha = alpha
+            else:
+                self.alpha = Variable(alpha)
+        self.gamma = gamma
+        self.class_num = num_classes
+        self.reduction = reduction
+
+
+    def forward(self, inputs, targets):
+        N = inputs.size(0)
+        C = inputs.size(1)
+        P = F.softmax(inputs, dim=1)
+
+        class_mask = inputs.data.new(N, C).fill_(0)
+        class_mask = Variable(class_mask)
+        ids = targets.view(-1, 1)
+        class_mask.scatter_(1, ids, 1.)
+        
+        self.alpha = self.alpha.to(inputs.device)
+        alpha = self.alpha[ids.data.view(-1)]
+        
+        probs = (P*class_mask).sum(1).view(-1,1)
+
+        log_p = probs.log()
+
+        loss = -alpha * (torch.pow((1 - probs), self.gamma)) * log_p 
+        
+        if self.reduction == 'mean':
+            loss = loss.mean()
+
+        elif self.reduction == 'sum':
+            loss = loss.sum()
+
+        return loss

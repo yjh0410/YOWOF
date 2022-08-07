@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .matcher import YoloMatcher
 from utils.box_ops import get_ious
-from utils.misc import sigmoid_focal_loss
+from utils.misc import Softmax_FocalLoss
 from utils.vis_tools import vis_targets
 
 
@@ -38,7 +38,8 @@ class Criterion(object):
         
         # Loss
         self.conf_loss = nn.MSELoss(reduction='none')
-        self.cls_loss = nn.CrossEntropyLoss(reduction='none')
+        # self.cls_loss = nn.CrossEntropyLoss(reduction='none')
+        self.cls_loss = Softmax_FocalLoss(num_classes=num_classes, gamma=2.0, reduction='none')
 
 
     def __call__(self, 
