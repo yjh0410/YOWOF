@@ -1,3 +1,4 @@
+from random import shuffle
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -96,7 +97,9 @@ def build_dataloader(args, dataset, batch_size, collate_fn=None, worker_init_fn=
 
     batch_sampler_train = torch.utils.data.BatchSampler(sampler, 
                                                         batch_size, 
-                                                        drop_last=True)
+                                                        shuffle=True,
+                                                        drop_last=True,
+                                                        pin_memory=True)
 
     dataloader = torch.utils.data.DataLoader(
         dataset=dataset, 
