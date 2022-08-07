@@ -75,8 +75,8 @@ dataset_config = {
                          {'name': 'Normalize'},
                          {'name': 'PadImage'}],
         # freeze backbone
-        'freeze_backbone_2d': True,
-        'freeze_backbone_3d': True,
+        'freeze_backbone_2d': False,
+        'freeze_backbone_3d': False,
         # train config
         'batch_size': 8,
         'accumulate': 16,
