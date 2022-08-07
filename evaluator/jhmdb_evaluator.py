@@ -47,7 +47,7 @@ class JHMDBEvaluator(object):
     @torch.no_grad()
     def inference(self, device, model, image_list):
         # preprocess
-        video_clip, _ = self.transform(image_list)
+        image_list, _ = self.transform(image_list)
 
         video_clip = torch.stack(image_list, dim=1)     # [3, T, H, W]
         video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
