@@ -38,8 +38,8 @@ class Criterion(object):
         
         # Loss
         self.conf_loss = nn.MSELoss(reduction='none')
-        # self.cls_loss = nn.CrossEntropyLoss(reduction='none')
-        self.cls_loss = Softmax_FocalLoss(num_classes=num_classes, gamma=2.0, reduction='none')
+        self.cls_loss = nn.CrossEntropyLoss(reduction='none')
+        # self.cls_loss = Softmax_FocalLoss(num_classes=num_classes, gamma=2.0, reduction='none')
 
 
     def __call__(self, 
