@@ -69,8 +69,8 @@ def inference(args, model, device, dataset, transform=None, class_names=None, cl
         orig_size = [orig_w, orig_h]
 
         # prepare
-        image_list, _ = transform(image_list)
-        video_clip = torch.stack(image_list, dim=1)     # [3, T, H, W]
+        image_list_, _ = transform(image_list)
+        video_clip = torch.stack(image_list_, dim=1)     # [3, T, H, W]
         video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
 
         t0 = time.time()
