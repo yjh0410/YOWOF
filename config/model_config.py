@@ -9,7 +9,7 @@ model_config = {
         'pretrained_2d': True,
         'stride': 32,
         ## 3D
-        'backbone_3d': 'resnet18',
+        'backbone_3d': 'resnext101',
         'pretrained_3d': True,
         # head
         'head_dim': 1024,
