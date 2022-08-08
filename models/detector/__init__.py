@@ -1,8 +1,8 @@
 import torch
-from .yowof.yowof import YOWOF
+from .yowo.yowo import YOWO
 
 
-# build YOWOF detector
+# build YOWO detector
 def build_model(args,
                 d_cfg,
                 m_cfg, 
@@ -19,9 +19,9 @@ def build_model(args,
     else:
         img_size = d_cfg['test_size']
 
-    # build YOWOF
-    if 'yowof' in args.version:
-        model = YOWOF(
+    # build YOWO
+    if args.version in ['yowo-d19', 'yowo-d53']:
+        model = YOWO(
             cfg=m_cfg,
             device=device,
             anchor_size=d_cfg['anchor_size'],

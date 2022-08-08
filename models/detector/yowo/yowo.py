@@ -10,7 +10,7 @@ from .loss import Criterion
 
 
 
-class YOWOF(nn.Module):
+class YOWO(nn.Module):
     def __init__(self, 
                  cfg,
                  device,
@@ -22,7 +22,7 @@ class YOWOF(nn.Module):
                  nms_thresh = 0.6,
                  topk = 1000,
                  trainable = False):
-        super(YOWOF, self).__init__()
+        super(YOWO, self).__init__()
         self.cfg = cfg
         self.device = device
         self.img_size = img_size

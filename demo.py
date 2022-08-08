@@ -16,10 +16,10 @@ from models.detector import build_model
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='YOWOF')
+    parser = argparse.ArgumentParser(description='YOWO')
 
     # basic
-    parser.add_argument('-size', '--img_size', default=320, type=int,
+    parser.add_argument('-size', '--img_size', default=224, type=int,
                         help='the size of input frame')
     parser.add_argument('--show', action='store_true', default=False,
                         help='show the visulization results.')
@@ -33,8 +33,8 @@ def parse_args():
                         help='path to video.')
 
     # model
-    parser.add_argument('-v', '--version', default='baseline', type=str,
-                        help='build yowof')
+    parser.add_argument('-v', '--version', default='yowo-d19', type=str,
+                        help='build yowo')
     parser.add_argument('--weight', default='weight/',
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,

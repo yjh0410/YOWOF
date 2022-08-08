@@ -28,7 +28,7 @@ GLOBAL_SEED = 42
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='YOWOF')
+    parser = argparse.ArgumentParser(description='YOWO')
     # CUDA
     parser.add_argument('--cuda', action='store_true', default=False,
                         help='use cuda.')
@@ -54,7 +54,7 @@ def parse_args():
                         type=str, help='save inference results.')
 
     # Model
-    parser.add_argument('-v', '--version', default='baseline', type=str,
+    parser.add_argument('-v', '--version', default='yowo-d19', type=str,
                         help='build spatio-temporal action detector')
     parser.add_argument('--topk', default=40, type=int,
                         help='topk candidates for evaluation')
@@ -229,9 +229,9 @@ def train():
             # inference
             if args.fp16:
                 with torch.cuda.amp.autocast(enabled=args.fp16):
-                    loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
+                    loss_dict = model(video_clips, targets=targets)
             else:
-                loss_dict = model(video_clips, targets=targets, vis_data=args.vis_data)
+                loss_dict = model(video_clips, targets=targets)
                 
             losses = loss_dict['losses']
 

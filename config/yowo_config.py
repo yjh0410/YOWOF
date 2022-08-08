@@ -1,8 +1,8 @@
 # Model configuration
 
 
-model_config = {
-    'yowof-d19': {
+yowo_config = {
+    'yowo-d19': {
         # backbone
         ## 2D
         'backbone_2d': 'yolov2',
