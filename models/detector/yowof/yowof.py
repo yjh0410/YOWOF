@@ -220,39 +220,47 @@ class YOWOF(nn.Module):
         cls_pred = pred[:, K:K*(1 + C), :, :].permute(0, 2, 3, 1).contiguous().view(B, -1, C)
         reg_pred = pred[:, K*(1 + C):, :, :].permute(0, 2, 3, 1).contiguous().view(B, -1, 4)
 
-        # [1, M, C] -> [M, C]
-        conf_pred = conf_pred[0]
-        cls_pred = cls_pred[0]
-        reg_pred = reg_pred[0]
-                    
-        # scores
-        scores, labels = torch.max(torch.sigmoid(conf_pred) * torch.softmax(cls_pred, dim=-1), dim=-1)
+        batch_scores = []
+        batch_labels = []
+        batch_bboxes = []
+        for batch_idx in range(conf_pred.size(0)):
+            # [1, M, C] -> [M, C]
+            conf_pred = conf_pred[batch_idx]
+            cls_pred = cls_pred[batch_idx]
+            reg_pred = reg_pred[batch_idx]
+                        
+            # scores
+            scores, labels = torch.max(torch.sigmoid(conf_pred) * torch.softmax(cls_pred, dim=-1), dim=-1)
 
-        # topk
-        anchor_boxes = self.anchor_boxes
-        if scores.shape[0] > self.topk:
-            scores, indices = torch.topk(scores, self.topk)
-            labels = labels[indices]
-            reg_pred = reg_pred[indices]
-            anchor_boxes = anchor_boxes[indices]
+            # topk
+            anchor_boxes = self.anchor_boxes
+            if scores.shape[0] > self.topk:
+                scores, indices = torch.topk(scores, self.topk)
+                labels = labels[indices]
+                reg_pred = reg_pred[indices]
+                anchor_boxes = anchor_boxes[indices]
 
-        # decode box
-        bboxes = self.decode_bbox(anchor_boxes, reg_pred) # [N, 4]
-        # normalize box
-        bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
-        
-        # to cpu
-        scores = scores.cpu().numpy()
-        labels = labels.cpu().numpy()
-        bboxes = bboxes.cpu().numpy()
+            # decode box
+            bboxes = self.decode_bbox(anchor_boxes, reg_pred) # [N, 4]
+            # normalize box
+            bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
+            
+            # to cpu
+            scores = scores.cpu().numpy()
+            labels = labels.cpu().numpy()
+            bboxes = bboxes.cpu().numpy()
 
-        # post-process
-        scores, labels, bboxes = self.post_process(scores, labels, bboxes)
+            # post-process
+            scores, labels, bboxes = self.post_process(scores, labels, bboxes)
 
-        return scores, labels, bboxes
+            batch_scores.append(scores)
+            batch_labels.append(labels)
+            batch_bboxes.append(bboxes)
+
+        return batch_scores, batch_labels, batch_bboxes
 
 
-    def forward(self, video_clips, targets=None, vis_data=False):
+    def forward(self, video_clips, targets=None):
         """
         Input:
             video_clips: (Tensor) -> [B, 3, T, H, W].
@@ -292,8 +300,7 @@ class YOWOF(nn.Module):
             loss_dict = self.criterion(
                 outputs=outputs, 
                 targets=targets, 
-                video_clips=video_clips,
-                vis_data=vis_data
+                video_clips=video_clips
                 )
 
             return loss_dict

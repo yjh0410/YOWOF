@@ -140,7 +140,7 @@ class Augmentation(object):
             if flip:
                 target[..., [1, 3]] = 1.0 - target[..., [3, 1]]
         else:
-            target = np.zeros([50, 5])
+            target = np.array([])
             
         # to tensor
         video_clip = self.to_tensor(video_clip)
@@ -171,7 +171,7 @@ class BaseTransform(object):
             target[..., [1, 3]] /= ow
             target[..., [2, 4]] /= oh
         else:
-            target = np.zeros([50, 5])
+            target = np.array([])
 
         # to tensor
         video_clip = self.to_tensor(video_clip)

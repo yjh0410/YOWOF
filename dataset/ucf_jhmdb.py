@@ -111,7 +111,6 @@ class UCF_JHMDB_Dataset(Dataset):
             target = np.loadtxt(label_path)
         else:
             target = None
-        target = target.reshape(-1, 5)
             
         # transform
         video_clip, target = self.transform(video_clip, target)
@@ -136,7 +135,7 @@ if __name__ == '__main__':
     dataset = 'ucf24'
     is_train = False
     img_size = 224
-    len_clip = 8
+    len_clip = 16
     trans_config = {
         'jitter': 0.2,
         'hue': 0.1,

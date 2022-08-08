@@ -131,7 +131,7 @@ def train():
 
     # dataloader
     batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()
-    dataloader = build_dataloader(args, dataset, batch_size, CollateFunc())
+    dataloader = build_dataloader(args, dataset, batch_size, CollateFunc(), is_train=True)
 
     # build model
     net = build_model(args=args,

@@ -70,8 +70,13 @@ def inference(args, model, device, dataset, class_names=None, class_colors=None)
 
         t0 = time.time()
         # inference
-        scores, labels, bboxes = model(video_clip)
+        batch_scores, batch_labels, batch_bboxes = model(video_clip)
         print("inference time ", time.time() - t0, "s")
+
+        # batch size = 1
+        scores = batch_scores[0]
+        labels = batch_labels[0]
+        bboxes = batch_bboxes[0]
         
         # rescale
         bboxes = rescale_bboxes(bboxes, orig_size)
