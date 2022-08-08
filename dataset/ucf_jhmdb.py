@@ -99,8 +99,10 @@ class UCF_JHMDB_Dataset(Dataset):
                 path_tmp = os.path.join(self.data_root, 'rgb-images', img_split[1], img_split[2] ,'{:05d}.jpg'.format(img_id_temp))
             elif self.dataset == 'jhmdb21':
                 path_tmp = os.path.join(self.data_root, 'rgb-images', img_split[1], img_split[2] ,'{:05d}.png'.format(img_id_temp))
+            frame = Image.open(path_tmp).convert('RGB')
+            ow, oh = frame.width, frame.height
 
-            video_clip.append(Image.open(path_tmp).convert('RGB'))
+            video_clip.append(frame)
 
             frame_id = img_split[1] + '_' +img_split[2] + '_' + img_split[3]
 
@@ -116,6 +118,13 @@ class UCF_JHMDB_Dataset(Dataset):
         # List [T, 3, H, W] -> [3, T, H, W]
         video_clip = torch.stack(video_clip, dim=1)
 
+        # reformat target
+        target = {
+            'boxes': target[:, 1:5].float(),  # [N, 4]
+            'labels': target[:, 0].long(),    # [N,]
+            'orig_size': [ow, oh]
+        }
+
         return frame_id, video_clip, target
 
 
@@ -125,7 +134,7 @@ if __name__ == '__main__':
 
     data_root = 'D:/python_work/spatial-temporal_action_detection/dataset/ucf24'
     dataset = 'ucf24'
-    is_train = True
+    is_train = False
     img_size = 224
     len_clip = 8
     trans_config = {
@@ -140,7 +149,7 @@ if __name__ == '__main__':
         saturation=trans_config['saturation'],
         exposure=trans_config['exposure']
         )
-    # transform = BaseTransform(img_size=img_size)
+    transform = BaseTransform(img_size=img_size)
 
     train_dataset = UCF_JHMDB_Dataset(
         data_root=data_root,

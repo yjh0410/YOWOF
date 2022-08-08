@@ -5,9 +5,8 @@ import time
 import numpy as np
 import torch
 
-from dataset.ucf24 import UCF24, UCF24_CLASSES
-from dataset.jhmdb import JHMDB, JHMDB_CLASSES
-from dataset.transforms import ValTransforms
+from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
+from dataset.transforms import BaseTransform
 
 from utils.misc import load_weight
 from utils.box_ops import rescale_bboxes
@@ -21,7 +20,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='YOWOF')
 
     # basic
-    parser.add_argument('-size', '--img_size', default=320, type=int,
+    parser.add_argument('-size', '--img_size', default=224, type=int,
                         help='the size of input frame')
     parser.add_argument('--show', action='store_true', default=False,
                         help='show the visulization results.')
@@ -45,15 +44,14 @@ def parse_args():
     # dataset
     parser.add_argument('--root', default='/mnt/share/ssd2/dataset',
                         help='data root')
-    parser.add_argument('-d', '--dataset', default='coco',
-                        help='coco, voc.')
+    parser.add_argument('-d', '--dataset', default='ucf24',
+                        help='ucf24, ava.')
 
     return parser.parse_args()
 
 
-
 @torch.no_grad()
-def inference(args, model, device, dataset, transform=None, class_names=None, class_colors=None):
+def inference(args, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
     save_path = os.path.join(
         args.save_folder, args.dataset, 
@@ -63,14 +61,11 @@ def inference(args, model, device, dataset, transform=None, class_names=None, cl
     # inference
     for index in range(len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
-        image_list, _ = dataset[index]
+        frame_id, video_clip, target = dataset[index]
 
-        orig_h, orig_w, _ = image_list[0].shape
-        orig_size = [orig_w, orig_h]
+        orig_size = target['orig_size']  # width, height
 
         # prepare
-        image_list_, _ = transform(image_list)
-        video_clip = torch.stack(image_list_, dim=1)     # [3, T, H, W]
         video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
 
         t0 = time.time()
@@ -82,8 +77,12 @@ def inference(args, model, device, dataset, transform=None, class_names=None, cl
         bboxes = rescale_bboxes(bboxes, orig_size)
 
         # vis results of key-frame
+        key_frame = video_clip[0, :, -1, :, :]
+        key_frame = (key_frame * 255).permute(1, 2, 0)
+        key_frame = key_frame.numpy().astype(np.uint8)
+
         vis_results = vis_detection(
-            frame=image_list[-1],
+            frame=key_frame.copy()[..., (2, 1, 0)], # to BGR
             scores=scores,
             labels=labels,
             bboxes=bboxes,
@@ -115,33 +114,28 @@ if __name__ == '__main__':
     d_cfg = build_dataset_config(args)
     m_cfg = build_model_config(args)
 
-    # dataset
-    if args.dataset == 'ucf24':
-        num_classes = 24
-        class_names = UCF24_CLASSES
-        # dataset
-        dataset = UCF24(
-            cfg=d_cfg,
-            img_size=args.img_size,
-            len_clip=d_cfg['len_clip'],
-            is_train=False,
-            transform=None,
-            debug=False
-            )
+    # transform
+    basetransform = BaseTransform(img_size=d_cfg['test_size'])
 
-    elif args.dataset == 'jhmdb':
-        num_classes = 21
-        class_names = JHMDB_CLASSES
-        # dataset
-        dataset = JHMDB(
-            cfg=d_cfg,
-            img_size=args.img_size,
-            len_clip=d_cfg['len_clip'],
+    # dataset
+    if args.dataset in ['ucf24', 'jhmdb21']:
+        dataset = UCF_JHMDB_Dataset(
+            data_root=d_cfg['data_root'],
+            dataset=args.dataset,
+            img_size=d_cfg['test_size'],
+            transform=basetransform,
             is_train=False,
-            transform=None,
-            debug=False
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
             )
-    
+        class_names = d_cfg['label_map']
+        num_classes = dataset.num_classes
+
+    elif args.dataset == 'ava':
+        dataset = None
+        class_names = None
+        num_classes = None
+
     else:
         print('unknow dataset !! Only support voc and coco !!')
         exit(0)
@@ -171,19 +165,10 @@ if __name__ == '__main__':
     # to eval
     model = model.to(device).eval()
 
-    # transform
-    transform = ValTransforms(
-        img_size=args.img_size,
-        pixel_mean=d_cfg['pixel_mean'],
-        pixel_std=d_cfg['pixel_std'],
-        format=d_cfg['format']
-        )
-
     # run
     inference(args=args,
               model=model,
               device=device,
               dataset=dataset,
-              transform=transform,
               class_names=class_names,
               class_colors=class_colors)

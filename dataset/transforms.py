@@ -146,12 +146,6 @@ class Augmentation(object):
         video_clip = self.to_tensor(video_clip)
         target = torch.as_tensor(target).float().view(-1, 5)
 
-        # reformat target
-        target = {
-            'boxes': target[:, 1:5].float(),  # [N, 4]
-            'labels': target[:, 0].long(),    # [N,]
-        }
-
         return video_clip, target 
 
 
@@ -182,12 +176,6 @@ class BaseTransform(object):
         # to tensor
         video_clip = self.to_tensor(video_clip)
         target = torch.as_tensor(target).float().view(-1, 5)
-
-        # reformat target
-        target = {
-            'boxes': target[:, 1:5].float(),  # [N, 4]
-            'labels': target[:, 0].long(),    # [N,]
-        }
 
         return video_clip, target 
 
