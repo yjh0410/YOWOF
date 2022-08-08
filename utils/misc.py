@@ -6,12 +6,10 @@ from torch.autograd import Variable
 from copy import deepcopy
 import math
 
-from dataset.ucf24 import UCF24
-from dataset.jhmdb import JHMDB
-from dataset.transforms import TrainTransforms, ValTransforms
+from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
+from dataset.transforms import Augmentation, BaseTransform
 
-from evaluator.ucf_evaluator import UCFEvaluator
-from evaluator.jhmdb_evaluator import JHMDBEvaluator
+from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
 
 
 def build_dataset(d_cfg, args, is_train=False):
@@ -19,60 +17,40 @@ def build_dataset(d_cfg, args, is_train=False):
         d_cfg: dataset config
     """
     # transform
-    trans_config = d_cfg['transforms']
-    print('==============================')
-    print('TrainTransforms: {}'.format(trans_config))
-    train_transform = TrainTransforms(trans_config=trans_config,
-                                      img_size=d_cfg['train_size'],
-                                      pixel_mean=d_cfg['pixel_mean'],
-                                      pixel_std=d_cfg['pixel_std'],
-                                      format=d_cfg['format'])
-    val_transform = ValTransforms(img_size=d_cfg['test_size'],
-                                  pixel_mean=d_cfg['pixel_mean'],
-                                  pixel_std=d_cfg['pixel_std'],
-                                  format=d_cfg['format'])
-    # dataset
-    
-    if args.dataset == 'ucf24':
-        num_classes = 24
-        # dataset
-        dataset = UCF24(cfg=d_cfg,
-                        img_size=d_cfg['train_size'],
-                        len_clip=d_cfg['len_clip'],
-                        is_train=is_train,
-                        transform=train_transform,
-                        debug=False)
-        # evaluator
-        evaluator = UCFEvaluator(
-                        cfg=d_cfg,
-                        len_clip=d_cfg['len_clip'],
-                        img_size=d_cfg['test_size'],
-                        thresh=0.5,
-                        transform=val_transform,
-                        metric='frame_map',
-                        save_dir=args.save_dir
-                        )
+    augmentation = Augmentation(
+        img_size=d_cfg['train_size'],
+        jitter=d_cfg['jitter'],
+        hue=d_cfg['hue'],
+        saturation=d_cfg['saturation'],
+        exposure=d_cfg['exposure']
+        )
+    basetransform = BaseTransform(img_size=d_cfg['test_size'])
 
-    elif args.dataset == 'jhmdb':
-        num_classes = 21
+    # dataset
+    if args.dataset in ['ucf24', 'jhmdb21']:
         # dataset
-        dataset = JHMDB(cfg=d_cfg,
-                        img_size=d_cfg['train_size'],
-                        len_clip=d_cfg['len_clip'],
-                        is_train=is_train,
-                        transform=train_transform,
-                        debug=False)
+        dataset = UCF_JHMDB_Dataset(
+            data_root=d_cfg['data_root'],
+            dataset=args.dataset,
+            img_size=d_cfg['train_size'],
+            transform=augmentation,
+            is_train=is_train,
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
+            )
+        num_classes = dataset.num_classes
+
         # evaluator
-        evaluator = JHMDBEvaluator(
-                        cfg=d_cfg,
-                        len_clip=d_cfg['len_clip'],
-                        img_size=d_cfg['test_size'],
-                        thresh=0.5,
-                        transform=val_transform,
-                        metric='frame_map',
-                        save_dir=args.save_dir
-                        )
-    
+        evaluator = None
+
+    elif args.dataset == 'ava':
+        # dataset
+        dataset = None
+        num_classes = None
+
+        # evaluator
+        evaluator = None
+
     else:
         print('unknow dataset !! Only support UCF24 and JHMDB !!')
         exit(0)
@@ -87,7 +65,7 @@ def build_dataset(d_cfg, args, is_train=False):
     return dataset, evaluator, num_classes
 
 
-def build_dataloader(args, dataset, batch_size, collate_fn=None, worker_init_fn=None):
+def build_dataloader(args, dataset, batch_size, collate_fn=None):
     # distributed
     if args.distributed:
         sampler = torch.utils.data.distributed.DistributedSampler(dataset)
@@ -109,16 +87,7 @@ def build_dataloader(args, dataset, batch_size, collate_fn=None, worker_init_fn=
     return dataloader
     
 
-def get_total_grad_norm(parameters, norm_type=2):
-    parameters = list(filter(lambda p: p.grad is not None, parameters))
-    norm_type = float(norm_type)
-    device = parameters[0].grad.device
-    total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]),
-                            norm_type)
-    return total_norm
-
-
-def load_weight(device, model, path_to_ckpt):
+def load_weight(model, path_to_ckpt):
     checkpoint = torch.load(path_to_ckpt, map_location='cpu')
     # checkpoint state dict
     checkpoint_state_dict = checkpoint.pop("model")
@@ -152,12 +121,8 @@ class CollateFunc(object):
         batch_video_clips = []
 
         for sample in batch:
-            image_list = sample[0]
-            target_clip = sample[1]
-
-            # List [T, 3, H, W] -> [3, T, H, W]
-            video_clip = torch.stack(image_list, dim=1)
-            key_target = target_clip[-1]
+            video_clip = sample[1]
+            key_target = sample[2]
             
             batch_video_clips.append(video_clip)
             batch_key_target.append(key_target)
@@ -234,6 +199,10 @@ class Softmax_FocalLoss(nn.Module):
 
 
     def forward(self, inputs, targets):
+        """
+            inputs: (Tensor): [N, C]
+            targets: (Tensor): [N,]
+        """
         N = inputs.size(0)
         C = inputs.size(1)
         P = F.softmax(inputs, dim=1)

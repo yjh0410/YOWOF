@@ -5,7 +5,7 @@ import time
 import numpy as np
 import torch
 
-from evaluator.ucf_evaluator import UCFEvaluator
+from evaluator.ucf_jhmdb_evaluator import UCFEvaluator
 from evaluator.jhmdb_evaluator import JHMDBEvaluator
 
 from dataset.transforms import ValTransforms

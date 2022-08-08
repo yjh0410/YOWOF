@@ -38,8 +38,8 @@ class Criterion(object):
         
         # Loss
         self.conf_loss = nn.MSELoss(reduction='none')
-        self.cls_loss = nn.CrossEntropyLoss(reduction='none')
-        # self.cls_loss = Softmax_FocalLoss(num_classes=num_classes, gamma=2.0, reduction='none')
+        # self.cls_loss = nn.CrossEntropyLoss(reduction='none')
+        self.cls_loss = Softmax_FocalLoss(num_classes=num_classes, gamma=2.0, reduction='none')
 
 
     def __call__(self, 
@@ -68,13 +68,6 @@ class Criterion(object):
         # target of key-frame
         device = outputs['conf_pred'].device
         batch_size = outputs['conf_pred'].shape[0]
-            
-        # reformat target
-        targets = [{
-            'boxes': t[:, :4].float(),  # [Ni, 4]
-            'labels': t[:, 4].long(),   # [Ni,]
-        } for t in targets]
-
 
         # Matcher for this frame
         (

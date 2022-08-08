@@ -6,42 +6,43 @@ import numpy as np
 from copy import deepcopy
 import torch
 
-from dataset.jhmdb import JHMDB, JHMDB_CLASSES
+from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from utils.box_ops import rescale_bboxes
 from .utils import iou2d, pr_to_ap, nms3dt, iou3dt
 from .utils import load_frame_detections, build_tubes
 
 
-class JHMDBEvaluator(object):
+class UCF_JHMDB_Evaluator(object):
     def __init__(self,
-                 cfg=None,
-                 len_clip=1,
+                 data_root=None,
+                 dataset='ucf24',
                  img_size=224,
+                 len_clip=1,
+                 label_map=None,
                  thresh=0.5,
                  transform=None,
                  metric='frame_map',
                  save_dir=None):
-        self.cfg = cfg
+        self.data_root = data_root
+        self.img_size = img_size
         self.len_clip = len_clip
+        self.class_names = label_map
         self.thresh = thresh
         self.transform = transform
         self.metric = metric
         self.save_dir = save_dir
-        self.num_classes = 21
-        self.class_names = JHMDB_CLASSES
         self.frame_map = 0.0
-        self.video_map = {'@0.5': 0.0,
-                          '@0.5:0.95': 0.0}
 
         # dataset
-        self.dataset = JHMDB(
-            cfg=cfg,
+        self.dataset = UCF_JHMDB_Dataset(
+            data_root=data_root,
+            dataset=dataset,
             img_size=img_size,
-            len_clip=len_clip,
+            transform=transform,
             is_train=False,
-            transform=None,
-            debug=False
-            )
+            len_clip=len_clip,
+            sampling_rate=1)
+        self.num_classes = self.dataset.num_classes
 
 
     @torch.no_grad()
@@ -80,7 +81,7 @@ class JHMDBEvaluator(object):
             # inference with video stream
             detections = {}
             for fid in range(1, num_frames + 1):
-                image_file = os.path.join(video_path, '{:0>5}.png'.format(fid))
+                image_file = os.path.join(video_path, '{:0>5}.jpg'.format(fid))
                 cur_frame = cv2.imread(image_file)
                 
                 assert cur_frame is not None
@@ -216,8 +217,8 @@ class JHMDBEvaluator(object):
                     fn -= 1
                 else:
                     fp += 1
-                pr[i + 1, 0] = float(tp) / float(tp + fp + 1e-5)
-                pr[i + 1, 1] = float(tp) / float(tp + fn + 1e-5)
+                pr[i + 1, 0] = float(tp) / float(tp + fp)
+                pr[i + 1, 1] = float(tp) / float(tp + fn)
 
             results[label] = pr
 
@@ -378,99 +379,6 @@ class JHMDBEvaluator(object):
         print("")
         print("{:20s} ".format("mean") + " ".join(["{:8.2f}".format(np.mean(L)) for L in LIST]))
         print("")
-
-
-    def videoAP(self):
-        # video name list
-        vlist = self.dataset.video_list
-        # load detections
-        # all_dets = for each label in 1..nlabels, list of tuple (v,score,tube as Kx5 array)
-        all_dets = {ilabel: [] for ilabel in range(len(self.dataset.labels))}
-        for v in vlist:
-            tubename = os.path.join(self.save_dir, v + '_tubes.pkl')
-            if not os.path.isfile(tubename):
-                print("ERROR: Missing extracted tubes " + tubename)
-                sys.exit()
-
-            with open(tubename, 'rb') as fid:
-                tubes = pickle.load(fid)
-                
-            for ilabel in range(len(self.dataset.labels)):
-                ltubes = tubes[ilabel]
-                idx = nms3dt(ltubes, 0.3)
-                all_dets[ilabel] += [(v, ltubes[i][1], ltubes[i][0]) for i in idx]
-
-        # compute AP for each class
-        res = {}
-        for ilabel in range(len(self.dataset.labels)):
-            detections = all_dets[ilabel]
-            # load ground-truth
-            gt = {}
-            for v in vlist:
-                tubes = self.dataset.gttubes[v]
-
-                if ilabel not in tubes:
-                    continue
-
-                gt[v] = tubes[ilabel]
-
-                if len(gt[v]) == 0:
-                    del gt[v]
-
-            # precision,recall
-            pr = np.empty((len(detections) + 1, 2), dtype=np.float32)
-            pr[0, 0] = 1.0
-            pr[0, 1] = 0.0
-
-            fn = sum([len(g) for g in gt.values()])  # false negatives
-            fp = 0  # false positives
-            tp = 0  # true positives
-
-            for i, j in enumerate(np.argsort(-np.array([dd[1] for dd in detections]))):
-                v, score, tube = detections[j]
-                ispositive = False
-
-                if v in gt:
-                    ious = [iou3dt(g, tube) for g in gt[v]]
-                    amax = np.argmax(ious)
-                    if ious[amax] >= self.thresh:
-                        ispositive = True
-                        del gt[v][amax]
-                        if len(gt[v]) == 0:
-                            del gt[v]
-
-                if ispositive:
-                    tp += 1
-                    fn -= 1
-                else:
-                    fp += 1
-
-                pr[i + 1, 0] = float(tp) / float(tp + fp)
-                pr[i + 1, 1] = float(tp) / float(tp + fn)
-
-            res[self.dataset.labels[ilabel]] = pr
-
-        # display results
-        print('>>>>>>>>>>>>> VideoAP_{} <<<<<<<<<<<<<<'.format(self.thresh))
-        aps = 100 * np.array([pr_to_ap(res[label]) for label in self.dataset.labels])
-        for i, ap in enumerate(aps):
-            print('{}: {:.2f}'.format(self.class_names[i], ap))
-        print()
-        video_map = np.mean(aps)
-
-        print("{:20s} {:8.2f}".format("mAP", video_map))
-
-        return video_map
-
-
-    def videpAP_050_095(self):
-        ap = 0
-        for i in range(10):
-            self.thresh = 0.5 + 0.05 * i
-            ap += self.videoAP()
-        ap = ap / 10.0
-        print('VideoAP_0.50:0.95 \n')
-        print("\n{:20s} {:8.2f}\n\n".format("mAP", ap))
 
 
 if __name__ == "__main__":

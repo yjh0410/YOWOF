@@ -77,6 +77,11 @@ class YoloMatcher(object):
                 # get a bbox coords
                 label = int(label)
                 x1, y1, x2, y2 = box.tolist()
+                # rescale bbox
+                x1 *= img_size
+                y1 *= img_size
+                x2 *= img_size
+                y2 *= img_size
                 # xyxy -> cxcywh
                 xc, yc = (x2 + x1) * 0.5, (y2 + y1) * 0.5
                 bw, bh = x2 - x1, y2 - y1
