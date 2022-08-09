@@ -32,11 +32,13 @@ def parse_args():
                         help='Dir to save results')
     parser.add_argument('-vs', '--vis_thresh', default=0.35, type=float,
                         help='threshold for visualization')
+    parser.add_argument('-inf', '--inference', default='clip', type=str,
+                        help='inference type: clip or stream')
 
     # model
     parser.add_argument('-v', '--version', default='yowo-d19', type=str,
                         help='build yowo')
-    parser.add_argument('--weight', default='weight/',
+    parser.add_argument('--weight', default=None,
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
@@ -51,7 +53,7 @@ def parse_args():
 
 
 @torch.no_grad()
-def inference(args, model, device, dataset, class_names=None, class_colors=None):
+def inference_with_video_clip(args, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
     save_path = os.path.join(
         args.save_folder, args.dataset, 
@@ -62,6 +64,8 @@ def inference(args, model, device, dataset, class_names=None, class_colors=None)
     for index in range(0, len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
         frame_id, video_clip, target = dataset[index]
+
+        print(frame_id)
 
         orig_size = target['orig_size']  # width, height
 
@@ -77,6 +81,74 @@ def inference(args, model, device, dataset, class_names=None, class_colors=None)
         scores = batch_scores[0]
         labels = batch_labels[0]
         bboxes = batch_bboxes[0]
+        
+        # rescale
+        bboxes = rescale_bboxes(bboxes, orig_size)
+
+        # vis results of key-frame
+        key_frame = video_clip[0, :, -1, :, :]
+        key_frame = (key_frame * 255).permute(1, 2, 0)
+        key_frame = key_frame.cpu().numpy().astype(np.uint8)
+        key_frame = key_frame.copy()[..., (2, 1, 0)]  # to BGR
+        key_frame = cv2.resize(key_frame, orig_size)
+
+        vis_results = vis_detection(
+            frame=key_frame,
+            scores=scores,
+            labels=labels,
+            bboxes=bboxes,
+            vis_thresh=args.vis_thresh,
+            class_names=class_names,
+            class_colors=class_colors
+            )
+
+        if args.show:
+            cv2.imshow('key-frame detection', vis_results)
+            cv2.waitKey(0)
+
+        if args.save:
+            # save result
+            cv2.imwrite(os.path.join(save_path,
+            '{:0>5}.jpg'.format(index)), vis_results)
+        
+
+@torch.no_grad()
+def inference_with_video_stream(args, model, device, dataset, class_names=None, class_colors=None):
+    # path to save 
+    save_path = os.path.join(
+        args.save_folder, args.dataset, 
+        args.version, 'video_clips')
+    os.makedirs(save_path, exist_ok=True)
+
+    # initalize model
+    model.initialization = True
+    model.stream_infernce = True
+
+    # inference
+    prev_frame_id = ''
+    for index in range(0, len(dataset)):
+        print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
+        frame_id, video_clip, target = dataset[index]
+        orig_size = target['orig_size']  # width, height
+
+        # ex: frame_id = Basketball_v_Basketball_g01_c01_00048.txt
+        if index == 0:
+            prev_frame_id = frame_id[:-10]
+            model.initialization = True
+
+        if frame_id[:-10] != prev_frame_id:
+            print(frame_id[:-10], prev_frame_id)
+            # a new video
+            prev_frame_id = frame_id[:-10]
+            model.initialization = True
+
+        # prepare
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
+
+        t0 = time.time()
+        # inference
+        scores, labels, bboxes = model(video_clip)
+        print("inference time ", time.time() - t0, "s")
         
         # rescale
         bboxes = rescale_bboxes(bboxes, orig_size)
@@ -169,9 +241,21 @@ if __name__ == '__main__':
     model = model.to(device).eval()
 
     # run
-    inference(args=args,
-              model=model,
-              device=device,
-              dataset=dataset,
-              class_names=class_names,
-              class_colors=class_colors)
+    if args.inference == 'clip':
+        inference_with_video_clip(
+            args=args,
+            model=model,
+            device=device,
+            dataset=dataset,
+            class_names=class_names,
+            class_colors=class_colors
+            )
+    elif args.inference == 'stream':
+        inference_with_video_stream(
+            args=args,
+            model=model,
+            device=device,
+            dataset=dataset,
+            class_names=class_names,
+            class_colors=class_colors
+            )

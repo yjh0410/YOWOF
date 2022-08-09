@@ -99,7 +99,11 @@ def build_dataloader(args, dataset, batch_size, collate_fn=None, is_train=False)
     return dataloader
     
 
-def load_weight(model, path_to_ckpt):
+def load_weight(model, path_to_ckpt=None):
+    if path_to_ckpt is None:
+        print('No trained weight ..')
+        return model
+        
     checkpoint = torch.load(path_to_ckpt, map_location='cpu')
     # checkpoint state dict
     checkpoint_state_dict = checkpoint.pop("model")

@@ -1,5 +1,6 @@
 import torch
 from .yowo.yowo import YOWO
+from .yowof.yowof import YOWOF
 
 
 # build YOWO detector
@@ -26,6 +27,20 @@ def build_model(args,
             device=device,
             anchor_size=d_cfg['anchor_size'],
             img_size=img_size,
+            len_clip=d_cfg['len_clip'],
+            num_classes=num_classes,
+            conf_thresh=m_cfg['conf_thresh'],
+            nms_thresh=m_cfg['nms_thresh'],
+            topk=args.topk,
+            trainable=trainable
+            )
+
+    elif args.version in ['yowof-r18', 'yowof-r50']:
+        model = YOWOF(
+            cfg=m_cfg,
+            device=device,
+            img_size=img_size,
+            anchor_size=d_cfg['anchor_size'],
             len_clip=d_cfg['len_clip'],
             num_classes=num_classes,
             conf_thresh=m_cfg['conf_thresh'],
