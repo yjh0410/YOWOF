@@ -163,7 +163,7 @@ class UCF_JHMDB_Evaluator(object):
                 recall = 1.0 * correct / (total_num_gts + eps)
                 fscore = 2.0 * precision * recall / (precision + recall + eps)
 
-                if iter_i % 100:
+                if iter_i % 100 == 0:
                     log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
                     print(log_info, flush=True)
 
