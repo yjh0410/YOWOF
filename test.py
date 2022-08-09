@@ -94,7 +94,7 @@ def inference(args, d_cfg, model, device, dataset, class_names=None, class_color
 
         # vis results of key-frame
         key_frame = video_clip[0, :, -1, :, :]
-        key_frame = key_frame.permute(1, 2, 0).numpy()
+        key_frame = key_frame.permute(1, 2, 0).cpu().numpy()
         key_frame = (key_frame * d_cfg['pixel_std'] + d_cfg['pixel_mean']) * 255
         key_frame = key_frame.astype(np.uint8)
         key_frame = key_frame.copy()[..., (2, 1, 0)]  # to BGR
