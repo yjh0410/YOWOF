@@ -87,18 +87,21 @@ class UCF_JHMDB_Evaluator(object):
                     orig_size = target['orig_size']
                     bboxes = rescale_bboxes(bboxes, orig_size)
 
+                    if not os.path.exists('results'):
+                        os.mkdir('results')
+
                     if self.dataset == 'ucf24':
-                        detection_path = os.path.join('ucf_detections', 'detections_' + str(epoch), frame_id)
-                        current_dir = os.path.join('ucf_detections', 'detections_' + str(epoch))
-                        if not os.path.exists('ucf_detections'):
-                            os.mkdir('ucf_detections')
+                        detection_path = os.path.join('results', 'ucf_detections', 'detections_' + str(epoch), frame_id)
+                        current_dir = os.path.join('results', 'ucf_detections', 'detections_' + str(epoch))
+                        if not os.path.exists('results/ucf_detections'):
+                            os.mkdir('results/ucf_detections')
                         if not os.path.exists(current_dir):
                             os.mkdir(current_dir)
                     else:
-                        detection_path = os.path.join('jhmdb_detections', 'detections_' + str(epoch), frame_id)
-                        current_dir = os.path.join('jhmdb_detections', 'detections_' + str(epoch))
-                        if not os.path.exists('jhmdb_detections'):
-                            os.mkdir('jhmdb_detections')
+                        detection_path = os.path.join('results', 'jhmdb_detections', 'detections_' + str(epoch), frame_id)
+                        current_dir = os.path.join('results', 'jhmdb_detections', 'detections_' + str(epoch))
+                        if not os.path.exists('results/jhmdb_detections'):
+                            os.mkdir('results/jhmdb_detections')
                         if not os.path.exists(current_dir):
                             os.mkdir(current_dir)
 
@@ -143,7 +146,6 @@ class UCF_JHMDB_Evaluator(object):
 
                         for j in pred_list: # ITERATE THROUGH ONLY CONFIDENT BOXES
                             iou = bbox_iou(box_gt, bboxes[j], x1y1x2y2=True)
-                            print(iou)
                             if iou > best_iou:
                                 best_j = j
                                 best_iou = iou
@@ -161,7 +163,7 @@ class UCF_JHMDB_Evaluator(object):
                 recall = 1.0 * correct / (total_num_gts + eps)
                 fscore = 2.0 * precision * recall / (precision + recall + eps)
 
-                if iter_i % 20:
+                if iter_i % 100:
                     log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
                     print(log_info, flush=True)
 
