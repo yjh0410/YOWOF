@@ -26,6 +26,8 @@ def parse_args():
                         help='evaluation metrics')
     parser.add_argument('--save_dir', default='inference_results/',
                         type=str, help='Trained state_dict file path to open')
+    parser.add_argument('-inf', '--inference', default='clip', type=str,
+                        help='inference type: clip or stream')
 
     # model
     parser.add_argument('-v', '--version', default='yowo-d19', type=str,
@@ -55,7 +57,8 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform, collate_fn):
         conf_thresh=0.1,
         iou_thresh=0.5,
         transform=transform,
-        collate_fn=collate_fn)
+        collate_fn=collate_fn,
+        inf_type=args.inference)
 
     cls_accu, loc_recall = evaluator.evaluate(model)
 
