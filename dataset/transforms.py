@@ -170,6 +170,7 @@ class BaseTransform(object):
             target = target.reshape(-1, 5)
             target[..., [1, 3]] /= ow
             target[..., [2, 4]] /= oh
+            target[..., 0] = target[..., 0] - 1
         else:
             target = np.array([])
 

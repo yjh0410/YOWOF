@@ -17,11 +17,11 @@ class UCF_JHMDB_Evaluator(object):
                  dataset='ucf24',
                  img_size=224,
                  len_clip=1,
+                 batch_size=1,
                  conf_thresh=0.1,
                  iou_thresh=0.5,
                  transform=None,
-                 collate_fn=None,
-                 save_dir=None):
+                 collate_fn=None):
         self.device = device
         self.data_root = data_root
         self.dataset = dataset
@@ -29,8 +29,6 @@ class UCF_JHMDB_Evaluator(object):
         self.len_clip = len_clip
         self.conf_thresh = conf_thresh
         self.iou_thresh = iou_thresh
-        self.transform = transform
-        self.save_dir = save_dir
         self.frame_map = 0.0
 
         # dataset
@@ -42,11 +40,12 @@ class UCF_JHMDB_Evaluator(object):
             is_train=False,
             len_clip=len_clip,
             sampling_rate=1)
-        self.num_classes = self.dataset.num_classes
+        self.num_classes = self.testset.num_classes
 
         # dataloader
         self.testloader = torch.utils.data.DataLoader(
             dataset=self.testset, 
+            batch_size=batch_size,
             shuffle=False,
             collate_fn=collate_fn, 
             num_workers=4,
@@ -115,8 +114,8 @@ class UCF_JHMDB_Evaluator(object):
                                 str(cls_id) + ' ' + str(score) + ' ' \
                                     + str(x1) + ' ' + str(y1) + ' ' + str(x2) + ' ' + str(y2) + '\n')
 
-                    tgt_bboxes = target['boxes']
-                    tgt_labels = target['labels']
+                    tgt_bboxes = target['boxes'].numpy()
+                    tgt_labels = target['labels'].numpy()
                     ow, oh = target['orig_size']
                     num_gts = tgt_bboxes.shape[0]
 
@@ -144,17 +143,19 @@ class UCF_JHMDB_Evaluator(object):
 
                         for j in pred_list: # ITERATE THROUGH ONLY CONFIDENT BOXES
                             iou = bbox_iou(box_gt, bboxes[j], x1y1x2y2=True)
+                            print(iou)
                             if iou > best_iou:
                                 best_j = j
                                 best_iou = iou
 
                         if best_iou > self.iou_thresh:
                             total_detected += 1
+                            # print(labels[best_j], tgt_label)
                             if int(labels[best_j]) == int(tgt_label):
                                 correct_classification += 1
 
                         if best_iou > self.iou_thresh and int(labels[best_j]) == int(tgt_label):
-                            correct = correct+1
+                            correct += 1
 
                 precision = 1.0 * correct / (proposals + eps)
                 recall = 1.0 * correct / (total_num_gts + eps)
@@ -169,6 +170,8 @@ class UCF_JHMDB_Evaluator(object):
 
         print("Classification accuracy: %.3f" % classification_accuracy)
         print("Locolization recall: %.3f" % locolization_recall)
+
+        return classification_accuracy, locolization_recall
 
 
 if __name__ == "__main__":

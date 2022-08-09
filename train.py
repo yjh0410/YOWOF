@@ -210,7 +210,7 @@ def train():
             dataloader.batch_sampler.sampler.set_epoch(epoch)            
 
         # train one epoch
-        for iter_i, (video_clips, targets) in enumerate(dataloader):
+        for iter_i, (frame_ids, video_clips, targets) in enumerate(dataloader):
             ni = iter_i + epoch * epoch_size
 
             # warmup

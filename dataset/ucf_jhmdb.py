@@ -131,8 +131,8 @@ if __name__ == '__main__':
     import cv2
     from transforms import Augmentation, BaseTransform
 
-    data_root = 'D:/python_work/spatial-temporal_action_detection/dataset/jhmdb21'
-    dataset = 'jhmdb21'
+    data_root = 'D:/python_work/spatial-temporal_action_detection/dataset/ucf24'
+    dataset = 'ucf24'
     is_train = True
     img_size = 224
     len_clip = 16

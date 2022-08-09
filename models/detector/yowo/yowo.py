@@ -224,24 +224,24 @@ class YOWO(nn.Module):
         batch_labels = []
         batch_bboxes = []
         for batch_idx in range(conf_pred.size(0)):
-            # [1, M, C] -> [M, C]
-            conf_pred = conf_pred[batch_idx]
-            cls_pred = cls_pred[batch_idx]
-            reg_pred = reg_pred[batch_idx]
+            # [B, M, C] -> [M, C]
+            cur_conf_pred = conf_pred[batch_idx]
+            cur_cls_pred = cls_pred[batch_idx]
+            cur_reg_pred = reg_pred[batch_idx]
                         
             # scores
-            scores, labels = torch.max(torch.sigmoid(conf_pred) * torch.softmax(cls_pred, dim=-1), dim=-1)
+            scores, labels = torch.max(torch.sigmoid(cur_conf_pred) * torch.softmax(cur_cls_pred, dim=-1), dim=-1)
 
             # topk
             anchor_boxes = self.anchor_boxes
             if scores.shape[0] > self.topk:
                 scores, indices = torch.topk(scores, self.topk)
                 labels = labels[indices]
-                reg_pred = reg_pred[indices]
+                cur_reg_pred = cur_reg_pred[indices]
                 anchor_boxes = anchor_boxes[indices]
 
             # decode box
-            bboxes = self.decode_bbox(anchor_boxes, reg_pred) # [N, 4]
+            bboxes = self.decode_bbox(anchor_boxes, cur_reg_pred) # [N, 4]
             # normalize box
             bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
             

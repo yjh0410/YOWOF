@@ -59,7 +59,7 @@ def inference(args, model, device, dataset, class_names=None, class_colors=None)
     os.makedirs(save_path, exist_ok=True)
 
     # inference
-    for index in range(6000, len(dataset)):
+    for index in range(0, len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
         frame_id, video_clip, target = dataset[index]
 

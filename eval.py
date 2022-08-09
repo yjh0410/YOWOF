@@ -6,7 +6,7 @@ from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
 
 from dataset.transforms import BaseTransform
 
-from utils.misc import load_weight
+from utils.misc import load_weight, CollateFunc
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
@@ -16,6 +16,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description='YOWO')
 
     # basic
+    parser.add_argument('-bs', '--batch_size', default=8, type=int,
+                        help='test batch size')
     parser.add_argument('-size', '--img_size', default=224, type=int,
                         help='the size of input frame')
     parser.add_argument('--cuda', action='store_true', default=False, 
@@ -42,32 +44,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def jhmdb_eval(d_cfg, model, transform, save_dir, metrics):
-    evaluator = JHMDBEvaluator(
-        cfg=d_cfg,
-        len_clip=model.len_clip,
-        img_size=args.img_size,
-        thresh=0.5,
+def ucf_jhmdb_eval(device, args, d_cfg, model, transform, collate_fn):
+    evaluator = UCF_JHMDB_Evaluator(
+        device=device,
+        dataset=args.dataset,
+        batch_size=args.batch_size,
+        data_root=d_cfg['data_root'],
+        img_size=d_cfg['test_size'],
+        len_clip=d_cfg['len_clip'],
+        conf_thresh=0.1,
+        iou_thresh=0.5,
         transform=transform,
-        save_dir=save_dir)
+        collate_fn=collate_fn)
 
-    for metric in metrics:
-        evaluator.metric = metric
-        evaluator.evaluate(model)
+    cls_accu, loc_recall = evaluator.evaluate(model)
 
-
-def ucf24_eval(d_cfg, model, transform, save_dir, metrics):
-    evaluator = UCFEvaluator(
-        cfg=d_cfg,
-        len_clip=model.len_clip,
-        img_size=args.img_size,
-        thresh=0.5,
-        transform=transform,
-        save_dir=save_dir)
-
-    for metric in metrics:
-        evaluator.metric = metric
-        evaluator.evaluate(model)
 
 
 if __name__ == '__main__':
@@ -112,30 +103,18 @@ if __name__ == '__main__':
     model = model.to(device).eval()
 
     # transform
-    transform = ValTransforms(
-        img_size=args.img_size,
-        pixel_mean=m_cfg['pixel_mean'],
-        pixel_std=m_cfg['pixel_std'],
-        format=m_cfg['format']
-        )
+    basetransform = BaseTransform(img_size=d_cfg['test_size'])
 
     # path to save inference results
     save_path = os.path.join(args.save_dir, args.dataset)
 
     # run
-    if args.dataset == 'jhmdb':
-        jhmdb_eval(
+    if args.dataset in ['ucf24', 'jhmdb21']:
+        ucf_jhmdb_eval(
+            device=device,
+            args=args,
             d_cfg=d_cfg,
             model=model,
-            transform=transform,
-            save_dir=save_path,
-            metrics=args.metrics
-            )
-    elif args.dataset == 'ucf24':
-        ucf24_eval(
-            d_cfg=d_cfg,
-            model=model,
-            transform=transform,
-            save_dir=save_path,
-            metrics=args.metrics
+            transform=basetransform,
+            collate_fn=CollateFunc()
             )

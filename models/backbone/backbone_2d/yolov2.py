@@ -163,7 +163,7 @@ def build_yolov2(pretrained):
     bk_dim = 425
 
     # Load COCO pretrained weight
-    if pretrained is not None:
+    if pretrained:
         print('Loading pretrained weight ...')
         checkpoint_state_dict = load_state_dict_from_url(
             model_urls['yolov2'],
