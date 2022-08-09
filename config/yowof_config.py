@@ -4,8 +4,8 @@
 yowof_config = {
     'yowof-r18': {
         # backbone
-        'backbone_2d': 'resnet18',
-        'pretrained_2d': True,
+        'backbone': 'resnet18',
+        'pretrained': True,
         'res5_dilation': False,
         'stride': 32,
         # temporal encoder
@@ -32,6 +32,11 @@ yowof_config = {
         'gamma': 2.0,
         'loss_cls_weight': 1.0,
         'loss_reg_weight': 3.0,
-
+        # anchor size
+        'anchor_size': [[16, 16],
+                        [32, 32],
+                        [64, 64],
+                        [128, 128],
+                        [256, 256]], # 320
     },
 }

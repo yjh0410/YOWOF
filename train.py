@@ -28,7 +28,7 @@ GLOBAL_SEED = 42
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='YOWO')
+    parser = argparse.ArgumentParser(description='YOWOF')
     # CUDA
     parser.add_argument('--cuda', action='store_true', default=False,
                         help='use cuda.')
@@ -54,7 +54,7 @@ def parse_args():
                         type=str, help='save inference results.')
 
     # Model
-    parser.add_argument('-v', '--version', default='yowo-d19', type=str,
+    parser.add_argument('-v', '--version', default='yowof-r18', type=str,
                         help='build spatio-temporal action detector')
     parser.add_argument('--topk', default=40, type=int,
                         help='topk candidates for evaluation')

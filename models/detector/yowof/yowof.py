@@ -3,7 +3,7 @@ import math
 import torch
 import torch.nn as nn
 
-from ...backbone import build_backbone_2d
+from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
 from ...basic.convlstm import ConvLSTM
 from .loss import Criterion
@@ -47,15 +47,15 @@ class YOWOF(nn.Module):
 
         # ------------------ Network ---------------------
         # 2D backbone
-        self.backbone_2d, bk_dim_2d = build_backbone_2d(
-            model_name=cfg['backbone_2d'], 
-            pretrained=cfg['pretrained_2d'] and trainable,
+        self.backbone, bk_dim = build_backbone(
+            model_name=cfg['backbone'], 
+            pretrained=cfg['pretrained'] and trainable,
             res5_dilation=cfg['res5_dilation']
             )
 
         # ConvLSTM
-        self.temporal_encoder = ConvLSTM(
-            in_dim=bk_dim_2d,
+        self.stm_encoder = ConvLSTM(
+            in_dim=bk_dim,
             hidden_dim=cfg['head_dim'],
             kernel_size=cfg['conv_lstm_ks'],
             num_layers=cfg['conv_lstm_nl'],
@@ -221,10 +221,10 @@ class YOWOF(nn.Module):
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
             self.stream_infernce = True
-            self.temporal_encoder.inf_full_seq = False
+            self.stm_encoder.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
-            self.temporal_encoder.inf_full_seq = True
+            self.stm_encoder.inf_full_seq = True
 
 
     def inference_video_clip(self, video_clips):
@@ -233,12 +233,12 @@ class YOWOF(nn.Module):
 
         # backbone
         for i in range(len(video_clips)):
-            feat = self.backbone_2d(video_clips[:, :, i, :, :])
+            feat = self.backbone(video_clips[:, :, i, :, :])
 
             backbone_feats.append(feat)
 
         # spatio-temporal-motion encoder
-        feat, _ = self.temporal_encoder(backbone_feats)
+        feat, _ = self.stm_encoder(backbone_feats)
         key_feat = feat[-1][-1]
 
         # head
@@ -301,7 +301,7 @@ class YOWOF(nn.Module):
         """
         key_frame = video_clips[:, :, -1, :, :]
         # backbone
-        cur_bk_feat = self.backbone_2d(key_frame)
+        cur_bk_feat = self.backbone(key_frame)
 
         # push the current feature
         self.clip_feats.append(cur_bk_feat)
@@ -309,7 +309,7 @@ class YOWOF(nn.Module):
         del self.clip_feats[0]
 
         # spatio-temporal-motion encoder
-        cur_feat, _ = self.temporal_encoder(self.clip_feats)
+        cur_feat, _ = self.stm_encoder(self.clip_feats)
         key_frame = cur_feat[-1]
 
         # head
@@ -384,7 +384,7 @@ class YOWOF(nn.Module):
                 # and output results of per frame
 
                 # check state of convlstm
-                self.temporal_encoder.initialization = True
+                self.stm_encoder.initialization = True
 
                 (   
                     clip_feats,
@@ -417,12 +417,12 @@ class YOWOF(nn.Module):
             backbone_feats = []
             # backbone
             for i in range(len(video_clips)):
-                feat = self.backbone_2d(video_clips[:, :, i, :, :])
+                feat = self.backbone(video_clips[:, :, i, :, :])
 
                 backbone_feats.append(feat)
 
             # spatio-temporal-motion encoder
-            feat, _ = self.temporal_encoder(backbone_feats)
+            feat, _ = self.stm_encoder(backbone_feats)
             key_frame = feat[-1][-1]  # the last output of the last layer
 
             # detection head

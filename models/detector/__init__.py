@@ -1,5 +1,4 @@
 import torch
-from .yowo.yowo import YOWO
 from .yowof.yowof import YOWOF
 
 
@@ -21,26 +20,12 @@ def build_model(args,
         img_size = d_cfg['test_size']
 
     # build YOWO
-    if args.version in ['yowo-d19', 'yowo-d53']:
-        model = YOWO(
-            cfg=m_cfg,
-            device=device,
-            anchor_size=d_cfg['anchor_size'],
-            img_size=img_size,
-            len_clip=d_cfg['len_clip'],
-            num_classes=num_classes,
-            conf_thresh=m_cfg['conf_thresh'],
-            nms_thresh=m_cfg['nms_thresh'],
-            topk=args.topk,
-            trainable=trainable
-            )
-
-    elif args.version in ['yowof-r18', 'yowof-r50']:
+    if args.version in ['yowof-r18', 'yowof-r50']:
         model = YOWOF(
             cfg=m_cfg,
             device=device,
             img_size=img_size,
-            anchor_size=d_cfg['anchor_size'],
+            anchor_size=m_cfg['anchor_size'],
             len_clip=d_cfg['len_clip'],
             num_classes=num_classes,
             conf_thresh=m_cfg['conf_thresh'],
@@ -48,16 +33,6 @@ def build_model(args,
             topk=args.topk,
             trainable=trainable
             )
-
-    # Freeze backbone
-    if d_cfg['freeze_backbone_2d']:
-        print('Freeze 2D Backbone ...')
-        for m in model.backbone_2d.parameters():
-            m.requires_grad = False
-    if d_cfg['freeze_backbone_3d']:
-        print('Freeze 3D Backbone ...')
-        for m in model.backbone_3d.parameters():
-            m.requires_grad = False
             
     # keep training       
     if resume is not None:

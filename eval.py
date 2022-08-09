@@ -13,7 +13,7 @@ from models.detector import build_model
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='YOWO')
+    parser = argparse.ArgumentParser(description='YOWOF')
 
     # basic
     parser.add_argument('-bs', '--batch_size', default=8, type=int,
@@ -26,12 +26,10 @@ def parse_args():
                         help='evaluation metrics')
     parser.add_argument('--save_dir', default='inference_results/',
                         type=str, help='Trained state_dict file path to open')
-    parser.add_argument('-inf', '--inference', default='clip', type=str,
-                        help='inference type: clip or stream')
 
     # model
-    parser.add_argument('-v', '--version', default='yowo-d19', type=str,
-                        help='build yowo')
+    parser.add_argument('-v', '--version', default='yowof-r18', type=str,
+                        help='build yowof')
     parser.add_argument('--weight', default='weight/',
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
@@ -57,8 +55,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform, collate_fn):
         conf_thresh=0.1,
         iou_thresh=0.5,
         transform=transform,
-        collate_fn=collate_fn,
-        inf_type=args.inference)
+        collate_fn=collate_fn)
 
     cls_accu, loc_recall = evaluator.evaluate(model)
 
@@ -106,7 +103,10 @@ if __name__ == '__main__':
     model = model.to(device).eval()
 
     # transform
-    basetransform = BaseTransform(img_size=d_cfg['test_size'])
+    basetransform = BaseTransform(
+        img_size=d_cfg['test_size'],
+        pixel_mean=d_cfg['pixel_mean'],
+        pixel_std=d_cfg['pixel_std'])
 
     # path to save inference results
     save_path = os.path.join(args.save_dir, args.dataset)

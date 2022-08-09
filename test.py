@@ -32,8 +32,6 @@ def parse_args():
                         help='Dir to save results')
     parser.add_argument('-vs', '--vis_thresh', default=0.35, type=float,
                         help='threshold for visualization')
-    parser.add_argument('-inf', '--inference', default='clip', type=str,
-                        help='inference type: clip or stream')
 
     # model
     parser.add_argument('-v', '--version', default='yowo-d19', type=str,
@@ -53,68 +51,7 @@ def parse_args():
 
 
 @torch.no_grad()
-def inference_with_video_clip(args, model, device, dataset, class_names=None, class_colors=None):
-    # path to save 
-    if args.save:
-        save_path = os.path.join(
-            args.save_folder, args.dataset, 
-            args.version, 'video_clips')
-        os.makedirs(save_path, exist_ok=True)
-
-    # inference
-    for index in range(0, len(dataset)):
-        print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
-        frame_id, video_clip, target = dataset[index]
-
-        print(frame_id)
-
-        orig_size = target['orig_size']  # width, height
-
-        # prepare
-        video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
-
-        t0 = time.time()
-        # inference
-        batch_scores, batch_labels, batch_bboxes = model(video_clip)
-        print("inference time ", time.time() - t0, "s")
-
-        # batch size = 1
-        scores = batch_scores[0]
-        labels = batch_labels[0]
-        bboxes = batch_bboxes[0]
-        
-        # rescale
-        bboxes = rescale_bboxes(bboxes, orig_size)
-
-        # vis results of key-frame
-        key_frame = video_clip[0, :, -1, :, :]
-        key_frame = (key_frame * 255).permute(1, 2, 0)
-        key_frame = key_frame.cpu().numpy().astype(np.uint8)
-        key_frame = key_frame.copy()[..., (2, 1, 0)]  # to BGR
-        key_frame = cv2.resize(key_frame, orig_size)
-
-        vis_results = vis_detection(
-            frame=key_frame,
-            scores=scores,
-            labels=labels,
-            bboxes=bboxes,
-            vis_thresh=args.vis_thresh,
-            class_names=class_names,
-            class_colors=class_colors
-            )
-
-        if args.show:
-            cv2.imshow('key-frame detection', vis_results)
-            cv2.waitKey(0)
-
-        if args.save:
-            # save result
-            cv2.imwrite(os.path.join(save_path,
-            '{:0>5}.jpg'.format(index)), vis_results)
-        
-
-@torch.no_grad()
-def inference_with_video_stream(args, model, device, dataset, class_names=None, class_colors=None):
+def inference(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
     if args.save:
         save_path = os.path.join(
@@ -157,8 +94,9 @@ def inference_with_video_stream(args, model, device, dataset, class_names=None, 
 
         # vis results of key-frame
         key_frame = video_clip[0, :, -1, :, :]
-        key_frame = (key_frame * 255).permute(1, 2, 0)
-        key_frame = key_frame.cpu().numpy().astype(np.uint8)
+        key_frame = key_frame.permute(1, 2, 0).numpy()
+        key_frame = (key_frame * d_cfg['pixel_std'] + d_cfg['pixel_mean']) * 255
+        key_frame = key_frame.astype(np.uint8)
         key_frame = key_frame.copy()[..., (2, 1, 0)]  # to BGR
         key_frame = cv2.resize(key_frame, orig_size)
 
@@ -196,7 +134,10 @@ if __name__ == '__main__':
     m_cfg = build_model_config(args)
 
     # transform
-    basetransform = BaseTransform(img_size=d_cfg['test_size'])
+    basetransform = BaseTransform(
+        img_size=d_cfg['test_size'],
+        pixel_mean=d_cfg['pixel_mean'],
+        pixel_std=d_cfg['pixel_std'])
 
     # dataset
     if args.dataset in ['ucf24', 'jhmdb21']:
@@ -243,21 +184,12 @@ if __name__ == '__main__':
     model = model.to(device).eval()
 
     # run
-    if args.inference == 'clip':
-        inference_with_video_clip(
-            args=args,
-            model=model,
-            device=device,
-            dataset=dataset,
-            class_names=class_names,
-            class_colors=class_colors
-            )
-    elif args.inference == 'stream':
-        inference_with_video_stream(
-            args=args,
-            model=model,
-            device=device,
-            dataset=dataset,
-            class_names=class_names,
-            class_colors=class_colors
-            )
+    inference(
+        args=args,
+        d_cfg=d_cfg,
+        model=model,
+        device=device,
+        dataset=dataset,
+        class_names=class_names,
+        class_colors=class_colors
+        )

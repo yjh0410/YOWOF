@@ -137,6 +137,8 @@ if __name__ == '__main__':
     img_size = 224
     len_clip = 16
     trans_config = {
+        'pixel_mean': [0.485, 0.456, 0.406],
+        'pixel_std': [0.229, 0.224, 0.225],
         'jitter': 0.2,
         'hue': 0.1,
         'saturation': 1.5,
@@ -144,11 +146,13 @@ if __name__ == '__main__':
     }
     transform = Augmentation(
         img_size=img_size,
+        pixel_mean=trans_config['pixel_mean'],
+        pixel_std=trans_config['pixel_std'],
         jitter=trans_config['jitter'],
         saturation=trans_config['saturation'],
         exposure=trans_config['exposure']
         )
-    transform = BaseTransform(img_size=img_size)
+    transform = BaseTransform(trans_config['pixel_mean'], trans_config['pixel_std'], img_size)
 
     train_dataset = UCF_JHMDB_Dataset(
         data_root=data_root,
@@ -165,8 +169,9 @@ if __name__ == '__main__':
         frame_id, video_clip, target = train_dataset[i]
         key_frame = video_clip[:, -1, :, :]
 
-        key_frame = (key_frame * 255).permute(1, 2, 0)
-        key_frame = key_frame.numpy().astype(np.uint8)
+        key_frame = key_frame.permute(1, 2, 0).numpy()
+        key_frame = (key_frame * trans_config['pixel_std'] + trans_config['pixel_mean']) * 255
+        key_frame = key_frame.astype(np.uint8)
         H, W, C = key_frame.shape
 
         key_frame = key_frame.copy()
