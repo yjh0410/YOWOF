@@ -38,18 +38,8 @@ class UCF_JHMDB_Evaluator(object):
             sampling_rate=1)
         self.num_classes = self.testset.num_classes
 
-        # dataloader
-        self.testloader = torch.utils.data.DataLoader(
-            dataset=self.testset, 
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=collate_fn, 
-            num_workers=4,
-            drop_last=False,
-            pin_memory=True
-            )
-    
 
+    @torch.no_grad()
     def evaluate(self, model, epoch=1):
         # number of groundtruth
         total_num_gts = 0
@@ -61,7 +51,7 @@ class UCF_JHMDB_Evaluator(object):
         total_detected = 0.0
         eps = 1e-5
 
-        epoch_size = len(self.testloader)
+        epoch_size = len(self.testset)
 
         # initalize model
         model.initialization = True
@@ -85,6 +75,9 @@ class UCF_JHMDB_Evaluator(object):
                 # a new video
                 prev_frame_id = frame_id[:-10]
                 model.initialization = True
+
+            # prepare
+            video_clip = video_clip.unsqueeze(0).to(self.device) # [B, 3, T, H, W], B=1
 
             with torch.no_grad():
                 # inference

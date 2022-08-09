@@ -30,7 +30,7 @@ def parse_args():
     # model
     parser.add_argument('-v', '--version', default='yowof-r18', type=str,
                         help='build yowof')
-    parser.add_argument('--weight', default='weight/',
+    parser.add_argument('--weight', default=None,
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
@@ -44,7 +44,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def ucf_jhmdb_eval(device, args, d_cfg, model, transform, collate_fn):
+def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
     evaluator = UCF_JHMDB_Evaluator(
         device=device,
         dataset=args.dataset,
@@ -54,8 +54,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform, collate_fn):
         len_clip=d_cfg['len_clip'],
         conf_thresh=0.1,
         iou_thresh=0.5,
-        transform=transform,
-        collate_fn=collate_fn)
+        transform=transform)
 
     cls_accu, loc_recall = evaluator.evaluate(model)
 
@@ -118,6 +117,5 @@ if __name__ == '__main__':
             args=args,
             d_cfg=d_cfg,
             model=model,
-            transform=basetransform,
-            collate_fn=CollateFunc()
+            transform=basetransform
             )
