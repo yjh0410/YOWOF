@@ -1,14 +1,10 @@
 import argparse
-import cv2
 import os
-import time
-import numpy as np
 import torch
 
-from evaluator.ucf_jhmdb_evaluator import UCFEvaluator
-from evaluator.jhmdb_evaluator import JHMDBEvaluator
+from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
 
-from dataset.transforms import ValTransforms
+from dataset.transforms import BaseTransform
 
 from utils.misc import load_weight
 
@@ -110,11 +106,7 @@ if __name__ == '__main__':
         )
 
     # load trained weight
-    model = load_weight(
-        device=device,
-        model=model, 
-        path_to_ckpt=args.weight
-        )
+    model = load_weight(model=model, path_to_ckpt=args.weight)
 
     # to eval
     model = model.to(device).eval()

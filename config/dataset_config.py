@@ -5,7 +5,7 @@ dataset_config = {
     'ucf24': {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/ucf24',
-        'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/ucf24',
+        # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/ucf24',
         # input
         'train_size': 224,
         'test_size': 224,
@@ -49,11 +49,10 @@ dataset_config = {
                 )
     },
     
-    'jhmdb': {
+    'jhmdb21': {
         # dataset
-        'data_root': '/mnt/share/ssd2/dataset/STAD/JHMDB',
-        # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/JHMDB',
-        'anno_file': 'JHMDB-GT.pkl',
+        'data_root': '/mnt/share/ssd2/dataset/STAD/jhmdb21',
+        'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/jhmdb21',
         'train_split': 1,
         'test_split': 1,
         # input
@@ -63,6 +62,7 @@ dataset_config = {
         'hue': 0.1,
         'saturation': 1.5,
         'exposure': 1.5,
+        'sampling_rate': 1,
         # freeze backbone
         'freeze_backbone_2d': False,
         'freeze_backbone_3d': False,

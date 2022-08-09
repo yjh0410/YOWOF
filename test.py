@@ -59,7 +59,7 @@ def inference(args, model, device, dataset, class_names=None, class_colors=None)
     os.makedirs(save_path, exist_ok=True)
 
     # inference
-    for index in range(len(dataset)):
+    for index in range(6000, len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
         frame_id, video_clip, target = dataset[index]
 
@@ -84,10 +84,12 @@ def inference(args, model, device, dataset, class_names=None, class_colors=None)
         # vis results of key-frame
         key_frame = video_clip[0, :, -1, :, :]
         key_frame = (key_frame * 255).permute(1, 2, 0)
-        key_frame = key_frame.numpy().astype(np.uint8)
+        key_frame = key_frame.cpu().numpy().astype(np.uint8)
+        key_frame = key_frame.copy()[..., (2, 1, 0)]  # to BGR
+        key_frame = cv2.resize(key_frame, orig_size)
 
         vis_results = vis_detection(
-            frame=key_frame.copy()[..., (2, 1, 0)], # to BGR
+            frame=key_frame,
             scores=scores,
             labels=labels,
             bboxes=bboxes,
@@ -161,11 +163,7 @@ if __name__ == '__main__':
         )
 
     # load trained weight
-    model = load_weight(
-        device=device,
-        model=model, 
-        path_to_ckpt=args.weight
-        )
+    model = load_weight(model=model, path_to_ckpt=args.weight)
 
     # to eval
     model = model.to(device).eval()
