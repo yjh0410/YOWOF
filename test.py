@@ -55,10 +55,11 @@ def parse_args():
 @torch.no_grad()
 def inference_with_video_clip(args, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
-    save_path = os.path.join(
-        args.save_folder, args.dataset, 
-        args.version, 'video_clips')
-    os.makedirs(save_path, exist_ok=True)
+    if args.save:
+        save_path = os.path.join(
+            args.save_folder, args.dataset, 
+            args.version, 'video_clips')
+        os.makedirs(save_path, exist_ok=True)
 
     # inference
     for index in range(0, len(dataset)):
@@ -115,10 +116,11 @@ def inference_with_video_clip(args, model, device, dataset, class_names=None, cl
 @torch.no_grad()
 def inference_with_video_stream(args, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
-    save_path = os.path.join(
-        args.save_folder, args.dataset, 
-        args.version, 'video_clips')
-    os.makedirs(save_path, exist_ok=True)
+    if args.save:
+        save_path = os.path.join(
+            args.save_folder, args.dataset, 
+            args.version, 'video_clips')
+        os.makedirs(save_path, exist_ok=True)
 
     # initalize model
     model.initialization = True
