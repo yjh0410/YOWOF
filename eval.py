@@ -24,7 +24,7 @@ def parse_args():
                         help='use cuda.')
     parser.add_argument('-mt', '--metrics', default=['frame_map', 'video_map'], type=str,
                         help='evaluation metrics')
-    parser.add_argument('--save_dir', default='inference_results/',
+    parser.add_argument('--save_path', default='results/',
                         type=str, help='Trained state_dict file path to open')
 
     # model
