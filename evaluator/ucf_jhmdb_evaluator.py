@@ -11,6 +11,7 @@ from .utils import bbox_iou
 
 class UCF_JHMDB_Evaluator(object):
     def __init__(self,
+                 device=None,
                  data_root=None,
                  dataset='ucf24',
                  model_name='yowo',
@@ -24,6 +25,7 @@ class UCF_JHMDB_Evaluator(object):
                  gt_folder=None,
                  dt_folder=None,
                  save_path=None):
+        self.device = device
         self.data_root = data_root
         self.dataset = dataset
         self.model_name = model_name
