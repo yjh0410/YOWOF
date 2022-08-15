@@ -123,9 +123,6 @@ if __name__ == '__main__':
         pixel_mean=d_cfg['pixel_mean'],
         pixel_std=d_cfg['pixel_std'])
 
-    # path to save inference results
-    save_path = os.path.join(args.save_dir, args.dataset)
-
     # run
     if args.dataset in ['ucf24', 'jhmdb21']:
         ucf_jhmdb_eval(
