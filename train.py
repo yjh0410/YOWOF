@@ -213,7 +213,9 @@ def train():
             ni = iter_i + epoch * epoch_size
 
         # evaluation
+        print(epoch)
         if (epoch) % args.eval_epoch == 0 or (epoch + 1) == max_epoch:
+            print(123123123)
             # check evaluator
             model_eval = ema.ema if args.ema else model_without_ddp
             if distributed_utils.is_main_process():
