@@ -8,4 +8,4 @@ python eval.py \
         --save_path ./evaluator/eval_results/ \
         --weight ./weights/ucf24/yowof-r18/yowof-r18_epoch_1_92.5_94.8.pth \
         --cal_mAP \
-        --redo \
+        # --redo \
