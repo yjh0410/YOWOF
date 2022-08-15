@@ -6,7 +6,7 @@ from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
 
 from dataset.transforms import BaseTransform
 
-from utils.misc import load_weight, CollateFunc
+from utils.misc import load_weight
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
