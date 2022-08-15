@@ -36,27 +36,43 @@ def parse_args():
                         help='NMS threshold')
 
     # dataset
-    parser.add_argument('--root', default='/mnt/share/ssd2/dataset',
-                        help='data root')
     parser.add_argument('-d', '--dataset', default='coco',
                         help='coco, voc.')
+
+    # eval
+    parser.add_argument('--gt_folder', default='./evaluator/groundtruth_ucf_jhmdb/groundtruth_ucf/',
+                        type=str, help='path to grouondtruth of ucf & jhmdb')
+    parser.add_argument('--dt_folder', default=None,
+                        type=str, help='path to detection dir')
+    parser.add_argument('--cal_mAP', action='store_true', default=False, 
+                        help='calculate_mAP.')
+    parser.add_argument('--redo', action='store_true', default=False, 
+                        help='re-make inference on testset.')
+
 
     return parser.parse_args()
 
 
 def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
     evaluator = UCF_JHMDB_Evaluator(
-        device=device,
         dataset=args.dataset,
+        model_name=args.version,
         batch_size=args.batch_size,
         data_root=d_cfg['data_root'],
         img_size=d_cfg['test_size'],
         len_clip=d_cfg['len_clip'],
-        conf_thresh=0.1,
+        conf_thresh=0.01,
         iou_thresh=0.5,
-        transform=transform)
+        transform=transform,
+        redo=args.redo,
+        gt_folder=args.gt_folder,
+        dt_folder=args.dt_folder,
+        save_path=args.save_path)
 
-    cls_accu, loc_recall = evaluator.evaluate(model)
+    if args.cal_mAP:
+        evaluator.evaluate_frame_map(model, show_pr_curve=True)
+    else:
+        cls_accu, loc_recall = evaluator.evaluate_accu_recall(model)
 
 
 

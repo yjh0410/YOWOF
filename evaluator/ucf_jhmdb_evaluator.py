@@ -3,29 +3,39 @@ import torch
 
 from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from utils.box_ops import rescale_bboxes
-from .utils import bbox_iou
 from utils.box_ops import rescale_bboxes
+
+from .cal_mAP import get_mAP
+from .utils import bbox_iou
 
 
 class UCF_JHMDB_Evaluator(object):
     def __init__(self,
-                 device,
                  data_root=None,
                  dataset='ucf24',
+                 model_name='yowo',
                  img_size=224,
                  len_clip=1,
                  batch_size=1,
-                 conf_thresh=0.1,
+                 conf_thresh=0.01,
                  iou_thresh=0.5,
                  transform=None,
-                 collate_fn=None):
-        self.device = device
+                 redo=False,
+                 gt_folder=None,
+                 dt_folder=None,
+                 save_path=None):
         self.data_root = data_root
         self.dataset = dataset
+        self.model_name = model_name
         self.img_size = img_size
         self.len_clip = len_clip
         self.conf_thresh = conf_thresh
         self.iou_thresh = iou_thresh
+
+        self.redo = redo
+        self.gt_folder = gt_folder
+        self.dt_folder = dt_folder
+        self.save_path = save_path
 
         # dataset
         self.testset = UCF_JHMDB_Dataset(
@@ -40,7 +50,7 @@ class UCF_JHMDB_Evaluator(object):
 
 
     @torch.no_grad()
-    def evaluate(self, model, epoch=1):
+    def evaluate_accu_recall(self, model, epoch=1):
         # number of groundtruth
         total_num_gts = 0
         proposals   = 0.0
@@ -173,6 +183,27 @@ class UCF_JHMDB_Evaluator(object):
         print("Locolization recall: %.3f" % locolization_recall)
 
         return classification_accuracy, locolization_recall
+
+
+    @torch.no_grad()
+    def evaluate_frame_map(self, model, epoch=1, show_pr_curve=False):
+        if self.redo:
+            (
+                classification_accuracy,
+                locolization_recall,
+                current_dir
+            ) = self.evaluate_accu_recall(model, epoch)
+
+            result_path = current_dir
+        else:
+            result_path = self.dt_folder
+
+        print('calculating Frame mAP ...')
+        metric_list = get_mAP(self.gt_folder, result_path, self.iou_thresh,
+                              self.save_path, self.dataset, show_pr_curve)
+        for metric in metric_list:
+            print(metric)
+
 
 
 if __name__ == "__main__":
