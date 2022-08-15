@@ -188,7 +188,7 @@ class UCF_JHMDB_Evaluator(object):
         print("Classification accuracy: %.3f" % classification_accuracy)
         print("Locolization recall: %.3f" % locolization_recall)
 
-        return classification_accuracy, locolization_recall
+        return classification_accuracy, locolization_recall, current_dir
 
 
     @torch.no_grad()
