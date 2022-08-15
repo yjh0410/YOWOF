@@ -65,7 +65,7 @@ def inference(args, d_cfg, model, device, dataset, class_names=None, class_color
 
     # inference
     prev_frame_id = ''
-    for index in range(6000, len(dataset)):
+    for index in range(0, len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
         frame_id, video_clip, target = dataset[index]
         orig_size = target['orig_size']  # width, height

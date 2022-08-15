@@ -16,9 +16,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='YOWOF')
 
     # basic
-    parser.add_argument('-bs', '--batch_size', default=8, type=int,
-                        help='test batch size')
-    parser.add_argument('-size', '--img_size', default=224, type=int,
+    parser.add_argument('-size', '--img_size', default=320, type=int,
                         help='the size of input frame')
     parser.add_argument('--cuda', action='store_true', default=False, 
                         help='use cuda.')
@@ -58,7 +56,6 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         device=device,
         dataset=args.dataset,
         model_name=args.version,
-        batch_size=args.batch_size,
         data_root=d_cfg['data_root'],
         img_size=d_cfg['test_size'],
         len_clip=d_cfg['len_clip'],

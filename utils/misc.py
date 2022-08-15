@@ -19,13 +19,19 @@ def build_dataset(d_cfg, args, is_train=False):
     """
     # transform
     augmentation = Augmentation(
+        pixel_mean=d_cfg['pixel_mean'],
+        pixel_std=d_cfg['pixel_std'],
         img_size=d_cfg['train_size'],
         jitter=d_cfg['jitter'],
         hue=d_cfg['hue'],
         saturation=d_cfg['saturation'],
         exposure=d_cfg['exposure']
         )
-    basetransform = BaseTransform(img_size=d_cfg['test_size'])
+    basetransform = BaseTransform(
+        pixel_mean=d_cfg['pixel_mean'],
+        pixel_std=d_cfg['pixel_std'],
+        img_size=d_cfg['test_size']
+        )
 
     # dataset
     if args.dataset in ['ucf24', 'jhmdb21']:
@@ -42,7 +48,16 @@ def build_dataset(d_cfg, args, is_train=False):
         num_classes = dataset.num_classes
 
         # evaluator
-        evaluator = None
+        evaluator = UCF_JHMDB_Evaluator(
+            data_root=d_cfg['data_root'],
+            dataset=args.dataset,
+            model_name=args.version,
+            img_size=d_cfg['test_size'],
+            len_clip=d_cfg['len_clip'],
+            conf_thresh=0.01,
+            iou_thresh=0.5,
+            transform=basetransform            
+        )
 
     elif args.dataset == 'ava':
         # dataset

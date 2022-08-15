@@ -194,7 +194,6 @@ def train():
     # training configuration
     max_epoch = d_cfg['max_epoch']
     epoch_size = len(dataloader)
-    best_frame_map = -1.
     warmup = True
 
     # EMA
@@ -313,22 +312,18 @@ def train():
                     model_eval.eval()
 
                     # evaluate
-                    evaluator.evaluate(model_eval)
+                    accu, recall, _ = evaluator.evaluate_accu_recall(model_eval, epoch + 1)
 
-                    cur_frame_map = evaluator.frame_map
-                    if cur_frame_map > best_frame_map:
-                        # update best-map
-                        best_frame_map = cur_frame_map
-                        # save model
-                        print('Saving state, epoch:', epoch + 1)
-                        weight_name = '{}_epoch_{}_{:.2f}.pth'.format(args.version, epoch + 1, best_frame_map)
-                        checkpoint_path = os.path.join(path_to_save, weight_name)
-                        torch.save({'model': model_eval.state_dict(),
-                                    # 'optimizer': optimizer.state_dict(),
-                                    # 'lr_scheduler': lr_scheduler.state_dict(),
-                                    'epoch': epoch,
-                                    'args': args}, 
-                                    checkpoint_path)                      
+                    # save model
+                    print('Saving state, epoch:', epoch + 1)
+                    weight_name = '{}_epoch_{}_{:.1f}_{:.1f}.pth'.format(args.version, epoch+1, accu*100, recall*100)
+                    checkpoint_path = os.path.join(path_to_save, weight_name)
+                    torch.save({'model': model_eval.state_dict(),
+                                # 'optimizer': optimizer.state_dict(),
+                                # 'lr_scheduler': lr_scheduler.state_dict(),
+                                'epoch': epoch,
+                                'args': args}, 
+                                checkpoint_path)                      
 
                     # set train mode.
                     model_eval.trainable = True

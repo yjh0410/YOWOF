@@ -17,7 +17,6 @@ class UCF_JHMDB_Evaluator(object):
                  model_name='yowo',
                  img_size=224,
                  len_clip=1,
-                 batch_size=1,
                  conf_thresh=0.01,
                  iou_thresh=0.5,
                  transform=None,
@@ -67,7 +66,7 @@ class UCF_JHMDB_Evaluator(object):
 
         # initalize model
         model.initialization = True
-        model.stream_infernce = True
+        model.set_inference_mode(mode='stream')
 
         # inference
         prev_frame_id = ''
