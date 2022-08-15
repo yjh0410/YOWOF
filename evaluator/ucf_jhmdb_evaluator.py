@@ -71,9 +71,7 @@ class UCF_JHMDB_Evaluator(object):
         # inference
         prev_frame_id = ''
         for iter_i, (frame_id, video_clip, target) in enumerate(self.testset):
-            # to device
-            video_clip = video_clip.to(self.device)
-
+            # orignal frame size
             orig_size = target['orig_size']  # width, height
 
             # ex: frame_id = Basketball_v_Basketball_g01_c01_00048.txt

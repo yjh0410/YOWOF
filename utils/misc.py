@@ -13,7 +13,7 @@ from dataset.transforms import Augmentation, BaseTransform
 from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
 
 
-def build_dataset(d_cfg, args, is_train=False):
+def build_dataset(device, d_cfg, args, is_train=False):
     """
         d_cfg: dataset config
     """
@@ -50,6 +50,7 @@ def build_dataset(d_cfg, args, is_train=False):
         # evaluator
         evaluator = UCF_JHMDB_Evaluator(
             data_root=d_cfg['data_root'],
+            device=device,
             dataset=args.dataset,
             model_name=args.version,
             img_size=d_cfg['test_size'],
