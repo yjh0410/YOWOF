@@ -185,8 +185,6 @@ class UCF_JHMDB_Evaluator(object):
         print("Classification accuracy: %.3f" % classification_accuracy)
         print("Locolization recall: %.3f" % locolization_recall)
 
-        model.set_inference_mode(mode='clip')
-
         return classification_accuracy, locolization_recall, current_dir
 
 

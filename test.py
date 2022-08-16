@@ -61,7 +61,6 @@ def inference(args, d_cfg, model, device, dataset, class_names=None, class_color
 
     # initalize model
     model.initialization = True
-    model.stream_infernce = True
 
     # inference
     prev_frame_id = ''
@@ -181,6 +180,9 @@ if __name__ == '__main__':
 
     # to eval
     model = model.to(device).eval()
+
+    # set inference mode
+    model.set_inference_mode(mode='stream')
 
     # run
     inference(

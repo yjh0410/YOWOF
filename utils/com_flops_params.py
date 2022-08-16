@@ -3,12 +3,20 @@ from thop import profile
 
 
 def FLOPs_and_Params(model, img_size, len_clip, device):
-    # generate init video clip
-    video_clip = torch.randn(1, 3, len_clip, img_size, img_size).to(device)
-
     # set eval mode
     model.trainable = False
     model.eval()
+
+    # initalize model
+    model.initialization = True
+    model.set_inference_mode(mode='stream')
+
+    # generate init video clip
+    video_clip = torch.randn(1, 3, len_clip, img_size, img_size).to(device)
+    outputs = model(video_clip)
+
+    # generate a new frame
+    video_clip = torch.randn(1, 3, len_clip, img_size, img_size).to(device)
 
     print('==============================')
     flops, params = profile(model, inputs=(video_clip, ))
