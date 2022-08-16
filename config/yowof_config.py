@@ -13,10 +13,10 @@ yowof_config = {
         'conv_lstm_nl': 2,
         'conv_lstm_di': 1,
         # head
-        'head_dim': 256,
+        'head_dim': 512,
         'head_norm': 'BN',
         'head_act': 'relu',
-        'num_cls_heads': 4,
+        'num_cls_heads': 2,
         'num_reg_heads': 4,
         'head_depthwise': False,
         # post process

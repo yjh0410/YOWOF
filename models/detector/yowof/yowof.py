@@ -6,6 +6,8 @@ import torch.nn as nn
 from ...backbone import build_backbone
 from ...head.decoupled_head import DecoupledHead
 from ...basic.convlstm import ConvLSTM
+
+from .encoder import SpatialEncoder, ChannelEncoder
 from .loss import Criterion
 
 
@@ -53,15 +55,31 @@ class YOWOF(nn.Module):
             res5_dilation=cfg['res5_dilation']
             )
 
-        # ConvLSTM
-        self.stm_encoder = ConvLSTM(
+        # Temporal Encoder
+        self.temporal_encoder = ConvLSTM(
             in_dim=bk_dim,
-            hidden_dim=cfg['head_dim'],
+            hidden_dim=256,
             kernel_size=cfg['conv_lstm_ks'],
             dilation=cfg['conv_lstm_di'],
             num_layers=cfg['conv_lstm_nl'],
             return_all_layers=False,
             inf_full_seq=trainable
+        )
+
+        # Spatial Encoder
+        self.spatial_encoder = SpatialEncoder(
+            in_dim=bk_dim,
+            out_dim=512,
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
+        )
+
+        # Channel Encoder
+        self.channel_encoder = ChannelEncoder(
+            in_dim=512 + 256,
+            out_dim=cfg['head_dim'],
+            act_type=cfg['head_act'],
+            norm_type=cfg['head_norm']
         )
 
         # head
@@ -222,10 +240,10 @@ class YOWOF(nn.Module):
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
             self.stream_infernce = True
-            self.stm_encoder.inf_full_seq = False
+            self.temporal_encoder.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
-            self.stm_encoder.inf_full_seq = True
+            self.temporal_encoder.inf_full_seq = True
 
 
     def inference_video_clip(self, video_clips):
@@ -238,12 +256,20 @@ class YOWOF(nn.Module):
 
             backbone_feats.append(feat)
 
-        # spatio-temporal-motion encoder
-        feat, _ = self.stm_encoder(backbone_feats)
-        key_feat = feat[-1][-1]
+        # temporal encoder
+        feat, _ = self.temporal_encoder(backbone_feats)
+        t_feat = feat[-1][-1]  # the last output of the last layer
 
-        # head
-        cls_feats, reg_feats = self.head(key_feat)
+        # spatial encoder
+        s_feat = backbone_feats[-1]
+        s_feat = self.spatial_encoder(s_feat)
+
+        # channel encoder
+        c_feat = torch.cat([s_feat, t_feat], dim=1)
+        c_feat = self.channel_encoder(c_feat)
+
+        # detection head
+        cls_feats, reg_feats = self.head(c_feat)
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -310,11 +336,18 @@ class YOWOF(nn.Module):
         del self.clip_feats[0]
 
         # spatio-temporal-motion encoder
-        cur_feat, _ = self.stm_encoder(self.clip_feats)
-        key_frame = cur_feat[-1]
+        cur_feat, _ = self.temporal_encoder(self.clip_feats)
+        t_feat = cur_feat[-1]
 
-        # head
-        cls_feats, reg_feats = self.head(key_frame)
+        # spatial encoder
+        s_feat = self.spatial_encoder(cur_bk_feat)
+
+        # channel encoder
+        c_feat = torch.cat([s_feat, t_feat], dim=1)
+        c_feat = self.channel_encoder(c_feat)
+
+        # detection head
+        cls_feats, reg_feats = self.head(c_feat)
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -385,7 +418,7 @@ class YOWOF(nn.Module):
                 # and output results of per frame
 
                 # check state of convlstm
-                self.stm_encoder.initialization = True
+                self.temporal_encoder.initialization = True
 
                 (   
                     clip_feats,
@@ -422,12 +455,20 @@ class YOWOF(nn.Module):
 
                 backbone_feats.append(feat)
 
-            # spatio-temporal-motion encoder
-            feat, _ = self.stm_encoder(backbone_feats)
-            key_frame = feat[-1][-1]  # the last output of the last layer
+            # temporal encoder
+            feat, _ = self.temporal_encoder(backbone_feats)
+            t_feat = feat[-1][-1]  # the last output of the last layer
+
+            # spatial encoder
+            s_feat = backbone_feats[-1]
+            s_feat = self.spatial_encoder(s_feat)
+
+            # channel encoder
+            c_feat = torch.cat([s_feat, t_feat], dim=1)
+            c_feat = self.channel_encoder(c_feat)
 
             # detection head
-            cls_feats, reg_feats = self.head(key_frame)
+            cls_feats, reg_feats = self.head(c_feat)
 
             obj_pred = self.obj_pred_(reg_feats)
             cls_pred = self.cls_pred_(cls_feats)
