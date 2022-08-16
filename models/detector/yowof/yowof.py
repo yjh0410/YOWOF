@@ -335,7 +335,7 @@ class YOWOF(nn.Module):
         # delete the oldest feature
         del self.clip_feats[0]
 
-        # spatio-temporal-motion encoder
+        # temporal encoder
         cur_feat, _ = self.temporal_encoder(self.clip_feats)
         t_feat = cur_feat[-1]
 
