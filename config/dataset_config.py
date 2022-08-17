@@ -27,7 +27,7 @@ dataset_config = {
         'max_epoch': 5,
         'lr_epoch': [1, 2, 3, 4],
         'base_lr': 1e-4,
-        'lr_decay_ratio': 0.1,
+        'lr_decay_ratio': 0.5,
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,

@@ -56,30 +56,14 @@ class YOWOF(nn.Module):
             )
 
         # Temporal Encoder
-        self.temporal_encoder = ConvLSTM(
+        self.stm_encoder = ConvLSTM(
             in_dim=bk_dim,
-            hidden_dim=256,
+            hidden_dim=cfg['head_dim'],
             kernel_size=cfg['conv_lstm_ks'],
             dilation=cfg['conv_lstm_di'],
             num_layers=cfg['conv_lstm_nl'],
             return_all_layers=False,
             inf_full_seq=trainable
-        )
-
-        # Spatial Encoder
-        self.spatial_encoder = SpatialEncoder(
-            in_dim=bk_dim,
-            out_dim=512,
-            act_type=cfg['head_act'],
-            norm_type=cfg['head_norm']
-        )
-
-        # Channel Encoder
-        self.channel_encoder = ChannelEncoder(
-            in_dim=512 + 256,
-            out_dim=cfg['head_dim'],
-            act_type=cfg['head_act'],
-            norm_type=cfg['head_norm']
         )
 
         # head
@@ -240,10 +224,10 @@ class YOWOF(nn.Module):
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
             self.stream_infernce = True
-            self.temporal_encoder.inf_full_seq = False
+            self.stm_encoder.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
-            self.temporal_encoder.inf_full_seq = True
+            self.stm_encoder.inf_full_seq = True
 
 
     def inference_video_clip(self, video_clips):
@@ -257,19 +241,11 @@ class YOWOF(nn.Module):
             backbone_feats.append(feat)
 
         # temporal encoder
-        feat, _ = self.temporal_encoder(backbone_feats)
-        t_feat = feat[-1][-1]  # the last output of the last layer
-
-        # spatial encoder
-        s_feat = backbone_feats[-1]
-        s_feat = self.spatial_encoder(s_feat)
-
-        # channel encoder
-        c_feat = torch.cat([s_feat, t_feat], dim=1)
-        c_feat = self.channel_encoder(c_feat)
+        feats, _ = self.stm_encoder(backbone_feats)
+        feat = feats[-1][-1]  # the last output of the last layer
 
         # detection head
-        cls_feats, reg_feats = self.head(c_feat)
+        cls_feats, reg_feats = self.head(feat)
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -336,18 +312,11 @@ class YOWOF(nn.Module):
         del self.clip_feats[0]
 
         # temporal encoder
-        cur_feat, _ = self.temporal_encoder(self.clip_feats)
-        t_feat = cur_feat[-1]
-
-        # spatial encoder
-        s_feat = self.spatial_encoder(cur_bk_feat)
-
-        # channel encoder
-        c_feat = torch.cat([s_feat, t_feat], dim=1)
-        c_feat = self.channel_encoder(c_feat)
+        cur_feats, _ = self.stm_encoder(self.clip_feats)
+        feat = cur_feats[-1]
 
         # detection head
-        cls_feats, reg_feats = self.head(c_feat)
+        cls_feats, reg_feats = self.head(feat)
 
         obj_pred = self.obj_pred_(reg_feats)
         cls_pred = self.cls_pred_(cls_feats)
@@ -418,7 +387,7 @@ class YOWOF(nn.Module):
                 # and output results of per frame
 
                 # check state of convlstm
-                self.temporal_encoder.initialization = True
+                self.stm_encoder.initialization = True
 
                 (   
                     clip_feats,
@@ -456,19 +425,11 @@ class YOWOF(nn.Module):
                 backbone_feats.append(feat)
 
             # temporal encoder
-            feat, _ = self.temporal_encoder(backbone_feats)
-            t_feat = feat[-1][-1]  # the last output of the last layer
-
-            # spatial encoder
-            s_feat = backbone_feats[-1]
-            s_feat = self.spatial_encoder(s_feat)
-
-            # channel encoder
-            c_feat = torch.cat([s_feat, t_feat], dim=1)
-            c_feat = self.channel_encoder(c_feat)
+            feats, _ = self.stm_encoder(backbone_feats)
+            feat = feats[-1][-1]  # the last output of the last layer
 
             # detection head
-            cls_feats, reg_feats = self.head(c_feat)
+            cls_feats, reg_feats = self.head(feat)
 
             obj_pred = self.obj_pred_(reg_feats)
             cls_pred = self.cls_pred_(cls_feats)
