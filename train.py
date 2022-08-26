@@ -16,7 +16,7 @@ import torch.cuda.amp as amp
 
 from utils import distributed_utils
 from utils.com_flops_params import FLOPs_and_Params
-from utils.misc import CollateFunc, build_dataset, build_dataloader, ModelEMA
+from utils.misc import CollateFunc, build_dataset, build_dataloader
 from utils.solver.optimizer import build_optimizer
 from utils.solver.warmup_schedule import build_warmup
 
@@ -56,14 +56,10 @@ def parse_args():
     # Model
     parser.add_argument('-v', '--version', default='yowof-r18', type=str,
                         help='build spatio-temporal action detector')
-    parser.add_argument('--topk', default=40, type=int,
+    parser.add_argument('--topk', default=50, type=int,
                         help='topk candidates for evaluation')
-    parser.add_argument('-p', '--coco_pretrained', default=None, type=str,
-                        help='coco pretrained weight')
     parser.add_argument('-r', '--resume', default=None, type=str,
                         help='keep training')
-    parser.add_argument('--ema', dest="ema", action="store_true", default=False,
-                        help="use model EMA.")
 
     # Dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
@@ -196,12 +192,6 @@ def train():
     epoch_size = len(dataloader)
     warmup = True
 
-    # EMA
-    if args.ema:
-        print('use EMA ...')
-        ema = ModelEMA(model, start_epoch*epoch_size)
-    else:
-        ema = None
 
     t0 = time.time()
     for epoch in range(start_epoch, max_epoch):
@@ -233,6 +223,7 @@ def train():
                 loss_dict = model(video_clips, targets=targets)
                 
             losses = loss_dict['losses']
+            losses = losses / d_cfg['accumulate']
 
             # reduce            
             loss_dict_reduced = distributed_utils.reduce_dict(loss_dict)
@@ -244,7 +235,7 @@ def train():
 
             # Backward and Optimize
             if args.fp16:
-                scaler.scale(losses / d_cfg['accumulate']).backward()
+                scaler.scale(losses).backward()
 
                 # Optimize
                 if ni % d_cfg['accumulate'] == 0:
@@ -254,16 +245,12 @@ def train():
                     
             else:
                 # Backward
-                (losses / d_cfg['accumulate']).backward()
+                losses.backward()
 
                 # Optimize
                 if ni % d_cfg['accumulate'] == 0:
                     optimizer.step()
                     optimizer.zero_grad()
-
-            # ema
-            if args.ema:
-                ema.update(model)
 
             # Display
             if distributed_utils.is_main_process() and iter_i % 10 == 0:
@@ -291,7 +278,7 @@ def train():
         # evaluation
         if (epoch + 1) % args.eval_epoch == 0 or (epoch + 1) == max_epoch:
             # check evaluator
-            model_eval = ema.ema if args.ema else model_without_ddp
+            model_eval = model_without_ddp
             if distributed_utils.is_main_process():
                 if evaluator is None:
                     print('No evaluator ... save model and go on training.')
@@ -312,15 +299,20 @@ def train():
                     model_eval.eval()
 
                     # evaluate
-                    accu, recall, _ = evaluator.evaluate_accu_recall(model_eval, epoch + 1)
+                    if args.dataset in ['ucf24', 'jhmdb21']:
+                        evaluator.evaluate_accu_recall(model_eval, epoch + 1)
+                    elif args.dataset in ['ava_v2.2']:
+                        evaluator.evaluate_frame_map(model_eval, epoch + 1)
+                        
+                    # set train mode.
+                    model_eval.trainable = True
+                    model_eval.train()
 
                     # save model
                     print('Saving state, epoch:', epoch + 1)
-                    weight_name = '{}_epoch_{}_{:.1f}_{:.1f}.pth'.format(args.version, epoch+1, accu*100, recall*100)
+                    weight_name = '{}_epoch_{}.pth'.format(args.version, epoch+1)
                     checkpoint_path = os.path.join(path_to_save, weight_name)
                     torch.save({'model': model_eval.state_dict(),
-                                # 'optimizer': optimizer.state_dict(),
-                                # 'lr_scheduler': lr_scheduler.state_dict(),
                                 'epoch': epoch,
                                 'args': args}, 
                                 checkpoint_path)                      

@@ -1,10 +1,10 @@
+from math import gamma
 import torch
 import torch.nn as nn
-from .matcher import UniformMatcher
-from utils.box_ops import box_iou, generalized_box_iou, box_cxcywh_to_xyxy, rescale_bboxes
-from utils.misc import Sigmoid_FocalLoss
+from .matcher import YoloMatcher
+from utils.box_ops import get_ious
+from utils.misc import AVA_FocalLoss, Softmax_FocalLoss
 from utils.vis_tools import vis_targets
-from utils.distributed_utils import get_world_size, is_dist_avail_and_initialized
 
 
 
@@ -12,142 +12,135 @@ class Criterion(object):
     def __init__(self, 
                  cfg, 
                  device,
-                 img_size=224,
-                 alpha=0.25,
-                 gamma=2.0,
+                 anchor_size,
+                 num_anchors,
+                 num_classes,
+                 multi_hot=False,
+                 loss_obj_weight=5.0,
+                 loss_noobj_weight=1.0,
                  loss_cls_weight=1.0, 
-                 loss_reg_weight=1.0, 
-                 num_classes=80):
+                 loss_reg_weight=1.0):
         self.cfg = cfg
         self.device = device
-        self.img_size = img_size
-        self.alpha = alpha
-        self.gamma = gamma
+        self.anchor_size = anchor_size
+        self.num_anchors = num_anchors
         self.num_classes = num_classes
+        self.multi_hot = multi_hot
+        self.loss_obj_weight = loss_obj_weight
+        self.loss_noobj_weight = loss_noobj_weight
         self.loss_cls_weight = loss_cls_weight
         self.loss_reg_weight = loss_reg_weight
-        # matcher
-        self.matcher = UniformMatcher(match_times=cfg['topk'])
-        # loss
-        self.cls_loss = Sigmoid_FocalLoss(alpha=alpha, gamma=gamma, reduction='none')
+
+        # Matcher
+        self.matcher = YoloMatcher(
+            num_classes=num_classes,
+            num_anchors=num_anchors,
+            anchor_size=anchor_size,
+            iou_thresh=cfg['ignore_thresh'],
+            multi_hot=multi_hot
+            )
+        
+        # Loss
+        self.conf_loss = nn.MSELoss(reduction='none')
+        if multi_hot:
+            self.cls_loss = AVA_FocalLoss(device, 0.5, num_classes, reduction='none')
+        else:
+            # self.cls_loss = nn.CrossEntropyLoss(reduction='none')
+            self.cls_loss = Softmax_FocalLoss(num_classes=num_classes, gamma=2.0, reduction='none')
 
 
-    def __call__(self, outputs, targets):
+    def __call__(self, 
+                 outputs, 
+                 targets, 
+                 video_clips=None, 
+                 vis_data=False):
         """
-            outputs['cls_preds']: List[Tensor] -> [[B, M, C], ...]
-            outputs['box_preds']: List[Tensor] -> [[B, M, 4], ...]
-            outputs['strides']: Int -> stride of the model output
+            outputs['conf_pred']: [B, M, 1]
+            outputs['cls_pred']: [B, M, C]
+            outputs['box_pred]: [B, M, 4]
+            outputs['stride']: Int -> stride of the model output
+            anchor_size: (Tensor) [K, 2]
             targets: List[List] -> [List[B, N, 6], 
                                     ...,
                                     List[B, N, 6]],
-        """            
-        box_pred = outputs['box_preds']
-        cls_pred = outputs['cls_preds']
-        anchor_boxes = outputs['anchors']
-        batch_size = len(targets)
+            video_clips: Lits[Tensor] -> [Tensor[B, C, H, W], 
+                                          ..., 
+                                          Tensor[B, C, H, W]]
+        """
+        if vis_data:
+            # To DO: 
+            # vis video clip and targets
+            vis_targets(video_clips, targets)
 
-        # rescale tgt box
-        rescale_tgt = []
-        for tgt in targets:
-            tgt['boxes'] = tgt['boxes'] * self.img_size
-            rescale_tgt.append(tgt)
-        targets = rescale_tgt
-        
-        # copy pred data
-        box_pred_copy = box_pred.detach().clone().cpu()
-        anchor_boxes_copy = anchor_boxes.clone().cpu()
+        # target of key-frame
+        device = outputs['conf_pred'].device
+        batch_size = outputs['conf_pred'].shape[0]
 
         # Matcher for this frame
-        indices = self.matcher(
-            pred_boxes = box_pred_copy,
-            anchor_boxes = anchor_boxes_copy,
-            targets = targets)
+        (
+            gt_conf, 
+            gt_cls, 
+            gt_bboxes
+            ) = self.matcher(img_size=outputs['img_size'], 
+                             stride=outputs['stride'], 
+                             targets=targets)
 
-        # convert cxcywh to x1y1x2y2
-        anchor_boxes_copy = box_cxcywh_to_xyxy(anchor_boxes_copy)
+        pred_conf = outputs['conf_pred'].view(-1)                  # [BM,]
+        pred_cls = outputs['cls_pred'].view(-1, self.num_classes)  # [BM, C]
+        pred_box = outputs['box_pred'].view(-1, 4)                 # [BM, 4]
+        
+        gt_conf = gt_conf.flatten().to(device).float()                     # [BM,]
+        gt_bboxes = gt_bboxes.view(-1, 4).to(device).float()               # [BM, 4]
+        if self.multi_hot:
+            gt_cls = gt_cls.view(-1, self.num_classes).to(device).long()  # [BM, C]
+        else:
+            gt_cls = gt_cls.flatten().to(device).long()                    # [BM,]
 
-        # [M, 4] -> [1, M, 4] -> [B, M, 4]
-        anchor_boxes_copy = anchor_boxes_copy[None].repeat(batch_size, 1, 1)
+        # fore mask
+        foreground_mask = (gt_conf > 0.)
 
-        ious = []
-        pos_ious = []
-        for batch_index in range(batch_size):
-            src_idx, tgt_idx = indices[batch_index]
-            # iou between predbox and tgt box
-            iou, _ = box_iou(box_pred_copy[batch_index, ...], 
-                                targets[batch_index]['boxes'].clone())
-            if iou.numel() == 0:
-                max_iou = iou.new_full((iou.size(0),), 0)
-            else:
-                max_iou = iou.max(dim=1)[0]
+        # box loss
+        matched_pred_box = pred_box[foreground_mask]
+        matched_tgt_box = gt_bboxes[foreground_mask]
+        ious = get_ious(matched_pred_box,
+                        matched_tgt_box,
+                        box_mode="xyxy",
+                        iou_type='giou')
+        loss_box = (1.0 - ious).sum() / batch_size * self.loss_reg_weight
 
-            # iou between anchorbox and tgt box
-            a_iou, _ = box_iou(anchor_boxes_copy[batch_index], 
-                                targets[batch_index]['boxes'].clone())
-            if a_iou.numel() == 0:
-                pos_iou = a_iou.new_full((0,), 0)
-            else:
-                pos_iou = a_iou[src_idx, tgt_idx]
-            ious.append(max_iou)
-            pos_ious.append(pos_iou)
+        # cls loss
+        matched_pred_cls = pred_cls[foreground_mask]
+        matched_tgt_cls = gt_cls[foreground_mask]
+        loss_cls = self.cls_loss(matched_pred_cls, matched_tgt_cls)
+        loss_cls = loss_cls.sum() / batch_size * self.loss_cls_weight
 
-        ious = torch.cat(ious)
-        ignore_idx = ious > self.cfg['igt']
-        pos_ious = torch.cat(pos_ious)
-        pos_ignore_idx = pos_ious < self.cfg['iou_t']
-
-        src_idx = torch.cat(
-            [src + idx * anchor_boxes_copy[0].shape[0] for idx, (src, _) in
-            enumerate(indices)])
-        # [BM,]
-        cls_pred = cls_pred.view(-1, self.num_classes)
-        gt_cls = torch.full(cls_pred.shape[:1],
-                            self.num_classes,
-                            dtype=torch.int64,
-                            device=self.device)
-        gt_cls[ignore_idx] = -1
-        tgt_cls_o = torch.cat([t['labels'][J] for t, (_, J) in zip(targets, indices)])
-        tgt_cls_o[pos_ignore_idx] = -1
-
-        gt_cls[src_idx] = tgt_cls_o.to(self.device)
-
-        foreground_idxs = (gt_cls >= 0) & (gt_cls != self.num_classes)
-        num_foreground = foreground_idxs.sum()
-
-        if is_dist_avail_and_initialized():
-            torch.distributed.all_reduce(num_foreground)
-        num_foreground = torch.clamp(num_foreground / get_world_size(), min=1).item()
-
-        # class loss
-        valid_idxs = gt_cls >= 0
-        gt_cls_target = torch.zeros_like(cls_pred)
-        gt_cls_target[foreground_idxs, gt_cls[foreground_idxs]] = 1
-        key_frame_loss_labels = self.cls_loss(cls_pred[valid_idxs], gt_cls_target[valid_idxs])
-        loss_labels = key_frame_loss_labels.sum() / num_foreground
-
-        # bbox loss
-        tgt_boxes = torch.cat([t['boxes'][i]
-                                    for t, (_, i) in zip(targets, indices)], dim=0).to(self.device)
-        tgt_boxes = tgt_boxes[~pos_ignore_idx]
-        matched_pred_box = box_pred.reshape(-1, 4)[src_idx[~pos_ignore_idx]]
-        # giou
-        gious = generalized_box_iou(matched_pred_box, tgt_boxes)  # [N, M]
-        # giou loss
-        key_frame_loss_bboxes = 1. - torch.diag(gious)
-        loss_bboxes = key_frame_loss_bboxes.sum() / num_foreground
+        # conf loss
+        ## obj & noobj
+        obj_mask = (gt_conf > 0.)
+        noobj_mask = (gt_conf == 0.)
+        ## gt conf with iou-aware
+        gt_ious = torch.zeros_like(gt_conf)
+        gt_ious[foreground_mask] = ious.clone().detach().clamp(0.)
+        gt_conf = gt_conf * gt_ious
+        ## weighted loss of conf
+        loss = self.conf_loss(pred_conf.sigmoid(), gt_conf)
+        loss_conf = loss * obj_mask * self.loss_obj_weight + \
+                    loss * noobj_mask * self.loss_noobj_weight
+        loss_conf = loss_conf.sum() / batch_size
 
         # total loss
-        losses = self.loss_cls_weight * loss_labels + \
-                 self.loss_reg_weight * loss_bboxes
+        losses = loss_conf + loss_cls + loss_box
 
+        
         loss_dict = dict(
-                loss_labels = loss_labels,
-                loss_bboxes = loss_bboxes,
+                loss_conf = loss_conf,
+                loss_cls = loss_cls,
+                loss_box = loss_box,
                 losses = losses
         )
 
         return loss_dict
-
+    
 
 if __name__ == "__main__":
     pass

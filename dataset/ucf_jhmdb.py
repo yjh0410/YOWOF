@@ -114,8 +114,8 @@ class UCF_JHMDB_Dataset(Dataset):
             
         # transform
         video_clip, target = self.transform(video_clip, target)
-        # List [T, 3, H, W] -> [3, T, H, W]
-        video_clip = torch.stack(video_clip, dim=1)
+        # List [T, 3, H, W] -> [T, 3, H, W]
+        video_clip = torch.stack(video_clip)
 
         # reformat target
         target = {
@@ -167,7 +167,7 @@ if __name__ == '__main__':
     print(len(train_dataset))
     for i in range(len(train_dataset)):
         frame_id, video_clip, target = train_dataset[i]
-        key_frame = video_clip[:, -1, :, :]
+        key_frame = video_clip[-1]
 
         key_frame = key_frame.permute(1, 2, 0).numpy()
         key_frame = (key_frame * trans_config['pixel_std'] + trans_config['pixel_mean']) * 255

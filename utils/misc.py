@@ -1,16 +1,16 @@
-from random import shuffle
+import json
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from copy import deepcopy
-import math
-
 from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
+from dataset.ava import AVA_Dataset
 from dataset.transforms import Augmentation, BaseTransform
 
 from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
+from evaluator.ava_evaluator import AVA_Evaluator
 
 
 def build_dataset(device, d_cfg, args, is_train=False):
@@ -19,18 +19,18 @@ def build_dataset(device, d_cfg, args, is_train=False):
     """
     # transform
     augmentation = Augmentation(
+        img_size=d_cfg['train_size'],
         pixel_mean=d_cfg['pixel_mean'],
         pixel_std=d_cfg['pixel_std'],
-        img_size=d_cfg['train_size'],
         jitter=d_cfg['jitter'],
         hue=d_cfg['hue'],
         saturation=d_cfg['saturation'],
         exposure=d_cfg['exposure']
         )
     basetransform = BaseTransform(
+        img_size=d_cfg['test_size'],
         pixel_mean=d_cfg['pixel_mean'],
         pixel_std=d_cfg['pixel_std'],
-        img_size=d_cfg['test_size']
         )
 
     # dataset
@@ -49,27 +49,43 @@ def build_dataset(device, d_cfg, args, is_train=False):
 
         # evaluator
         evaluator = UCF_JHMDB_Evaluator(
-            data_root=d_cfg['data_root'],
             device=device,
+            data_root=d_cfg['data_root'],
             dataset=args.dataset,
             model_name=args.version,
             img_size=d_cfg['test_size'],
             len_clip=d_cfg['len_clip'],
             conf_thresh=0.01,
             iou_thresh=0.5,
-            transform=basetransform            
+            transform=basetransform          
         )
 
-    elif args.dataset == 'ava':
+    elif args.dataset == 'ava_v2.2':
         # dataset
-        dataset = None
-        num_classes = None
+        dataset = AVA_Dataset(
+            cfg=d_cfg,
+            is_train=True,
+            img_size=d_cfg['train_size'],
+            transform=augmentation,
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
+        )
+        num_classes = 80
 
         # evaluator
-        evaluator = None
+        evaluator = AVA_Evaluator(
+            d_cfg=d_cfg,
+            img_size=d_cfg['test_size'],
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate'],
+            transform=basetransform,
+            collate_fn=CollateFunc(),
+            full_test_on_val=False,
+            version='v2.2'
+            )
 
     else:
-        print('unknow dataset !! Only support UCF24 and JHMDB !!')
+        print('unknow dataset !! Only support ucf24 & jhmdb21 & ava_v2.2 !!')
         exit(0)
 
     print('==============================')
@@ -142,11 +158,6 @@ def load_weight(model, path_to_ckpt=None):
     return model
 
 
-def is_parallel(model):
-    # Returns True if model is of type DP or DDP
-    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
-
-
 class CollateFunc(object):
     def __call__(self, batch):
         batch_frame_id = []
@@ -162,63 +173,65 @@ class CollateFunc(object):
             batch_video_clips.append(video_clip)
             batch_key_target.append(key_target)
 
-        # List [B, 3, T, H, W] -> [B, 3, T, H, W]
+        # List [B, T, 3, H, W] -> [B, T, 3, H, W]
         batch_video_clips = torch.stack(batch_video_clips)
         
         return batch_frame_id, batch_video_clips, batch_key_target
 
 
-class ModelEMA(object):
-    def __init__(self, model, decay=0.9999, updates=0):
-        # create EMA
-        self.ema = deepcopy(model.module if is_parallel(model) else model).eval()  # FP32 EMA
-        self.updates = updates
-        self.decay = lambda x: decay * (1 - math.exp(-x / 2000.))
-        for p in self.ema.parameters():
-            p.requires_grad_(False)
-
-    def update(self, model):
-        # Update EMA parameters
-        with torch.no_grad():
-            self.updates += 1
-            d = self.decay(self.updates)
-
-            msd = model.module.state_dict() if is_parallel(model) else model.state_dict()  # model state_dict
-            for k, v in self.ema.state_dict().items():
-                if v.dtype.is_floating_point:
-                    v *= d
-                    v += (1. - d) * msd[k].detach()
-
-
-class Sigmoid_FocalLoss(object):
-    def __init__(self, alpha=0.25, gamma=2.0, reduction='none'):
-        self.alpha = alpha
+class AVA_FocalLoss(object):
+    """ Focal loss for AVA"""
+    def __init__(self, device, gamma, num_classes, reduction='none'):
+        with open('config/ava_categories_ratio.json', 'r') as fb:
+            self.class_ratio = json.load(fb)
+        self.device = device
         self.gamma = gamma
+        self.num_classes = num_classes
         self.reduction = reduction
+        self.class_weight = torch.zeros(80).to(device)
+        self._init_class_weight()
 
-        
+
+    def _init_class_weight(self):
+        for i in range(1, 81):
+            self.class_weight[i - 1] = 1 - self.class_ratio[str(i)]
+
+
     def __call__(self, logits, targets):
-        p = torch.sigmoid(logits)
-        ce_loss = F.binary_cross_entropy_with_logits(input=logits, 
-                                                        target=targets, 
-                                                        reduction="none")
-        p_t = p * targets + (1.0 - p) * (1.0 - targets)
-        loss = ce_loss * ((1.0 - p_t) ** self.gamma)
+        '''
+        inputs: (N, C) -- result of sigmoid
+        targets: (N, C) -- one-hot variable
+        '''
+        # process class pred
+        inputs1 = torch.clamp(torch.softmax(logits[..., :14], dim=-1), min=1e-4, max=1 - 1e-4)
+        inputs2 = torch.clamp(torch.sigmoid(logits[..., 14:]), min=1e-4, max=1 - 1e-4)
 
-        if self.alpha >= 0:
-            alpha_t = self.alpha * targets + (1.0 - self.alpha) * (1.0 - targets)
-            loss = alpha_t * loss
+        inputs = torch.cat([inputs1, inputs2], dim=-1)
 
-        if self.reduction == "mean":
-            loss = loss.mean()
+        # weight matrix
+        weight_matrix = self.class_weight.expand(logits.size(0), self.num_classes)
+        weight_p1 = torch.exp(weight_matrix[targets == 1])
+        weight_p0 = torch.exp(1 - weight_matrix[targets == 0])
 
-        elif self.reduction == "sum":
+        # pos & neg output
+        p_1 = inputs[targets == 1]
+        p_0 = inputs[targets == 0]
+
+        # loss
+        loss1 = torch.pow(1 - p_1, self.gamma) * torch.log(p_1) * weight_p1
+        loss2 = torch.pow(p_0, self.gamma) * torch.log(1 - p_0) * weight_p0
+        loss = -loss1.sum() - loss2.sum()
+
+        if self.reduction == 'sum':
             loss = loss.sum()
+        elif self.reduction == 'mean':
+            loss = loss.mean()
 
         return loss
 
 
 class Softmax_FocalLoss(nn.Module):
+    """ Focal loss for UCF24 & JHMDB21"""
     def __init__(self, num_classes, alpha=None, gamma=2.0, reduction='none'):
         super(Softmax_FocalLoss, self).__init__()
         if alpha is None:
@@ -229,7 +242,7 @@ class Softmax_FocalLoss(nn.Module):
             else:
                 self.alpha = Variable(alpha)
         self.gamma = gamma
-        self.class_num = num_classes
+        self.num_classes = num_classes
         self.reduction = reduction
 
 

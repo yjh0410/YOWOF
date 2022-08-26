@@ -1,107 +1,154 @@
 import numpy as np
 import torch
-from utils.box_ops import box_xyxy_to_cxcywh
 
 
-class UniformMatcher(object):
-    """
-    Uniform Matching between the anchors and gt boxes, which can achieve
-    balance in positive anchors.
-    Args:
-        match_times(int): Number of positive anchors for each gt box.
-    """
+class YoloMatcher(object):
+    def __init__(self, num_classes, num_anchors, anchor_size, iou_thresh, multi_hot=False):
+        self.num_classes = num_classes
+        self.num_anchors = num_anchors
+        self.iou_thresh = iou_thresh
+        self.multi_hot = multi_hot
+        self.anchor_boxes = np.array(
+            [[0., 0., anchor[0], anchor[1]]
+            for anchor in anchor_size]
+            )  # [KA, 4]
 
-    def __init__(self, match_times: int = 4):
-        self.match_times = match_times
+
+    def compute_iou(self, anchor_boxes, gt_box):
+        """
+            anchor_boxes : ndarray -> [KA, 4] (cx, cy, bw, bh).
+            gt_box : ndarray -> [1, 4] (cx, cy, bw, bh).
+        """
+        # anchors: [KA, 4]
+        anchors = np.zeros_like(anchor_boxes)
+        anchors[..., :2] = anchor_boxes[..., :2] - anchor_boxes[..., 2:] * 0.5  # x1y1
+        anchors[..., 2:] = anchor_boxes[..., :2] + anchor_boxes[..., 2:] * 0.5  # x2y2
+        anchors_area = anchor_boxes[..., 2] * anchor_boxes[..., 3]
+        
+        # gt_box: [1, 4] -> [KA, 4]
+        gt_box = np.array(gt_box).reshape(-1, 4)
+        gt_box = np.repeat(gt_box, anchors.shape[0], axis=0)
+        gt_box_ = np.zeros_like(gt_box)
+        gt_box_[..., :2] = gt_box[..., :2] - gt_box[..., 2:] * 0.5  # x1y1
+        gt_box_[..., 2:] = gt_box[..., :2] + gt_box[..., 2:] * 0.5  # x2y2
+        gt_box_area = np.prod(gt_box[..., 2:] - gt_box[..., :2], axis=1)
+
+        # intersection
+        inter_w = np.minimum(anchors[:, 2], gt_box_[:, 2]) - \
+                  np.maximum(anchors[:, 0], gt_box_[:, 0])
+        inter_h = np.minimum(anchors[:, 3], gt_box_[:, 3]) - \
+                  np.maximum(anchors[:, 1], gt_box_[:, 1])
+        inter_area = inter_w * inter_h
+        
+        # union
+        union_area = anchors_area + gt_box_area - inter_area
+
+        # iou
+        iou = inter_area / union_area
+        iou = np.clip(iou, a_min=1e-10, a_max=1.0)
+        
+        return iou
+
 
     @torch.no_grad()
-    def __call__(self, pred_boxes, anchor_boxes, targets):
+    def __call__(self, img_size, stride, targets):
         """
-            pred_boxes: (Tensor)   [B, num_queries, 4]
-            anchor_boxes: (Tensor) [num_queries, 4]
+            img_size: (Int) image size
+            stride: (Int) -> output stride of network.
             targets: (Dict) dict{'boxes': [...], 
-                                 'labels': [...]}
+                                 'labels': [...], 
+                                 'orig_size': ...}
         """
+        
+        bs = len(targets)
+        fmp_h = fmp_w = img_size // stride
+        # prepare
+        gt_conf = torch.zeros([bs, fmp_h, fmp_w, self.num_anchors, 1])
+        gt_bboxes = torch.zeros([bs, fmp_h, fmp_w, self.num_anchors, 4])
+        if self.multi_hot:
+            gt_cls = torch.zeros([bs, fmp_h, fmp_w, self.num_anchors, self.num_classes])
+        else:
+            gt_cls = torch.zeros([bs, fmp_h, fmp_w, self.num_anchors, 1])
 
-        bs, num_queries = pred_boxes.shape[:2]
+        for bi in range(bs):
+            targets_per_image = targets[bi]
+            # [N,]
+            tgt_labels = targets_per_image["labels"].numpy()
+            # [N, 4]
+            tgt_bboxes = targets_per_image['boxes'].numpy()
 
-        # We flatten to compute the cost matrices in a batch
-        # [B, num_queries, 4] -> [M, 4]
-        out_bbox = pred_boxes.flatten(0, 1)
-        # [num_queries, 4] -> [1, num_queries, 4] -> [B, num_queries, 4] -> [M, 4]
-        anchor_boxes = anchor_boxes[None].repeat(bs, 1, 1)
-        anchor_boxes = anchor_boxes.flatten(0, 1)
+            for box, label in zip(tgt_bboxes, tgt_labels):
+                # get a bbox coords
+                x1, y1, x2, y2 = box.tolist()
+                # rescale bbox
+                x1 *= img_size
+                y1 *= img_size
+                x2 *= img_size
+                y2 *= img_size
+                # xyxy -> cxcywh
+                xc, yc = (x2 + x1) * 0.5, (y2 + y1) * 0.5
+                bw, bh = x2 - x1, y2 - y1
+                gt_box = [0, 0, bw, bh]
 
-        # Also concat the target boxes
-        tgt_bbox = torch.cat([v['boxes'] for v in targets])
+                # check target
+                if bw < 1. or bh < 1.:
+                    # invalid target
+                    continue
 
-        # Compute the L1 cost between boxes
-        # Note that we use anchors and predict boxes both
-        cost_bbox = torch.cdist(box_xyxy_to_cxcywh(out_bbox), 
-                                box_xyxy_to_cxcywh(tgt_bbox), 
-                                p=1)
-        cost_bbox_anchors = torch.cdist(anchor_boxes, 
-                                        box_xyxy_to_cxcywh(tgt_bbox), 
-                                        p=1)
+                # compute IoU
+                iou = self.compute_iou(self.anchor_boxes, gt_box)
+                iou_mask = (iou > self.iou_thresh)
 
-        # Final cost matrix: [B, M, N], M=num_queries, N=num_tgt
-        C = cost_bbox
-        C = C.view(bs, num_queries, -1)
-        C1 = cost_bbox_anchors
-        C1 = C1.view(bs, num_queries, -1)
+                label_assignment_results = []
+                if iou_mask.sum() == 0:
+                    # We assign the anchor box with highest IoU score.
+                    anchor_idx = np.argmax(iou)
 
-        sizes = [len(v['boxes']) for v in targets]  # the number of object instances in each image
-        all_indices_list = [[] for _ in range(bs)]
-        # positive indices when matching predict boxes and gt boxes
-        # len(indices) = batch size
-        # len(tupe) = topk
-        indices = [
-            tuple(
-                torch.topk(
-                    c[i],
-                    k=self.match_times,
-                    dim=0,
-                    largest=False)[1].numpy().tolist()
-            )
-            for i, c in enumerate(C.split(sizes, -1))
-        ]
-        # positive indices when matching anchor boxes and gt boxes
-        indices1 = [
-            tuple(
-                torch.topk(
-                    c[i],
-                    k=self.match_times,
-                    dim=0,
-                    largest=False)[1].numpy().tolist())
-            for i, c in enumerate(C1.split(sizes, -1))]
+                    # compute the grid cell
+                    xc_s = xc / stride
+                    yc_s = yc / stride
+                    grid_x = int(xc_s)
+                    grid_y = int(yc_s)
 
-        # concat the indices according to image ids
-        # img_id = batch_id
-        for img_id, (idx, idx1) in enumerate(zip(indices, indices1)):
-            img_idx_i = [
-                np.array(idx_ + idx1_)
-                for (idx_, idx1_) in zip(idx, idx1)
-            ] # 'i' is the index of queris
-            img_idx_j = [
-                np.array(list(range(len(idx_))) + list(range(len(idx1_))))
-                for (idx_, idx1_) in zip(idx, idx1)
-            ] # 'j' is the index of tgt
-            all_indices_list[img_id] = [*zip(img_idx_i, img_idx_j)]
+                    label_assignment_results.append([grid_x, grid_y, anchor_idx])
+                else:            
+                    for iou_ind, iou_m in enumerate(iou_mask):
+                        if iou_m:
+                            anchor_idx = iou_ind
+                            # compute the gride cell
+                            xc_s = xc / stride
+                            yc_s = yc / stride
+                            grid_x = int(xc_s)
+                            grid_y = int(yc_s)
 
-        # re-organize the positive indices
-        all_indices = []
-        for img_id in range(bs):
-            all_idx_i = []
-            all_idx_j = []
-            for idx_list in all_indices_list[img_id]:
-                idx_i, idx_j = idx_list
-                all_idx_i.append(idx_i)
-                all_idx_j.append(idx_j)
-            all_idx_i = np.hstack(all_idx_i)
-            all_idx_j = np.hstack(all_idx_j)
-            all_indices.append((all_idx_i, all_idx_j))
+                            label_assignment_results.append([grid_x, grid_y, anchor_idx])
+
+                # label assignment
+                for result in label_assignment_results:
+                    grid_x, grid_y, anchor_idx = result
+
+                    # check
+                    is_valid = (grid_y >= 0 and grid_y < fmp_h) and (grid_x >= 0 and grid_x < fmp_w)
+
+                    if is_valid:
+                        gt_conf[bi, grid_y, grid_x, anchor_idx, 0] = 1.0
+                        gt_bboxes[bi, grid_y, grid_x, anchor_idx] = torch.as_tensor([x1, y1, x2, y2])
+                        if self.multi_hot:
+                            gt_cls[bi, grid_y, grid_x, anchor_idx, :] = torch.as_tensor(label)
+                        else:
+                            gt_cls[bi, grid_y, grid_x, anchor_idx, 0] = label
+
+        # [B, M, C]
+        gt_conf = gt_conf.view(bs, -1, 1).float()
+        gt_bboxes = gt_bboxes.view(bs, -1, 4).float()
+        if self.multi_hot:
+            gt_cls = gt_cls.view(bs, -1, self.num_classes).long()
+        else:
+            gt_cls = gt_cls.view(bs, -1, 1).long()
+
+        return gt_conf, gt_cls, gt_bboxes
 
 
-        return [(torch.as_tensor(i, dtype=torch.int64), 
-                 torch.as_tensor(j, dtype=torch.int64)) for i, j in all_indices]
-                 
+
+if __name__ == "__main__":
+    pass

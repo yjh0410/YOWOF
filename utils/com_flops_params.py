@@ -12,11 +12,11 @@ def FLOPs_and_Params(model, img_size, len_clip, device):
     model.set_inference_mode(mode='stream')
 
     # generate init video clip
-    video_clip = torch.randn(1, 3, len_clip, img_size, img_size).to(device)
+    video_clip = torch.randn(1, len_clip, 3, img_size, img_size).to(device)
     outputs = model(video_clip)
 
     # generate a new frame
-    video_clip = torch.randn(1, 3, len_clip, img_size, img_size).to(device)
+    video_clip = torch.randn(1, len_clip, 3, img_size, img_size).to(device)
 
     print('==============================')
     flops, params = profile(model, inputs=(video_clip, ))

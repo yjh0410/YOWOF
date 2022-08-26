@@ -224,12 +224,8 @@ class ResNet(nn.Module):
                                 norm_layer=norm_layer))
 
         return nn.Sequential(*layers)
-
-    def _freeze(self):
-        for name, parameter in self.named_parameters():
-            if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
-                parameter.requires_grad_(False)
         
+
     def _forward_impl(self, x: Tensor) -> Tensor:
         # See note [TorchScript super()]
         x = self.conv1(x)
@@ -244,11 +240,13 @@ class ResNet(nn.Module):
 
         return x
 
+
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
 
 
 def load_weight(model, arch, progress):
+    print('loading pretrained weight: ', model_urls[arch])
     # checkpoint state dict
     checkpoint = load_state_dict_from_url(
         model_urls[arch],
@@ -361,7 +359,7 @@ def build_resnet_2d(model_name='resnet50', pretrained=False, res5_dilation=True)
 if __name__ == '__main__':
     import time
 
-    model, feat_dim = build_resnet_2d(model_name='resnet18', pretrained=False, res5_dilation=True)
+    model, feat_dim = build_resnet_2d(model_name='resnet50', pretrained=True, res5_dilation=True)
     print(feat_dim)
     if torch.cuda.is_available():
         device = torch.device("cuda")

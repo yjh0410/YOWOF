@@ -51,7 +51,7 @@ def parse_args():
 
 
 @torch.no_grad()
-def inference(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
+def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
     if args.save:
         save_path = os.path.join(
@@ -185,12 +185,13 @@ if __name__ == '__main__':
     model.set_inference_mode(mode='stream')
 
     # run
-    inference(
-        args=args,
-        d_cfg=d_cfg,
-        model=model,
-        device=device,
-        dataset=dataset,
-        class_names=class_names,
-        class_colors=class_colors
-        )
+    if args.dataset in ['ucf24', 'jhmdb21']:
+        inference_ucf_jhmdb(
+            args=args,
+            d_cfg=d_cfg,
+            model=model,
+            device=device,
+            dataset=dataset,
+            class_names=class_names,
+            class_colors=class_colors
+            )

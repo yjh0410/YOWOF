@@ -1,5 +1,5 @@
 # YOWOF
-You Only Watch One-level Feature for Spatio-Temporal Action Detection
+You Only Watch One Frame (YOWOF) for Spatio-Temporal Action Detection
 
 # Requirements
 - We recommend you to use Anaconda to create a conda environment:
