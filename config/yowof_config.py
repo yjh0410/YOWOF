@@ -51,22 +51,19 @@ yowof_config = {
         # head
         'head_dim': 256,
         'head_norm': 'BN',
-        'head_act': 'relu',
+        'head_act': 'lrelu',
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
         'conf_thresh': 0.1,
-        'nms_thresh': 0.6,
+        'conf_thresh_valid': 0.005,
+        'nms_thresh': 0.5,
         # matcher
-        'matcher': 'uniform_matcher',
-        'topk': 4,
-        'iou_t': 0.15,
-        'igt': 0.7,
-        'ctr_clamp': 32,
+        'ignore_thresh': 0.5,
         # loss
-        'alpha': 0.25,
-        'gamma': 2.0,
+        'loss_obj_weight': 5.0,
+        'loss_noobj_weight': 1.0,
         'loss_cls_weight': 1.0,
         'loss_reg_weight': 1.0,
         # anchor size
@@ -86,26 +83,23 @@ yowof_config = {
         # temporal encoder
         'conv_lstm_ks': 3,
         'conv_lstm_nl': 2,
-        'conv_lstm_di': 2,
+        'conv_lstm_di': 1,
         # head
         'head_dim': 256,
         'head_norm': 'BN',
-        'head_act': 'relu',
+        'head_act': 'lrelu',
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
         'conf_thresh': 0.1,
-        'nms_thresh': 0.6,
+        'conf_thresh_valid': 0.005,
+        'nms_thresh': 0.5,
         # matcher
-        'matcher': 'uniform_matcher',
-        'topk': 4,
-        'iou_t': 0.15,
-        'igt': 0.7,
-        'ctr_clamp': 32,
+        'ignore_thresh': 0.5,
         # loss
-        'alpha': 0.25,
-        'gamma': 2.0,
+        'loss_obj_weight': 5.0,
+        'loss_noobj_weight': 1.0,
         'loss_cls_weight': 1.0,
         'loss_reg_weight': 1.0,
         # anchor size
