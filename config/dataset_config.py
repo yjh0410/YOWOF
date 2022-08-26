@@ -116,9 +116,8 @@ dataset_config = {
         # cls label
         'multi_hot': True,  # multi hot
         # train config
-        'batch_size': 8,
-        'test_batch_size': 8,
-        'accumulate': 16,
+        'batch_size': 4,
+        'accumulate': 32,
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,
