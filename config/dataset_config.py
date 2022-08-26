@@ -69,10 +69,11 @@ dataset_config = {
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,
-        'max_epoch': 12,
-        'lr_epoch': [8, 10],
-        'base_lr': 2e-5,
-        'lr_decay_ratio': 0.1,
+        'max_epoch': 5,
+        'lr_epoch': [1, 2, 3, 4],
+        'base_lr': 1e-4,
+        'lr_decay_ratio': 0.5,
+        # warmup strategy
         # warmup strategy
         'warmup': 'linear',
         'warmup_factor': 0.00066667,
