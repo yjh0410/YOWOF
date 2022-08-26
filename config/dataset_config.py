@@ -61,6 +61,8 @@ dataset_config = {
         'exposure': 1.5,
         'sampling_rate': 1,
         'len_clip': 16,
+        # cls label
+        'multi_hot': False,  # one hot
         # train config
         'batch_size': 1,
         'accumulate': 1,

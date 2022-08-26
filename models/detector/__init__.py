@@ -35,7 +35,8 @@ def build_model(args,
         conf_thresh=conf_thresh,
         nms_thresh=m_cfg['nms_thresh'],
         topk=args.topk,
-        trainable=trainable
+        trainable=trainable,
+        multi_hot=d_cfg['multi_hot']
         )
             
     # keep training       
