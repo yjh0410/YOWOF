@@ -48,7 +48,7 @@ dataset_config = {
     'jhmdb21': {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/jhmdb21',
-        'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/jhmdb21',
+        # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/jhmdb21',
         # input size
         'train_size': 320,
         'test_size': 320,
@@ -64,8 +64,8 @@ dataset_config = {
         # cls label
         'multi_hot': False,  # one hot
         # train config
-        'batch_size': 1,
-        'accumulate': 1,
+        'batch_size': 8,
+        'accumulate': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,
