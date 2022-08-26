@@ -221,7 +221,7 @@ class AVA_Dataset(Dataset):
 
         }
 
-        return keyframe_info, video_clip, target
+        return [video_idx, sec], video_clip, target
 
 
 
@@ -278,7 +278,9 @@ if __name__ == '__main__':
     std = trans_config['pixel_std']
     mean = trans_config['pixel_mean']
     for i in range(len(train_dataset)):
-        frame_id, video_clip, target = train_dataset[i]
+        video_info, video_clip, target = train_dataset[i]
+        print(video_info)
+        
         key_frame = video_clip[-1]
 
         key_frame = key_frame.permute(1, 2, 0).numpy()
