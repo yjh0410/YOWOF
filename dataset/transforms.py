@@ -7,10 +7,10 @@ from PIL import Image
 
 # Augmentation for Training
 class Augmentation(object):
-    def __init__(self, pixel_mean, pixel_std, img_size=224, jitter=0.2, hue=0.1, saturation=1.5, exposure=1.5):
+    def __init__(self, img_size=224, pixel_mean=[0., 0., 0.], pixel_std=[1., 1., 1.], jitter=0.2, hue=0.1, saturation=1.5, exposure=1.5):
+        self.img_size = img_size
         self.pixel_mean = pixel_mean
         self.pixel_std = pixel_std
-        self.img_size = img_size
         self.jitter = jitter
         self.hue = hue
         self.saturation = saturation
@@ -81,34 +81,26 @@ class Augmentation(object):
 
 
     def apply_bbox(self, target, ow, oh, dx, dy, sx, sy):
-        if target is None:
-            target = np.zeros([10, 5])
+        sx, sy = 1./sx, 1./sy
+        # apply deltas on bbox
+        target[..., 0] = np.minimum(0.999, np.maximum(0, target[..., 0] / ow * sx - dx)) 
+        target[..., 1] = np.minimum(0.999, np.maximum(0, target[..., 1] / oh * sy - dy)) 
+        target[..., 2] = np.minimum(0.999, np.maximum(0, target[..., 2] / ow * sx - dx)) 
+        target[..., 3] = np.minimum(0.999, np.maximum(0, target[..., 3] / oh * sy - dy)) 
 
-            return target
-        else:
-            target = np.reshape(target, (-1, 5))
+        # refine target
+        refine_target = []
+        for i in range(target.shape[0]):
+            tgt = target[i]
+            bw = (tgt[2] - tgt[0]) * ow
+            bh = (tgt[3] - tgt[1]) * oh
 
-            sx, sy = 1./sx, 1./sy
-            # apply deltas on bbox
-            target[..., 1] = np.minimum(0.999, np.maximum(0, target[..., 1] / ow * sx - dx)) 
-            target[..., 2] = np.minimum(0.999, np.maximum(0, target[..., 2] / oh * sy - dy)) 
-            target[..., 3] = np.minimum(0.999, np.maximum(0, target[..., 3] / ow * sx - dx)) 
-            target[..., 4] = np.minimum(0.999, np.maximum(0, target[..., 4] / oh * sy - dy)) 
-            target[..., 0] = target[..., 0] - 1
+            if bw < 1. or bh < 1.:
+                continue
+            
+            refine_target.append(tgt)
 
-            # refine target
-            refine_target = []
-            for i in range(target.shape[0]):
-                tgt = target[i]
-                bw = (tgt[3] - tgt[1]) * ow
-                bh = (tgt[4] - tgt[2]) * oh
-
-                if bw < 1. or bh < 1.:
-                    continue
-                
-                refine_target.append(tgt)
-
-            refine_target = np.array(refine_target).reshape(-1, 5)
+        refine_target = np.array(refine_target).reshape(-1, target.shape[-1])
 
         return refine_target
         
@@ -140,23 +132,23 @@ class Augmentation(object):
         if target is not None:
             target = self.apply_bbox(target, ow, oh, dx, dy, sx, sy)
             if flip:
-                target[..., [1, 3]] = 1.0 - target[..., [3, 1]]
+                target[..., [0, 2]] = 1.0 - target[..., [2, 0]]
         else:
             target = np.array([])
             
         # to tensor
         video_clip = self.to_tensor(video_clip)
-        target = torch.as_tensor(target).float().view(-1, 5)
+        target = torch.as_tensor(target).float()
 
         return video_clip, target 
 
 
 # Transform for Testing
 class BaseTransform(object):
-    def __init__(self, pixel_mean, pixel_std, img_size=224):
+    def __init__(self, img_size=224, pixel_mean=[0., 0., 0.], pixel_std=[1., 1., 1.]):
+        self.img_size = img_size
         self.pixel_mean = pixel_mean
         self.pixel_std = pixel_std
-        self.img_size = img_size
 
     def to_tensor(self, video_clip):
         return [F.normalize(F.to_tensor(image), self.pixel_mean, self.pixel_std) for image in video_clip]
@@ -170,17 +162,18 @@ class BaseTransform(object):
         video_clip = [img.resize([self.img_size, self.img_size]) for img in video_clip]
 
         # normalize target
-        if target is not None:
+        if len(target.shape) < 2:
             target = target.reshape(-1, 5)
-            target[..., [1, 3]] /= ow
-            target[..., [2, 4]] /= oh
-            target[..., 0] = target[..., 0] - 1
+
+        if target is not None:
+            target[..., [0, 2]] /= ow
+            target[..., [1, 3]] /= oh
         else:
             target = np.array([])
 
         # to tensor
         video_clip = self.to_tensor(video_clip)
-        target = torch.as_tensor(target).float().view(-1, 5)
+        target = torch.as_tensor(target).float()
 
         return video_clip, target 
 
