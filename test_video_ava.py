@@ -59,6 +59,11 @@ def detect(args, d_cfg, model, device, transform, class_names):
     fps = 15.0
     out = cv2.VideoWriter(save_name, fourcc, fps, save_size)
 
+    # initalize model
+    model.initialization = True
+    model.set_inference_mode(mode='stream')
+
+    # run
     video_clip = []
     while(True):
         ret, frame = video.read()
