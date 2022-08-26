@@ -4,22 +4,20 @@ import os
 import time
 import numpy as np
 import torch
+from PIL import Image
 
-from dataset.ucf24 import UCF24_CLASSES
-from dataset.transforms import ValTransforms
-from utils.misc import load_weight, rescale_bboxes, rescale_bboxes_list
-from utils.vis_tools import vis_video_clip, vis_video_frame
-
-from config import build_model_config
+from dataset.transforms import BaseTransform
+from utils.misc import load_weight
+from config import build_dataset_config, build_model_config
 from models.detector import build_model
 
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='YOWO')
+    parser = argparse.ArgumentParser(description='YOWOF')
 
     # basic
-    parser.add_argument('-size', '--img_size', default=224, type=int,
+    parser.add_argument('-size', '--img_size', default=320, type=int,
                         help='the size of input frame')
     parser.add_argument('--show', action='store_true', default=False,
                         help='show the visulization results.')
@@ -29,127 +27,109 @@ def parse_args():
                         help='Dir to save results')
     parser.add_argument('-vs', '--vis_thresh', default=0.35, type=float,
                         help='threshold for visualization')
-    parser.add_argument('-path', '--path_to_video', default='data/demo/videos/', type=str,
-                        help='path to video.')
+    parser.add_argument('--video', default='9Y_l9NsnYE0.mp4', type=str,
+                        help='AVA video name.')
+    parser.add_argument('-d', '--dataset', default='ava_v2.2',
+                        help='ava_v2.2')
 
     # model
-    parser.add_argument('-v', '--version', default='yowo-d19', type=str,
-                        help='build yowo')
+    parser.add_argument('-v', '--version', default='yowof-r18', type=str,
+                        help='build yowof')
     parser.add_argument('--weight', default='weight/',
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
 
-    # dataset
-    parser.add_argument('--root', default='/mnt/share/ssd2/dataset',
-                        help='data root')
-    parser.add_argument('-d', '--dataset', default='coco',
-                        help='coco, voc.')
-
     return parser.parse_args()
                     
 
-def detect(args, model, device, transform=None, class_names=None):
+def detect(args, d_cfg, model, device, transform, class_names):
     # path to save 
-    save_path = os.path.join(args.save_folder, args.version, 'demo')
+    save_path = os.path.join(args.save_folder, 'ava_video')
     os.makedirs(save_path, exist_ok=True)
 
-    video = cv2.VideoCapture(args.path_to_video)
+    # path to video
+    path_to_video = os.path.join(d_cfg['data_root'], 'videos_15min', args.video)
+
+    # video
+    video = cv2.VideoCapture(path_to_video)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     save_size = (640, 480)
     save_name = os.path.join(save_path, 'detection.avi')
     fps = 15.0
     out = cv2.VideoWriter(save_name, fourcc, fps, save_size)
-    frame_index = 0
 
+    video_clip = []
     while(True):
         ret, frame = video.read()
         
         if ret:
+            # to PIL image
+            frame_pil = Image.fromarray(frame.astype(np.uint8))
+
             # prepare
+            if len(video_clip) <= 0:
+                for _ in range(d_cfg['len_clip']):
+                    video_clip.append(frame_pil)
+
+            video_clip.append(frame_pil)
+            del video_clip[0]
+
+            # orig size
             orig_h, orig_w = frame.shape[:2]
-            orig_size = np.array([[orig_w, orig_h, orig_w, orig_h]])
-            initialization = True
-            init_video_clip = []
-            scores_list = []
-            labels_list = []
-            bboxes_list = []
 
-            if initialization:
-                if frame_index < model.len_clip:
-                    init_video_clip.append(frame)
-                else:
-                    # preprocess
-                    xs, _ = transform(init_video_clip)
+            # transform
+            x, _ = transform(video_clip)
+            # List [T, 3, H, W] -> [T, 3, H, W]
+            x = torch.stack(x)
+            x = x.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
 
-                    # to device
-                    xs = [x.unsqueeze(0).to(device) for x in xs] 
+            t0 = time.time()
+            # inference
+            out_bboxes = model(x)
+            print("inference time ", time.time() - t0, "s")
 
-                    # inference with an init video clip
-                    init_scores, init_labels, init_bboxes = model(xs)
+            # visualize detection results
+            for bbox in out_bboxes:
+                x1, y1, x2, y2 = bbox[:4]
+                det_conf = float(bbox[4])
+                cls_out = [det_conf * cls_conf.cpu().numpy() for cls_conf in bbox[5]]
+            
+                # rescale bbox
+                x1, x2 = int(x1 * orig_w), int(x2 * orig_w)
+                y1, y2 = int(y1 * orig_h), int(y2 * orig_h)
 
-                    # rescale
-                    init_bboxes = rescale_bboxes_list(init_bboxes, orig_size)
+                cls_scores = np.array(cls_out)
+                indices = np.where(cls_scores > 0.4)
+                scores = cls_scores[indices]
+                indices = list(indices[0])
+                scores = list(scores)
 
-                    # store init predictions
-                    scores_list.extend(init_scores)
-                    labels_list.extend(init_labels)
-                    bboxes_list.extend(init_bboxes)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                    initialization = False
-                    del init_video_clip
+                if len(scores) > 0:
+                    blk   = np.zeros(frame.shape, np.uint8)
+                    font  = cv2.FONT_HERSHEY_SIMPLEX
+                    coord = []
+                    text  = []
+                    text_size = []
 
-                    # vis init detection
-                    vis_results = vis_video_clip(
-                        init_video_clip, scores_list, labels_list, bboxes_list, 
-                        args.vis_thresh, class_names, splice=False
-                    )
+                    for _, cls_ind in enumerate(indices):
+                        text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
+                        text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.25, thickness=1)[0])
+                        coord.append((x1+3, y1+7+10*_))
+                        cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-6), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
+                    frame = cv2.addWeighted(frame, 1.0, blk, 0.25, 1)
+                    for t in range(len(text)):
+                        cv2.putText(frame, text[t], coord[t], font, 0.25, (0, 0, 0), 1)
 
-                    # write each frame to video
-                    for frame in vis_results:
-                        resized_frame = cv2.resize(frame, save_size)
-                        out.write(resized_frame)
-                        cv2.imshow('detection', frame)
-                        cv2.waitKey(1)
-                
-                # count frame
-                frame_index += 1
-            else:
-                # preprocess
-                xs, _ = transform([frame])
+            # save
+            out.write(frame)
 
-                # to device
-                xs = [x.unsqueeze(0).to(device) for x in xs] 
-
-                # inference with the current frame
-                t0 = time.time()
-                cur_score, cur_label, cur_bboxes = model(xs[0])
-                t1 = time.time()
-
-                print('inference time: {:.3f}'.format(t1 - t0))
-                
-                # rescale
-                cur_bboxes = rescale_bboxes(cur_bboxes, orig_size)
-
-                # store current predictions
-                scores_list.append(cur_score)
-                labels_list.append(cur_label)
-                bboxes_list.append(cur_bboxes)
-
-                # vis current detection results
-                vis_results = vis_video_frame(
-                    frame, cur_score, cur_label, cur_bboxes, 
-                    args.vis_thresh, class_names
-                )
-
-                # write cur frame to video
-                resized_frame = cv2.resize(vis_results, save_size)
-                out.write(resized_frame)
-                cv2.imshow('detection', vis_results)
+            if args.show:
+                # show
+                cv2.imshow('key-frame detection', frame)
                 cv2.waitKey(1)
-
-                # count frame
-                frame_index += 1
 
         else:
             break
@@ -161,14 +141,6 @@ def detect(args, model, device, transform=None, class_names=None):
 
 if __name__ == '__main__':
     args = parse_args()
-
-    np.random.seed(0)
-    num_classes = 24
-    class_names = UCF24_CLASSES
-    class_colors = [(np.random.randint(255),
-                     np.random.randint(255),
-                     np.random.randint(255)) for _ in range(num_classes)]
-
     # cuda
     if args.cuda:
         print('use cuda')
@@ -177,26 +149,35 @@ if __name__ == '__main__':
         device = torch.device("cpu")
 
     # config
+    d_cfg = build_dataset_config(args)
     m_cfg = build_model_config(args)
 
-    # build model
-    model = build_model(args=args, 
-                        cfg=m_cfg,
-                        device=device, 
-                        num_classes=num_classes, 
-                        trainable=False)
-
-    # load trained weight
-    model = load_weight(device=device, 
-                        model=model, 
-                        path_to_ckpt=args.weight)
+    class_names = d_cfg['label_map']
+    num_classes = 80
 
     # transform
-    transform = ValTransforms(img_size=args.img_size,
-                              pixel_mean=m_cfg['pixel_mean'],
-                              pixel_std=m_cfg['pixel_std'],
-                              format=m_cfg['format'])
+    basetransform = BaseTransform(
+        img_size=d_cfg['test_size'],
+        pixel_mean=d_cfg['pixel_mean'],
+        pixel_std=d_cfg['pixel_std']
+        )
+
+    # build model
+    model = build_model(
+        args=args,
+        d_cfg=d_cfg,
+        m_cfg=m_cfg,
+        device=device, 
+        num_classes=num_classes, 
+        trainable=False
+        )
+
+    # load trained weight
+    model = load_weight(model=model, path_to_ckpt=args.weight)
+
+    # to eval
+    model = model.to(device).eval()
 
     # run
-    detect(args=args, net=model, device=device,
-            transform=transform, class_names=class_names)
+    detect(args=args, d_cfg=d_cfg, model=model, device=device,
+           transform=basetransform, class_names=class_names)
