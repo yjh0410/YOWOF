@@ -80,7 +80,7 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
             model.initialization = True
 
         # prepare
-        video_clip = video_clip.unsqueeze(0).to(device) # [B, 3, T, H, W], B=1
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
 
         t0 = time.time()
         # inference
@@ -91,7 +91,7 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
         bboxes = rescale_bboxes(bboxes, orig_size)
 
         # vis results of key-frame
-        key_frame = video_clip[0, :, -1, :, :]
+        key_frame = video_clip[0, -1, :, :, :]
         key_frame = key_frame.permute(1, 2, 0).cpu().numpy()
         key_frame = (key_frame * d_cfg['pixel_std'] + d_cfg['pixel_mean']) * 255
         key_frame = key_frame.astype(np.uint8)
