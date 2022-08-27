@@ -23,6 +23,7 @@ def build_model(args,
             conf_thresh = m_cfg['conf_thresh']
     else:
         img_size = d_cfg['test_size']
+        conf_thresh = m_cfg['conf_thresh']
 
     # build YOWO
     model = YOWOF(
