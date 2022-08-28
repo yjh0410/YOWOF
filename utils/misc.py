@@ -59,6 +59,7 @@ def build_dataset(device, d_cfg, args, is_train=False):
             iou_thresh=0.5,
             transform=basetransform,
             gt_folder=d_cfg['gt_folder'],
+            save_path='results/',
             redo=True
         )
 
