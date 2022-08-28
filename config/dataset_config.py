@@ -6,6 +6,7 @@ dataset_config = {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/ucf24',
         # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/ucf24',
+        'gt_folder': './evaluator/groundtruths_ucf_jhmdb/groundtruths_ucf/',
         # input size
         'train_size': 320,
         'test_size': 320,
@@ -49,6 +50,7 @@ dataset_config = {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/jhmdb21',
         # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/jhmdb21',
+        'gt_folder': './evaluator/groundtruths_ucf_jhmdb/groundtruths_jhmdb/',
         # input size
         'train_size': 320,
         'test_size': 320,
