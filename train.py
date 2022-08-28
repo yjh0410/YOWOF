@@ -299,10 +299,7 @@ def train():
                     model_eval.eval()
 
                     # evaluate
-                    if args.dataset in ['ucf24', 'jhmdb21']:
-                        evaluator.evaluate_accu_recall(model_eval, epoch + 1)
-                    elif args.dataset in ['ava_v2.2']:
-                        evaluator.evaluate_frame_map(model_eval, epoch + 1)
+                    evaluator.evaluate_frame_map(model_eval, epoch + 1)
                         
                     # set train mode.
                     model_eval.trainable = True

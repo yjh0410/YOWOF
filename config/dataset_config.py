@@ -25,9 +25,9 @@ dataset_config = {
         'accumulate': 16,
         'optimizer': 'adamw',
         'momentum': 0.9,
-        'weight_decay': 1e-4,
-        'max_epoch': 5,
-        'lr_epoch': [1, 2, 3, 4],
+        'weight_decay': 5e-4,
+        'max_epoch': 10,
+        'lr_epoch': [2, 3, 4, 5],
         'base_lr': 1e-4,
         'lr_decay_ratio': 0.5,
         # warmup strategy
