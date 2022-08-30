@@ -70,7 +70,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
     if args.cal_mAP:
         evaluator.evaluate_frame_map(model, show_pr_curve=True)
     else:
-        cls_accu, loc_recall = evaluator.evaluate_accu_recall(model)
+        evaluator.evaluate_accu_recall(model)
 
 
 
