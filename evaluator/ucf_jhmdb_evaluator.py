@@ -97,6 +97,7 @@ class UCF_JHMDB_Evaluator(object):
 
                 if not os.path.exists('results'):
                     os.mkdir('results')
+                    print(123123123123123)
 
                 if self.dataset == 'ucf24':
                     detection_path = os.path.join('results', 'ucf_detections', self.model_name, 'detections_' + str(epoch), frame_id)
@@ -107,7 +108,6 @@ class UCF_JHMDB_Evaluator(object):
                         os.mkdir('results/ucf_detections/'+self.model_name)
                     if not os.path.exists(current_dir):
                         os.mkdir(current_dir)
-                        print(current_dir)
                 else:
                     detection_path = os.path.join('results', 'jhmdb_detections',  self.model_name, 'detections_' + str(epoch), frame_id)
                     current_dir = os.path.join('results', 'jhmdb_detections',  self.model_name, 'detections_' + str(epoch))
