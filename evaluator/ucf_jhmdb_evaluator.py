@@ -70,7 +70,7 @@ class UCF_JHMDB_Evaluator(object):
 
         # inference
         prev_frame_id = ''
-        for iter_i, (frame_id, video_clip, target) in enumerate(self.testset[:1]):
+        for iter_i, (frame_id, video_clip, target) in enumerate(self.testset):
             # orignal frame size
             orig_size = target['orig_size']  # width, height
 

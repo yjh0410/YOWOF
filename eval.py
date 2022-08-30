@@ -63,7 +63,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         iou_thresh=0.5,
         transform=transform,
         redo=args.redo,
-        gt_folder=d_cfg['gt_folder'],
+        gt_folder=args.gt_folder,
         dt_folder=args.dt_folder,
         save_path=args.save_path)
 
