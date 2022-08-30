@@ -63,9 +63,7 @@ dataset_config = {
         'len_clip': 16,
         # cls label
         'multi_hot': False,  # one hot
-        # train config
-        'batch_size': 8,
-        'accumulate': 16,
+        # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,
@@ -116,9 +114,7 @@ dataset_config = {
         'len_clip': 16,
         # cls label
         'multi_hot': True,  # multi hot
-        # train config
-        'batch_size': 8,
-        'accumulate': 16,
+        # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
         'weight_decay': 1e-4,

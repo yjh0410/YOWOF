@@ -126,7 +126,7 @@ def train():
     dataset, evaluator, num_classes = build_dataset(device, d_cfg, args, is_train=True)
 
     # dataloader
-    batch_size = d_cfg['batch_size'] * distributed_utils.get_world_size()
+    batch_size = m_cfg['batch_size'] * distributed_utils.get_world_size()
     dataloader = build_dataloader(args, dataset, batch_size, CollateFunc(), is_train=True)
 
     # build model
@@ -223,7 +223,7 @@ def train():
                 loss_dict = model(video_clips, targets=targets)
                 
             losses = loss_dict['losses']
-            losses = losses / d_cfg['accumulate']
+            losses = losses / m_cfg['accumulate']
 
             # reduce            
             loss_dict_reduced = distributed_utils.reduce_dict(loss_dict)
@@ -238,7 +238,7 @@ def train():
                 scaler.scale(losses).backward()
 
                 # Optimize
-                if ni % d_cfg['accumulate'] == 0:
+                if ni % m_cfg['accumulate'] == 0:
                     scaler.step(optimizer)
                     scaler.update()
                     optimizer.zero_grad()
@@ -248,7 +248,7 @@ def train():
                 losses.backward()
 
                 # Optimize
-                if ni % d_cfg['accumulate'] == 0:
+                if ni % m_cfg['accumulate'] == 0:
                     optimizer.step()
                     optimizer.zero_grad()
 

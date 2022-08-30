@@ -76,8 +76,8 @@ yowof_config = {
         # matcher
         'ignore_thresh': 0.5,
         # batch size
-        'batch_size': 6,
-        'accumulate': 21,
+        'batch_size': 8,
+        'accumulate': 16,
         # loss
         'loss_obj_weight': 5.0,
         'loss_noobj_weight': 1.0,
