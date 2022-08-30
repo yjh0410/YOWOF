@@ -14,10 +14,10 @@ class UCF_JHMDB_Evaluator(object):
                  device=None,
                  data_root=None,
                  dataset='ucf24',
-                 model_name='yowof',
+                 model_name='yowo',
                  img_size=224,
                  len_clip=1,
-                 conf_thresh=0.005,
+                 conf_thresh=0.01,
                  iou_thresh=0.5,
                  transform=None,
                  redo=False,
@@ -95,7 +95,8 @@ class UCF_JHMDB_Evaluator(object):
                 orig_size = target['orig_size']
                 bboxes = rescale_bboxes(bboxes, orig_size)
 
-                os.makedirs('results', exist_ok=True)
+                if not os.path.exists('results'):
+                    os.mkdir('results')
 
                 if self.dataset == 'ucf24':
                     detection_path = os.path.join('results', 'ucf_detections', self.model_name, 'detections_' + str(epoch), frame_id)
@@ -177,8 +178,6 @@ class UCF_JHMDB_Evaluator(object):
                 if iter_i % 1000 == 0:
                     log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
                     print(log_info, flush=True)
-
-            break
 
         classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
         locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
