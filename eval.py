@@ -59,6 +59,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         data_root=d_cfg['data_root'],
         img_size=d_cfg['test_size'],
         len_clip=d_cfg['len_clip'],
+        conf_thresh=0.005,
         iou_thresh=0.5,
         transform=transform,
         redo=args.redo,
@@ -105,7 +106,8 @@ if __name__ == '__main__':
         m_cfg=m_cfg,
         device=device, 
         num_classes=num_classes, 
-        trainable=False
+        trainable=False,
+        eval_mode=True
         )
 
     # load trained weight
