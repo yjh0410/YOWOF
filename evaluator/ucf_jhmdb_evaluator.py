@@ -17,7 +17,6 @@ class UCF_JHMDB_Evaluator(object):
                  model_name='yowo',
                  img_size=224,
                  len_clip=1,
-                 conf_thresh=0.01,
                  iou_thresh=0.5,
                  transform=None,
                  redo=False,
@@ -30,7 +29,6 @@ class UCF_JHMDB_Evaluator(object):
         self.model_name = model_name
         self.img_size = img_size
         self.len_clip = len_clip
-        self.conf_thresh = conf_thresh
         self.iou_thresh = iou_thresh
 
         self.redo = redo

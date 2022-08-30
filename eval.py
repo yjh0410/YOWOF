@@ -59,11 +59,10 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         data_root=d_cfg['data_root'],
         img_size=d_cfg['test_size'],
         len_clip=d_cfg['len_clip'],
-        conf_thresh=0.01,
         iou_thresh=0.5,
         transform=transform,
         redo=args.redo,
-        gt_folder=args.gt_folder,
+        gt_folder=d_cfg['gt_folder'],
         dt_folder=args.dt_folder,
         save_path=args.save_path)
 
