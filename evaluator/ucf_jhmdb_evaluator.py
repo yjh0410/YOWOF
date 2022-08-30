@@ -14,7 +14,7 @@ class UCF_JHMDB_Evaluator(object):
                  device=None,
                  data_root=None,
                  dataset='ucf24',
-                 model_name='yowo',
+                 model_name='yowof',
                  img_size=224,
                  len_clip=1,
                  conf_thresh=0.005,
