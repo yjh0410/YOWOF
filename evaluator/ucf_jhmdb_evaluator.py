@@ -95,9 +95,7 @@ class UCF_JHMDB_Evaluator(object):
                 orig_size = target['orig_size']
                 bboxes = rescale_bboxes(bboxes, orig_size)
 
-                if not os.path.exists('results'):
-                    os.mkdir('results')
-                    print(123123123123123)
+                os.makedirs('results', exist_ok=True)
 
                 if self.dataset == 'ucf24':
                     detection_path = os.path.join('results', 'ucf_detections', self.model_name, 'detections_' + str(epoch), frame_id)
