@@ -70,7 +70,7 @@ class UCF_JHMDB_Evaluator(object):
 
         # inference
         prev_frame_id = ''
-        for iter_i, (frame_id, video_clip, target) in enumerate(self.testset):
+        for iter_i, (frame_id, video_clip, target) in enumerate(self.testset[:1]):
             # orignal frame size
             orig_size = target['orig_size']  # width, height
 
@@ -178,8 +178,6 @@ class UCF_JHMDB_Evaluator(object):
                 if iter_i % 1000 == 0:
                     log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
                     print(log_info, flush=True)
-
-            break
 
         classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
         locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
