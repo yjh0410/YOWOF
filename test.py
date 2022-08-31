@@ -32,6 +32,8 @@ def parse_args():
                         help='Dir to save results')
     parser.add_argument('-vs', '--vis_thresh', default=0.35, type=float,
                         help='threshold for visualization')
+    parser.add_argument('-sid', '--start_index', default=0, type=int,
+                        help='start index to test.')
 
     # model
     parser.add_argument('-v', '--version', default='yowo-d19', type=str,
@@ -64,7 +66,7 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
 
     # inference
     prev_frame_id = ''
-    for index in range(0, len(dataset)):
+    for index in range(args.start_index, len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
         frame_id, video_clip, target = dataset[index]
         orig_size = target['orig_size']  # width, height
