@@ -24,8 +24,6 @@ from config import build_dataset_config, build_model_config
 from models.detector import build_model
 
 
-GLOBAL_SEED = 42
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='YOWOF')
@@ -86,10 +84,6 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
     random.seed(seed)
     np.random.seed(seed)
-
-
-def worker_init_fn(dump):
-    set_seed(GLOBAL_SEED)
 
 
 def train():
