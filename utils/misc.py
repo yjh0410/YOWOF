@@ -230,6 +230,34 @@ class AVA_FocalLoss(object):
         return loss
 
 
+class Sigmoid_FocalLoss(object):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction='none'):
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+        
+    def __call__(self, logits, targets):
+        p = torch.sigmoid(logits)
+        ce_loss = F.binary_cross_entropy_with_logits(input=logits, 
+                                                        target=targets, 
+                                                        reduction="none")
+        p_t = p * targets + (1.0 - p) * (1.0 - targets)
+        loss = ce_loss * ((1.0 - p_t) ** self.gamma)
+
+        if self.alpha >= 0:
+            alpha_t = self.alpha * targets + (1.0 - self.alpha) * (1.0 - targets)
+            loss = alpha_t * loss
+
+        if self.reduction == "mean":
+            loss = loss.mean()
+
+        elif self.reduction == "sum":
+            loss = loss.sum()
+
+        return loss
+
+
 class Softmax_FocalLoss(nn.Module):
     """ Focal loss for UCF24 & JHMDB21"""
     def __init__(self, num_classes, alpha=None, gamma=2.0, reduction='none'):

@@ -34,8 +34,8 @@ def parse_args():
                         help='NMS threshold')
 
     # dataset
-    parser.add_argument('-d', '--dataset', default='coco',
-                        help='coco, voc.')
+    parser.add_argument('-d', '--dataset', default='ucf24',
+                        help='ucf24, jhmdb21, ava_v2.2.')
 
     # eval
     parser.add_argument('--gt_folder', default='./evaluator/groundtruth_ucf_jhmdb/groundtruth_ucf/',
