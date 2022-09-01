@@ -104,6 +104,7 @@ class Criterion(object):
         cls_pred = outputs['cls_preds']
         anchor_boxes = outputs['anchors']
         batch_size = len(targets)
+        targets = [{k: v.to(box_pred.device) for k, v in t.items()} for t in targets]
 
         # rescale tgt box
         rescale_tgt = []
