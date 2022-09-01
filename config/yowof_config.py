@@ -15,7 +15,7 @@ yowof_config = {
         # head
         'head_dim': 256,
         'head_norm': 'BN',
-        'head_act': 'lrelu',
+        'head_act': 'relu',
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
