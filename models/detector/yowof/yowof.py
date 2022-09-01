@@ -286,22 +286,16 @@ class YOWOF(nn.Module):
         # normalize box
         bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
         
-        # conf pred & cls pred (for AVA dataset)
-        conf_pred = None
-        conf_pred = torch.sigmoid(conf_pred)                         # [M, 1]
-        pose_cls_pred = torch.softmax(cls_pred[..., :14], dim=-1)
-        act_cls_pred = torch.sigmoid(cls_pred[..., 14:])
-        cls_pred = torch.cat([pose_cls_pred, act_cls_pred], dim=-1)  # [M, C]
+        # cls pred
 
         all_bboxes = []
-        for i in range(conf_pred.shape[0]):
-            pred_box_conf =  conf_pred[i].item()
+        for i in range(cls_pred.shape[0]):
+            score =  cls_pred[i].item()
             pred_box = bboxes[i]
-            pred_cls_conf = cls_pred[i]
 
-            if pred_box_conf > self.conf_thresh:
+            if score > self.conf_thresh:
                 x1, y1, x2, y2 = pred_box
-                box = [x1, y1, x2, y2, pred_box_conf, pred_cls_conf]
+                box = [x1, y1, x2, y2, score]
                 all_bboxes.append(box)
 
         # nms
@@ -388,7 +382,7 @@ class YOWOF(nn.Module):
         else:
             outputs = self.post_process_one_hot(cls_pred[0], reg_pred[0])
 
-        return backbone_feats_list, outputs
+        return outputs
 
 
     def inference_single_frame(self, video_clips):
@@ -401,13 +395,8 @@ class YOWOF(nn.Module):
         # backbone
         cur_bk_feat = self.backbone(key_frame)
 
-        # push the current feature
-        self.clip_feats.append(cur_bk_feat)
-        # delete the oldest feature
-        del self.clip_feats[0]
-
         # temporal encoder
-        cur_feats, _ = self.temporal_encoder(self.clip_feats)
+        cur_feats, _ = self.temporal_encoder(cur_bk_feat)
         feat = cur_feats[-1]
 
         # detection head
@@ -433,7 +422,7 @@ class YOWOF(nn.Module):
     def inference(self, video_clips):
         # Init inference, model processes a video clip
         if not self.stream_infernce:
-            _, outputs = self.inference_video_clip(video_clips)
+            outputs = self.inference_video_clip(video_clips)
 
             return outputs
             
@@ -443,19 +432,17 @@ class YOWOF(nn.Module):
             self.labels_list = []
 
             if self.initialization:
-                # Init stage, detector process a video clip
-                # and output results of per frame
-
                 # check state of convlstm
                 self.temporal_encoder.initialization = True
 
-                clip_feats, outputs = self.inference_video_clip(video_clips)
+                # Init stage, detector process a video clip
+                outputs = self.inference_video_clip(video_clips)
+
                 self.initialization = False
-                self.clip_feats = clip_feats
 
                 return outputs
             else:
-                # After init stage, detector process current frame
+                # After init stage, detector process key frame
                 outputs = self.inference_single_frame(video_clips)
 
                 return outputs

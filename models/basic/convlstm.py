@@ -162,25 +162,25 @@ class ConvLSTM(nn.Module):
             return layer_output_list[-1:], last_state_list[-1:]
 
 
-    def forward(self, feats, hidden_state=None):
+    def forward(self, feat, hidden_state=None):
         if self.inf_full_seq:
-            return self.inference_full_sequence(feats, hidden_state)
+            return self.inference_full_sequence(feat, hidden_state)
         else:
             if self.initialization:
                 self.return_all_layers = True
                 (
                     layer_output_list,
                     last_state_list
-                ) = self.inference_full_sequence(feats, hidden_state)
+                ) = self.inference_full_sequence(feat, hidden_state)
                 self.initialization = False
                 self.last_state_list = last_state_list
                 
             else:
-                cur_input = feats[-1]
+                # cur_input = feats[-1]
                 (
                     layer_output_list,
                     last_state_list
-                ) = self.inference_new_input(cur_input, self.last_state_list)
+                ) = self.inference_new_input(feat, self.last_state_list)
                 self.last_state_list = last_state_list
 
 
