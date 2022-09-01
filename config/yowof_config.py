@@ -24,7 +24,7 @@ yowof_config = {
         'conf_thresh_valid': 0.005,
         'nms_thresh': 0.5,
         # batch size
-        'batch_size': 8,
+        'batch_size': 1,
         'accumulate': 16,
         # matcher
         'matcher': 'uniform_matcher',

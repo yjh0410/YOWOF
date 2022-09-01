@@ -126,7 +126,7 @@ class UCF_JHMDB_Dataset(Dataset):
         target = {
             'boxes': target[:, :4].float(),      # [N, 4]
             'labels': target[:, -1].long() - 1,    # [N,]
-            'orig_size': [ow, oh]
+            'orig_size': torch.as_tensor([ow, oh])
         }
 
         return frame_id, video_clip, target
@@ -157,7 +157,7 @@ if __name__ == '__main__':
         saturation=trans_config['saturation'],
         exposure=trans_config['exposure']
         )
-    transform = BaseTransform(trans_config['pixel_mean'], trans_config['pixel_std'], img_size)
+    transform = BaseTransform(img_size, trans_config['pixel_mean'], trans_config['pixel_std'])
 
     train_dataset = UCF_JHMDB_Dataset(
         data_root=data_root,
