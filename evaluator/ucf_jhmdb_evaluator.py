@@ -92,7 +92,7 @@ class UCF_JHMDB_Evaluator(object):
                 scores, labels, bboxes = model(video_clip)
 
                 # rescale bbox
-                orig_size = target['orig_size']
+                orig_size = target['orig_size'].tolist()
                 bboxes = rescale_bboxes(bboxes, orig_size)
 
                 if not os.path.exists('results'):
@@ -131,7 +131,7 @@ class UCF_JHMDB_Evaluator(object):
 
                 tgt_bboxes = target['boxes'].numpy()
                 tgt_labels = target['labels'].numpy()
-                ow, oh = target['orig_size']
+                ow, oh = target['orig_size'].tolist()
                 num_gts = tgt_bboxes.shape[0]
 
                 # count number of total groundtruth

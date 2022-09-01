@@ -67,7 +67,7 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
     for index in range(args.start_index, len(dataset)):
         print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
         frame_id, video_clip, target = dataset[index]
-        orig_size = target['orig_size']  # width, height
+        orig_size = target['orig_size'].tolist()  # width, height
 
         # ex: frame_id = Basketball_v_Basketball_g01_c01_00048.txt
         if index == 0:
