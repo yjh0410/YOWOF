@@ -181,7 +181,7 @@ class Criterion(object):
         if self.multi_hot:
             valid_idxs = (torch.sum(gt_cls, dim=-1) >= 0)
             tgt_labels = torch.zeros_like(cls_pred)
-            tgt_labels[foreground_idxs] = gt_cls[foreground_idxs]
+            tgt_labels[foreground_idxs] = gt_cls[foreground_idxs].float()
 
         else:
             valid_idxs = gt_cls >= 0
