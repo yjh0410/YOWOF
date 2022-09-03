@@ -44,7 +44,7 @@ class Criterion(object):
             gt_cls = torch.zeros(cls_pred_shape, device=self.device).float()
             gt_cls[ignore_idx, :] = -1
             # [BN, C]
-            tgt_cls_o = torch.cat([t['labels'][J] for t, (_, J) in zip(targets, indices)])
+            tgt_cls_o = torch.cat([t['labels'][J] for t, (_, J) in zip(targets, indices)]).float()
             tgt_cls_o[pos_ignore_idx, :] = -1
             gt_cls[src_idx] = tgt_cls_o.to(self.device)
 
