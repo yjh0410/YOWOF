@@ -85,7 +85,7 @@ class UCF_JHMDB_Evaluator(object):
                 model.initialization = True
 
             # prepare
-            video_clip = video_clip.unsqueeze(0).to(self.device) # [B, 3, T, H, W], B=1
+            video_clip = video_clip.unsqueeze(0).to(self.device) # [B, T, 3, H, W], B=1
 
             with torch.no_grad():
                 # inference

@@ -3,6 +3,7 @@ import os
 import torch
 
 from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
+from evaluator.ava_evaluator import AVA_Evaluator
 
 from dataset.transforms import BaseTransform
 
@@ -73,6 +74,19 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         evaluator.evaluate_accu_recall(model)
 
 
+def ava_eval(device, d_cfg, model, transform):
+    evaluator = AVA_Evaluator(
+        device=device,
+        d_cfg=d_cfg,
+        img_size=d_cfg['test_size'],
+        len_clip=d_cfg['len_clip'],
+        sampling_rate=d_cfg['sampling_rate'],
+        transform=transform,
+        full_test_on_val=False,
+        version='v2.2')
+
+    evaluator.evaluate_frame_map(model)
+
 
 if __name__ == '__main__':
     args = parse_args()
@@ -130,6 +144,13 @@ if __name__ == '__main__':
         ucf_jhmdb_eval(
             device=device,
             args=args,
+            d_cfg=d_cfg,
+            model=model,
+            transform=basetransform
+            )
+    elif args.dataset == 'ava_v2.2':
+        ava_eval(
+            device=device,
             d_cfg=d_cfg,
             model=model,
             transform=basetransform

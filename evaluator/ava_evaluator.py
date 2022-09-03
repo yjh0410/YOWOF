@@ -18,17 +18,16 @@ from .ava_eval_helper import (
 
 
 class AVA_Evaluator(object):
-    def __init__(self, 
+    def __init__(self,
+                 device,
                  d_cfg,
                  img_size,
                  len_clip,
                  sampling_rate,
-                 batch_size,
                  transform,
-                 collate_fn,
                  full_test_on_val=False,
                  version='v2.2'):
-        self.all_preds = []
+        self.device = device
         self.full_ava_test = full_test_on_val
         self.data_root = d_cfg['data_root']
         self.backup_dir = d_cfg['backup_dir']
@@ -62,18 +61,8 @@ class AVA_Evaluator(object):
             sampling_rate=sampling_rate
         )
         self.num_classes = self.testset.num_classes
+        self.all_preds = []
 
-        # dataloader
-        self.testloader = torch.utils.data.DataLoader(
-            dataset=self.testset, 
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=collate_fn, 
-            num_workers=4,
-            drop_last=False,
-            pin_memory=True
-            )
-    
 
     def get_ava_mini_groundtruth(self, full_groundtruth):
         """
@@ -206,31 +195,46 @@ class AVA_Evaluator(object):
         model.eval()
         epoch_size = len(self.testloader)
 
-        for iter_i, (_, batch_video_clip, batch_target) in enumerate(self.testloader):
+        # initalize model
+        model.initialization = True
+        model.set_inference_mode(mode='stream')
 
-            # to device
-            batch_video_clip = batch_video_clip.to(model.device)
+        # inference
+        prev_video_id = ''
+        prev_video_sec = ''
+        for iter_i, (key_frame_info, video_clip, target) in enumerate(self.testset):
+
+            # ex: video_id: 1204, sec: 900
+            if iter_i == 0:
+                prev_video_id = key_frame_info[0]
+                prev_video_sec = key_frame_info[1]
+                model.initialization = True
+
+            if key_frame_info[0] != prev_video_id:
+                # a new video
+                prev_video_id = key_frame_info[0]
+                prev_video_sec = key_frame_info[1]
+                model.initialization = True
+
+            # prepare
+            video_clip = video_clip.unsqueeze(0).to(self.device) # [B, T, 3, H, W], B=1
 
             with torch.no_grad():
                 # inference
-                batch_bboxes = model(batch_video_clip)
+                bboxes = model(video_clip)
 
                 # process batch
                 preds_list = []
-                for bi in range(len(batch_bboxes)):
-                    bboxes = batch_bboxes[bi]
-                    target = batch_target[bi]
 
-                    # video info
-                    video_idx = target['video_idx']
-                    sec = target['sec']
+                # video info
+                video_idx = key_frame_info[0]
+                sec = key_frame_info[1]
 
-                    for bbox in bboxes:
-                        x1, y1, x2, y2 = bbox[:4]
-                        det_conf = float(bbox[4])
-                        cls_out = [det_conf * cls_conf.cpu().numpy() for cls_conf in bbox[5]]
+                for bbox in bboxes:
+                    x1, y1, x2, y2 = bbox[:4]
+                    cls_out = bbox[-1].cpu().numpy()
 
-                        preds_list.append([[x1,y1,x2,y2], cls_out, [video_idx, sec]])
+                    preds_list.append([[x1,y1,x2,y2], cls_out, [video_idx, sec]])
 
             self.update_stats(preds_list)
             if iter_i % 100 == 0:

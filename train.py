@@ -61,7 +61,7 @@ def parse_args():
 
     # Dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
-                        help='ucf24, jhmdb')
+                        help='ucf24, jhmdb21, ava_v2.2')
     parser.add_argument('--num_workers', default=4, type=int, 
                         help='Number of workers used in dataloading')
     
