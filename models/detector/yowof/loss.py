@@ -40,18 +40,22 @@ class Criterion(object):
 
     def prepare_targets(self, cls_pred_shape, targets, indices, src_idx, ignore_idx, pos_ignore_idx):
         if self.multi_hot:
+            # gt_cls: 0 -> bg; 1 -> fg; -1 -> ignore;
             # [BM, C]
-            gt_cls = torch.zeros(cls_pred_shape, device=self.device).float()
+            gt_cls = torch.zeros(cls_pred_shape,
+                                 dtype=torch.int64,
+                                 device=self.device)
             gt_cls[ignore_idx, :] = -1
             # [BN, C]
-            tgt_cls_o = torch.cat([t['labels'][J] for t, (_, J) in zip(targets, indices)]).float()
+            tgt_cls_o = torch.cat([t['labels'][J] for t, (_, J) in zip(targets, indices)])
             tgt_cls_o[pos_ignore_idx, :] = -1
             gt_cls[src_idx] = tgt_cls_o.to(self.device)
 
-            foreground_idxs = (torch.sum(gt_cls, dim=-1) >= 0)
+            foreground_idxs = (torch.sum(gt_cls, dim=-1) > 0)
             num_foreground = foreground_idxs.sum()
 
         else:
+            # gt_cls: 80 -> bg; 0-79 -> fg; -1 -> ignore;
             # [BM,]
             gt_cls = torch.full(cls_pred_shape[:1],
                                 self.num_classes,
@@ -174,9 +178,15 @@ class Criterion(object):
             )
 
         # class loss
-        valid_idxs = gt_cls >= 0
-        tgt_labels = torch.zeros_like(cls_pred)
-        tgt_labels[foreground_idxs, gt_cls[foreground_idxs]] = 1
+        if self.multi_hot:
+            valid_idxs = (torch.sum(gt_cls, dim=-1) >= 0)
+            tgt_labels = torch.zeros_like(cls_pred)
+            tgt_labels[foreground_idxs] = gt_cls[foreground_idxs]
+
+        else:
+            valid_idxs = gt_cls >= 0
+            tgt_labels = torch.zeros_like(cls_pred)
+            tgt_labels[foreground_idxs, gt_cls[foreground_idxs]] = 1
         valid_cls_pred = cls_pred[valid_idxs]
         valid_tgt_labels = tgt_labels[valid_idxs]
         loss_labels = self.loss_labels(valid_cls_pred, valid_tgt_labels, num_foreground)
