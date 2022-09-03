@@ -74,6 +74,7 @@ def build_dataset(device, d_cfg, args, is_train=False):
 
         # evaluator
         evaluator = AVA_Evaluator(
+            device=device,
             d_cfg=d_cfg,
             img_size=d_cfg['test_size'],
             len_clip=d_cfg['len_clip'],
