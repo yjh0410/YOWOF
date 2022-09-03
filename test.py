@@ -6,11 +6,12 @@ import numpy as np
 import torch
 
 from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
+from dataset.ava import AVA_Dataset
 from dataset.transforms import BaseTransform
 
 from utils.misc import load_weight
 from utils.box_ops import rescale_bboxes
-from utils.vis_tools import vis_detection
+from utils.vis_tools import convert_tensor_to_cv2img, vis_detection
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
@@ -45,7 +46,7 @@ def parse_args():
 
     # dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
-                        help='ucf24, ava.')
+                        help='ucf24, jhmdb21, ava_v2.2.')
 
     return parser.parse_args()
 
@@ -91,11 +92,10 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
         bboxes = rescale_bboxes(bboxes, orig_size)
 
         # vis results of key-frame
-        key_frame = video_clip[0, -1, :, :, :]
-        key_frame = key_frame.permute(1, 2, 0).cpu().numpy()
-        key_frame = (key_frame * d_cfg['pixel_std'] + d_cfg['pixel_mean']) * 255
-        key_frame = key_frame.astype(np.uint8)
-        key_frame = key_frame.copy()[..., (2, 1, 0)]  # to BGR
+        key_frame_tensor = video_clip[0, -1, :, :, :]
+        key_frame = convert_tensor_to_cv2img(key_frame_tensor, d_cfg['pixel_mean'], d_cfg['pixel_std'])
+
+        # resize key_frame to orig size
         key_frame = cv2.resize(key_frame, orig_size)
 
         vis_results = vis_detection(
@@ -116,6 +116,96 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
             # save result
             cv2.imwrite(os.path.join(save_path,
             '{:0>5}.jpg'.format(index)), vis_results)
+        
+
+@torch.no_grad()
+def inference_ava(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
+    # path to save 
+    if args.save:
+        save_path = os.path.join(
+            args.save_folder, args.dataset, 
+            args.version, 'video_clips')
+        os.makedirs(save_path, exist_ok=True)
+
+    # initalize model
+    model.initialization = True
+
+    # inference
+    prev_video_id = ''
+    prev_video_sec = ''
+    for index in range(args.start_index, len(dataset)):
+        print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
+        key_frame_info, video_clip, target = dataset[index]
+        
+        orig_size = target['orig_size'].tolist()  # width, height
+
+        # ex: video_id: 1204, sec: 900
+        if index == 0:
+            prev_video_id = key_frame_info[0]
+            prev_video_sec = key_frame_info[1]
+            model.initialization = True
+
+        if key_frame_info[0] != prev_video_id:
+            # a new video
+            prev_video_id = key_frame_info[0]
+            prev_video_sec = key_frame_info[1]
+            model.initialization = True
+
+        # prepare
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
+
+        t0 = time.time()
+        # inference
+        bboxes = model(video_clip)
+        print("inference time ", time.time() - t0, "s")
+        
+        # vis results of key-frame
+        key_frame_tensor = video_clip[0, :, -1, :, :]
+        key_frame = convert_tensor_to_cv2img(key_frame_tensor, d_cfg['pixel_mean'], d_cfg['pixel_std'])
+        # resize key_frame to orig size
+        key_frame = cv2.resize(key_frame, orig_size)
+
+        # visualize detection results
+        for bbox in bboxes:
+            x1, y1, x2, y2 = bbox[:4]
+            cls_out = bbox[-1].cpu().numpy()
+        
+            # rescale bbox
+            x1, x2 = int(x1 * orig_size[0]), int(x2 * orig_size[0])
+            y1, y2 = int(y1 * orig_size[1]), int(y2 * orig_size[1])
+
+            cls_scores = np.array(cls_out)
+            indices = np.where(cls_scores > 0.4)
+            scores = cls_scores[indices]
+            indices = list(indices[0])
+            scores = list(scores)
+
+            cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            if len(scores) > 0:
+                blk   = np.zeros(key_frame.shape, np.uint8)
+                font  = cv2.FONT_HERSHEY_SIMPLEX
+                coord = []
+                text  = []
+                text_size = []
+                # scores, indices  = [list(a) for a in zip(*sorted(zip(scores,indices), reverse=True))] # if you want, you can sort according to confidence level
+                for _, cls_ind in enumerate(indices):
+                    text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
+                    text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.25, thickness=1)[0])
+                    coord.append((x1+3, y1+7+10*_))
+                    cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-6), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
+                key_frame = cv2.addWeighted(key_frame, 1.0, blk, 0.25, 1)
+                for t in range(len(text)):
+                    cv2.putText(key_frame, text[t], coord[t], font, 0.25, (0, 0, 0), 1)
+        
+        if args.show:
+            cv2.imshow('key-frame detection', key_frame)
+            cv2.waitKey(0)
+
+        if args.save:
+            # save result
+            cv2.imwrite(os.path.join(save_path,
+            '{:0>5}.jpg'.format(index)), key_frame)
         
 
 if __name__ == '__main__':
@@ -151,13 +241,20 @@ if __name__ == '__main__':
         class_names = d_cfg['label_map']
         num_classes = dataset.num_classes
 
-    elif args.dataset == 'ava':
-        dataset = None
-        class_names = None
-        num_classes = None
+    elif args.dataset == 'ava_v2.2':
+        dataset = AVA_Dataset(
+            cfg=d_cfg,
+            is_train=False,
+            img_size=d_cfg['test_size'],
+            transform=basetransform,
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
+        )
+        class_names = d_cfg['label_map']
+        num_classes = dataset.num_classes
 
     else:
-        print('unknow dataset !! Only support voc and coco !!')
+        print('unknow dataset !! Only support ucf24 & jhmdb21 & ava_v2.2 and coco !!')
         exit(0)
 
     np.random.seed(100)

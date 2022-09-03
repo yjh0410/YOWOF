@@ -33,6 +33,18 @@ def vis_targets(video_clips, targets):
             cv2.waitKey(0)
 
 
+def convert_tensor_to_cv2img(img_tensor, pixel_mean=[0., 0., 0.], pixel_std=[1., 1., 1.]):
+    """ convert torch.Tensor to cv2 image """
+    # to numpy
+    img_tensor = img_tensor.permute(1, 2, 0).cpu().numpy()
+    # to cv2 img Mat
+    cv2_img = ((img_tensor * pixel_std + pixel_mean) * 255).astype(np.uint8)
+    # to BGR
+    cv2_img = cv2_img.copy()[..., (2, 1, 0)]
+
+    return cv2_img
+
+
 def plot_bbox_labels(img, bbox, label=None, cls_color=None, text_scale=0.4):
     x1, y1, x2, y2 = bbox
     x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)

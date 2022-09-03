@@ -200,9 +200,10 @@ class YOWOF(nn.Module):
             h = np.maximum(1e-28, yy2 - yy1)
             inter = w * h
 
-            ovr = inter / (areas[i] + areas[order[1:]] - inter + 1e-14)
-            #reserve all the boundingbox whose ovr less than thresh
-            inds = np.where(ovr <= self.nms_thresh)[0]
+            # iou
+            iou = inter / (areas[i] + areas[order[1:]] - inter + 1e-14)
+            #iou threshold
+            inds = np.where(iou <= self.nms_thresh)[0]
             order = order[inds + 1]
 
         return keep
@@ -286,40 +287,33 @@ class YOWOF(nn.Module):
         # normalize box
         bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
         
-        # cls pred
-
-        all_bboxes = []
-        for i in range(cls_pred.shape[0]):
-            score =  cls_pred[i].item()
-            pred_box = bboxes[i]
-
-            if score > self.conf_thresh:
-                x1, y1, x2, y2 = pred_box
-                box = [x1, y1, x2, y2, score]
-                all_bboxes.append(box)
+        # conf threshold
+        keep = (torch.max(cls_pred, dim=-1)[0] > self.conf_thresh).bool()
+        cls_pred = cls_pred[keep]
+        bboxes = bboxes[keep]
 
         # nms
-        if len(all_bboxes) > 0:
-            det_confs = torch.zeros(len(all_bboxes))
-            for i in range(len(all_bboxes)):
-                det_confs[i] = 1.0 - all_bboxes[i][4]                
+        if len(bboxes) > 0:
+            det_confs = torch.zeros(len(bboxes))
+            for i in range(len(bboxes)):
+                det_confs[i] = 1.0 - cls_pred[i].max().item()               
 
             _, sortIds = torch.sort(det_confs)
 
             out_boxes = []
-            for i in range(len(all_bboxes)):
-                box_i = all_bboxes[sortIds[i]]
+            for i in range(len(bboxes)):
+                box_i = bboxes[sortIds[i]]
                 if box_i[4] > 0:
                     out_boxes.append(box_i)
-                    for j in range(i+1, len(all_bboxes)):
-                        box_j = all_bboxes[sortIds[j]]
+                    for j in range(i+1, len(bboxes)):
+                        box_j = bboxes[sortIds[j]]
                         if self.bbox_iou(box_i, box_j) > self.nms_thresh:
                             box_j[4] = 0
 
             return out_boxes
 
         else:
-            return all_bboxes
+            return bboxes
     
 
     def decode_output(self, act_pred, cls_pred, reg_pred):
