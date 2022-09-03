@@ -215,10 +215,7 @@ class AVA_Dataset(Dataset):
         target = {
             'boxes': target[:, :4].float(),  # [N, 4]
             'labels': target[:, 4:].long(),  # [N, C]
-            'orig_size': [ow, oh],
-            'video_idx': video_idx,
-            'sec': sec,
-
+            'orig_size': torch.as_tensor([ow, oh])
         }
 
         return [video_idx, sec], video_clip, target
