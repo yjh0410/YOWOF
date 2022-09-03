@@ -41,7 +41,7 @@ class Criterion(object):
     def prepare_targets(self, cls_pred_shape, targets, indices, src_idx, ignore_idx, pos_ignore_idx):
         if self.multi_hot:
             # [BM, C]
-            gt_cls = torch.zeros_like(cls_pred_shape)
+            gt_cls = torch.zeros(cls_pred_shape, device=self.device).float()
             gt_cls[ignore_idx, :] = -1
             # [BN, C]
             tgt_cls_o = torch.cat([t['labels'][J] for t, (_, J) in zip(targets, indices)])
