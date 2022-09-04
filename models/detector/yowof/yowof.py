@@ -287,37 +287,24 @@ class YOWOF(nn.Module):
         # normalize box
         bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
         
-        # conf threshold
         cls_pred = torch.sigmoid(cls_pred)
-        keep = (torch.max(cls_pred, dim=-1)[0] > self.conf_thresh).bool()
+        # conf threshold
+        scores = torch.max(cls_pred, dim=-1)[0]
+        keep = (scores > self.conf_thresh).bool()
+        cls_pred = cls_pred[keep]   # [N, C]
+        bboxes = bboxes[keep]       # [N, 4]
+
+        # nms
+        keep = self.nms(bboxes, scores)
+
+        keep = np.where(keep > 0)
         cls_pred = cls_pred[keep]
         bboxes = bboxes[keep]
 
         # [N, 4 + C]
-        bboxes = torch.cat([bboxes, cls_pred], dim=-1)
+        out_boxes = torch.cat([bboxes, cls_pred], dim=-1)
 
-        # nms
-        if len(bboxes) > 0:
-            det_confs = torch.zeros(len(bboxes))
-            for i in range(len(bboxes)):
-                det_confs[i] = 1.0 - cls_pred[i].max().item()               
-
-            _, sortIds = torch.sort(det_confs)
-
-            out_boxes = []
-            for i in range(len(bboxes)):
-                box_i = bboxes[sortIds[i]]
-                if box_i[4:].max().item() > 0:
-                    out_boxes.append(box_i)
-                    for j in range(i+1, len(bboxes)):
-                        box_j = bboxes[sortIds[j]]
-                        if self.bbox_iou(box_i, box_j) > self.nms_thresh:
-                            box_j[4:] = 0
-
-            return out_boxes
-
-        else:
-            return bboxes
+        return out_boxes
     
 
     def decode_output(self, act_pred, cls_pred, reg_pred):
