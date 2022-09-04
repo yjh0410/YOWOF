@@ -288,6 +288,7 @@ class YOWOF(nn.Module):
         bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
         
         # conf threshold
+        cls_pred = torch.sigmoid(cls_pred)
         keep = (torch.max(cls_pred, dim=-1)[0] > self.conf_thresh).bool()
         cls_pred = cls_pred[keep]
         bboxes = bboxes[keep]
