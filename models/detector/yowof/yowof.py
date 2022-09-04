@@ -291,8 +291,9 @@ class YOWOF(nn.Module):
         # conf threshold
         scores = torch.max(cls_pred, dim=-1)[0]
         keep = (scores > self.conf_thresh).bool()
-        cls_pred = cls_pred[keep]   # [N, C]
-        bboxes = bboxes[keep]       # [N, 4]
+        cls_pred = cls_pred[keep]   # [N1, C]
+        bboxes = bboxes[keep]       # [N1, 4]
+        scores = scores[keep]       # [N1,]
 
         # nms
         bboxes = bboxes.cpu().numpy()
@@ -304,7 +305,7 @@ class YOWOF(nn.Module):
         cls_pred = cls_pred[keep]
         bboxes = bboxes[keep]
 
-        # [N, 4 + C]
+        # [N2, 4 + C]
         out_boxes = np.concatenate([bboxes, cls_pred], axis=-1)
 
         return out_boxes
