@@ -176,6 +176,35 @@ class YOWOF(nn.Module):
         return pred_box
 
 
+    def decode_output(self, act_pred, cls_pred, reg_pred):
+        """
+        Input:
+            act_pred: (Tensor) [B, 1, H, W]
+            cls_pred: (Tensor) [B, C, H, W]
+            reg_pred: (Tensor) [B, 4, H, W]
+        Output:
+            normalized_cls_pred: (Tensor) [B, M, C]
+            reg_pred: (Tensor) [B, M, 4]
+        """
+        # implicit objectness
+        B, _, H, W = act_pred.size()
+        act_pred = act_pred.view(B, -1, 1, H, W)
+        cls_pred = cls_pred.view(B, -1, self.num_classes, H, W)
+        normalized_cls_pred = cls_pred + act_pred - torch.log(
+            1. + 
+            torch.clamp(cls_pred, max=DEFAULT_EXP_CLAMP).exp() + 
+            torch.clamp(act_pred, max=DEFAULT_EXP_CLAMP).exp())
+        # [B, KA, C, H, W] -> [B, H, W, KA, C] -> [B, M, C], M = HxWxKA
+        normalized_cls_pred = normalized_cls_pred.permute(0, 3, 4, 1, 2).contiguous()
+        normalized_cls_pred = normalized_cls_pred.view(B, -1, self.num_classes)
+
+        # [B, KA*4, H, W] -> [B, KA, 4, H, W] -> [B, H, W, KA, 4] -> [B, M, 4]
+        reg_pred =reg_pred.view(B, -1, 4, H, W).permute(0, 3, 4, 1, 2).contiguous()
+        reg_pred = reg_pred.view(B, -1, 4)
+
+        return normalized_cls_pred, reg_pred
+
+
     def nms(self, dets, scores):
         """"Pure Python NMS."""
         x1 = dets[:, 0]  #xmin
@@ -207,31 +236,6 @@ class YOWOF(nn.Module):
             order = order[inds + 1]
 
         return keep
-
-
-    def bbox_iou(self, box1, box2):
-        mx = min(box1[0], box2[0])
-        Mx = max(box1[2], box2[2])
-        my = min(box1[1], box2[1])
-        My = max(box1[3], box2[3])
-        w1 = box1[2] - box1[0]
-        h1 = box1[3] - box1[1]
-        w2 = box2[2] - box2[0]
-        h2 = box2[3] - box2[1]
-        uw = Mx - mx
-        uh = My - my
-        cw = w1 + w2 - uw
-        ch = h1 + h2 - uh
-        carea = 0
-        if cw <= 0 or ch <= 0:
-            return 0.0
-
-        area1 = w1 * h1
-        area2 = w2 * h2
-        carea = cw * ch
-        uarea = area1 + area2 - carea
-
-        return carea / uarea
 
 
     def post_process_one_hot(self, cls_pred, reg_pred):
@@ -309,35 +313,6 @@ class YOWOF(nn.Module):
 
         return out_boxes
     
-
-    def decode_output(self, act_pred, cls_pred, reg_pred):
-        """
-        Input:
-            act_pred: (Tensor) [B, 1, H, W]
-            cls_pred: (Tensor) [B, C, H, W]
-            reg_pred: (Tensor) [B, 4, H, W]
-        Output:
-            normalized_cls_pred: (Tensor) [B, M, C]
-            reg_pred: (Tensor) [B, M, 4]
-        """
-        # implicit objectness
-        B, _, H, W = act_pred.size()
-        act_pred = act_pred.view(B, -1, 1, H, W)
-        cls_pred = cls_pred.view(B, -1, self.num_classes, H, W)
-        normalized_cls_pred = cls_pred + act_pred - torch.log(
-            1. + 
-            torch.clamp(cls_pred, max=DEFAULT_EXP_CLAMP).exp() + 
-            torch.clamp(act_pred, max=DEFAULT_EXP_CLAMP).exp())
-        # [B, KA, C, H, W] -> [B, H, W, KA, C] -> [B, M, C], M = HxWxKA
-        normalized_cls_pred = normalized_cls_pred.permute(0, 3, 4, 1, 2).contiguous()
-        normalized_cls_pred = normalized_cls_pred.view(B, -1, self.num_classes)
-
-        # [B, KA*4, H, W] -> [B, KA, 4, H, W] -> [B, H, W, KA, 4] -> [B, M, 4]
-        reg_pred =reg_pred.view(B, -1, 4, H, W).permute(0, 3, 4, 1, 2).contiguous()
-        reg_pred = reg_pred.view(B, -1, 4)
-
-        return normalized_cls_pred, reg_pred
-
 
     def inference_video_clip(self, video_clips):
         # prepare

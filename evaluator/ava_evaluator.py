@@ -151,14 +151,14 @@ class AVA_Evaluator(object):
             video_idx = int(np.round(pred[-1][0]))
             sec = int(np.round(pred[-1][1]))
             box = pred[0]
-            scores = pred[1]
-            assert len(scores) == 80
+            cls_out = pred[1]
+            assert len(cls_out) == 80
 
             video = self.video_idx_to_name[video_idx]
             key = video + ',' + "%04d" % (sec)
             box = [box[1], box[0], box[3], box[2]]  # turn to y1,x1,y2,x2
 
-            for cls_idx, score in enumerate(scores):
+            for cls_idx, score in enumerate(cls_out):
                 if cls_idx + 1 in self.class_whitelist:
                     out_scores[key].append(score)
                     out_labels[key].append(cls_idx + 1)
@@ -232,7 +232,7 @@ class AVA_Evaluator(object):
 
                 for bbox in bboxes:
                     x1, y1, x2, y2 = bbox[:4]
-                    cls_out = bbox[-1].cpu().numpy()
+                    cls_out = bbox[4:]
 
                     preds_list.append([[x1,y1,x2,y2], cls_out, [video_idx, sec]])
 
