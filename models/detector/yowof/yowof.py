@@ -306,11 +306,12 @@ class YOWOF(nn.Module):
             out_boxes = []
             for i in range(len(bboxes)):
                 box_i = bboxes[sortIds[i]]
-                out_boxes.append(box_i)
-                for j in range(i+1, len(bboxes)):
-                    box_j = bboxes[sortIds[j]]
-                    if self.bbox_iou(box_i, box_j) > self.nms_thresh:
-                        box_j[4] = 0
+                if box_i[4:].max().item() > 0:
+                    out_boxes.append(box_i)
+                    for j in range(i+1, len(bboxes)):
+                        box_j = bboxes[sortIds[j]]
+                        if self.bbox_iou(box_i, box_j) > self.nms_thresh:
+                            box_j[4:] = 0
 
             return out_boxes
 
