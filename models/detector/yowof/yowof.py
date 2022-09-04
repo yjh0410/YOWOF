@@ -300,7 +300,6 @@ class YOWOF(nn.Module):
         scores = scores.cpu().numpy()
         cls_pred = cls_pred.cpu().numpy()
 
-        print(bboxes.shape, scores.shape)
         keep = self.nms(bboxes, scores)
         cls_pred = cls_pred[keep]
         bboxes = bboxes[keep]

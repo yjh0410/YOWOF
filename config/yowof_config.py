@@ -20,7 +20,7 @@ yowof_config = {
         'num_reg_heads': 4,
         'head_depthwise': False,
         # post process
-        'conf_thresh': 0.4,
+        'conf_thresh': 0.3,
         'conf_thresh_valid': 0.005,
         'nms_thresh': 0.5,
         # batch size
