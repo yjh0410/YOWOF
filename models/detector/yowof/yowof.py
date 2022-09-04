@@ -295,15 +295,16 @@ class YOWOF(nn.Module):
         bboxes = bboxes[keep]       # [N, 4]
 
         # nms
-        print(scores)
-        keep = self.nms(bboxes, scores)
+        bboxes = bboxes.cpu().numpy()
+        scores = scores.cpu().numpy()
+        cls_pred = cls_pred.cpu().numpy()
 
-        keep = np.where(keep > 0)
+        keep = self.nms(bboxes, scores)
         cls_pred = cls_pred[keep]
         bboxes = bboxes[keep]
 
         # [N, 4 + C]
-        out_boxes = torch.cat([bboxes, cls_pred], dim=-1)
+        out_boxes = np.concatenate([bboxes, cls_pred], axis=-1)
 
         return out_boxes
     
