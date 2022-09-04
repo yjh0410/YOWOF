@@ -175,7 +175,7 @@ def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
             y1, y2 = int(y1 * orig_size[1]), int(y2 * orig_size[1])
 
             cls_scores = np.array(cls_out)
-            indices = np.where(cls_scores > 0.4)
+            indices = np.where(cls_scores > 0.1)
             scores = cls_scores[indices]
             indices = list(indices[0])
             scores = list(scores)
