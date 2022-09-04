@@ -293,7 +293,7 @@ class YOWOF(nn.Module):
         bboxes = bboxes[keep]
 
         # [N, 4 + C]
-        bboxes = torch.cat([bboxes, cls_pred])
+        bboxes = torch.cat([bboxes, cls_pred], dim=-1)
 
         # nms
         if len(bboxes) > 0:
