@@ -160,7 +160,7 @@ def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
         print("inference time ", time.time() - t0, "s")
         
         # vis results of key-frame
-        key_frame_tensor = video_clip[0, :, -1, :, :]
+        key_frame_tensor = video_clip[0, -1, :, :, :]
         key_frame = convert_tensor_to_cv2img(key_frame_tensor, d_cfg['pixel_mean'], d_cfg['pixel_std'])
         # resize key_frame to orig size
         key_frame = cv2.resize(key_frame, orig_size)
