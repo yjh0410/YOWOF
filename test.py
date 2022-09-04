@@ -119,7 +119,7 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
         
 
 @torch.no_grad()
-def inference_ava(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
+def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
     # path to save 
     if args.save:
         save_path = os.path.join(
@@ -291,4 +291,14 @@ if __name__ == '__main__':
             dataset=dataset,
             class_names=class_names,
             class_colors=class_colors
+            )
+
+    elif args.dataset in ['ava_v2.2']:
+        inference_ava(
+            d_cfg=d_cfg,
+            args=args,
+            model=model,
+            device=device,
+            dataset=dataset,
+            class_names=class_names
             )
