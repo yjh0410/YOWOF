@@ -168,7 +168,7 @@ def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
         # visualize detection results
         for bbox in bboxes:
             x1, y1, x2, y2 = bbox[:4]
-            cls_out = bbox[-1].cpu().numpy()
+            cls_out = bbox[4:].cpu().numpy()
         
             # rescale bbox
             x1, x2 = int(x1 * orig_size[0]), int(x2 * orig_size[0])
