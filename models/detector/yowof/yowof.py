@@ -295,6 +295,7 @@ class YOWOF(nn.Module):
         bboxes = bboxes[keep]       # [N, 4]
 
         # nms
+        print(scores)
         keep = self.nms(bboxes, scores)
 
         keep = np.where(keep > 0)
