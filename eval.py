@@ -96,6 +96,9 @@ if __name__ == '__main__':
 
     elif args.dataset == 'jhmdb':
         num_classes = 21
+
+    elif args.dataset == 'ava_v2.2':
+        num_classes = 80
     
     else:
         print('unknow dataset.')
