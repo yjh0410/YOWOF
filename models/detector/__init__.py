@@ -26,6 +26,7 @@ def build_model(args,
             conf_thresh = m_cfg['conf_thresh']
 
     # build YOWO
+    print(conf_thresh)
     model = YOWOF(
         cfg=m_cfg,
         device=device,
