@@ -21,7 +21,7 @@ yowof_config = {
         'head_depthwise': False,
         # post process
         'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.1,
+        'conf_thresh_valid': 0.005,
         'nms_thresh': 0.5,
         # batch size
         'batch_size': 8,

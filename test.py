@@ -151,6 +151,8 @@ def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
             prev_video_sec = key_frame_info[1]
             model.initialization = True
 
+        print(key_frame_info[0], key_frame_info[1])
+
         # prepare
         video_clip = video_clip.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
 

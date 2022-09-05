@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from .matcher import UniformMatcher
 from utils.box_ops import box_iou, generalized_box_iou, box_cxcywh_to_xyxy
-from utils.misc import Sigmoid_FocalLoss
+from utils.misc import Sigmoid_FocalLoss, AVA_FocalLoss
 from utils.vis_tools import vis_targets
 from utils.distributed_utils import get_world_size, is_dist_avail_and_initialized
 
@@ -33,7 +33,7 @@ class Criterion(object):
         self.matcher = UniformMatcher(match_times=cfg['topk'])
         # loss
         if multi_hot:
-            self.cls_loss = Sigmoid_FocalLoss(alpha=alpha, gamma=gamma, reduction='none')
+            self.cls_loss = AVA_FocalLoss(device=device, gamma=0.5, reduction='none')
         else:
             self.cls_loss = Sigmoid_FocalLoss(alpha=alpha, gamma=gamma, reduction='none')
 
