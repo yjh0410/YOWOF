@@ -241,7 +241,6 @@ class AVA_Evaluator(object):
             if iter_i % 1 == 0:
                 log_info = "[%d / %d]" % (iter_i, len(self.testset))
                 print(log_info, flush=True)
-                break
 
         mAP = self.calculate_mAP(epoch)
         print("mAP: {}".format(mAP))
