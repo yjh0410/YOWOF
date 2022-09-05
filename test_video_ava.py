@@ -97,15 +97,14 @@ def detect(args, d_cfg, model, device, transform, class_names):
             # visualize detection results
             for bbox in out_bboxes:
                 x1, y1, x2, y2 = bbox[:4]
-                det_conf = float(bbox[4])
-                cls_out = [det_conf * cls_conf.cpu().numpy() for cls_conf in bbox[5]]
+                cls_out = bbox[4:]
             
                 # rescale bbox
                 x1, x2 = int(x1 * orig_w), int(x2 * orig_w)
                 y1, y2 = int(y1 * orig_h), int(y2 * orig_h)
 
                 cls_scores = np.array(cls_out)
-                indices = np.where(cls_scores > 0.4)
+                indices = np.where(cls_scores > args.vis_thresh)
                 scores = cls_scores[indices]
                 indices = list(indices[0])
                 scores = list(scores)
