@@ -193,7 +193,6 @@ class AVA_Evaluator(object):
 
     def evaluate_frame_map(self, model, epoch=1):
         model.eval()
-        epoch_size = len(self.testloader)
 
         # initalize model
         model.initialization = True
@@ -238,7 +237,7 @@ class AVA_Evaluator(object):
 
             self.update_stats(preds_list)
             if iter_i % 100 == 0:
-                log_info = "[%d / %d]" % (iter_i, epoch_size)
+                log_info = "[%d / %d]" % (iter_i, len(self.testset))
                 print(log_info, flush=True)
                 break
 
