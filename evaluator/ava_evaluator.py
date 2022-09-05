@@ -229,11 +229,13 @@ class AVA_Evaluator(object):
                 video_idx = key_frame_info[0]
                 sec = key_frame_info[1]
 
-                for bbox in bboxes:
-                    x1, y1, x2, y2 = bbox[:4]
-                    cls_out = bbox[4:]
+                # [[x1, y1, x2, y2, cls_out, [video_idx, sec]], ...]
+                preds_list = [[bbox[:4].tolist(), bbox[4:], [video_idx, sec]] for bbox in bboxes]
+                # for bbox in bboxes:
+                #     x1, y1, x2, y2 = bbox[:4]
+                #     cls_out = bbox[4:]
 
-                    preds_list.append([[x1,y1,x2,y2], cls_out, [video_idx, sec]])
+                #     preds_list.append([[x1,y1,x2,y2], cls_out, [video_idx, sec]])
 
             self.update_stats(preds_list)
             if iter_i % 1000 == 0:

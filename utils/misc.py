@@ -203,10 +203,7 @@ class AVA_FocalLoss(object):
         targets: (N, C) -- one-hot variable
         '''
         # process class pred
-        inputs1 = torch.clamp(torch.softmax(logits[..., :14], dim=-1), min=1e-4, max=1 - 1e-4)
-        inputs2 = torch.clamp(torch.sigmoid(logits[..., 14:]), min=1e-4, max=1 - 1e-4)
-
-        inputs = torch.cat([inputs1, inputs2], dim=-1)
+        inputs = torch.clamp(logits.sigmoid(), min=1e-4, max=1 - 1e-4)
 
         # weight matrix
         weight_matrix = self.class_weight.expand(logits.size(0), self.num_classes)
