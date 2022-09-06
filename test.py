@@ -77,6 +77,7 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
 
         if frame_id[:-10] != prev_frame_id:
             # a new video
+            print(prev_frame_id)
             prev_frame_id = frame_id[:-10]
             model.initialization = True
 
