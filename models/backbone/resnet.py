@@ -13,7 +13,6 @@ __all__ = ['ResNet', 'resnet18', 'resnet50', 'resnet101']
 model_urls = {
     'resnet18': 'https://download.openmmlab.com/mmaction/recognition/tsn/hvu/action/tsn_r18_1x1x8_100e_hvu_action_rgb_20201027-011b282b.pth',
     'resnet50': 'https://download.openmmlab.com/mmaction/recognition/tsn/tsn_r50_video_1x1x8_100e_kinetics600_rgb/tsn_r50_video_1x1x8_100e_kinetics600_rgb_20201015-4db3c461.pth',
-    'resnet101': 'https://download.openmmlab.com/mmaction/recognition/tsn/tsn_r101_1x1x5_50e_mmit_rgb/tsn_r101_1x1x5_50e_mmit_rgb_20200618-642f450d.pth',
     'resnext101_32x4d': 'https://download.openmmlab.com/mmaction/recognition/tsn/custom_backbones/tsn_rn101_32x4d_320p_1x1x3_100e_kinetics400_rgb-16a8b561.pth'
 }
 
@@ -288,7 +287,7 @@ def load_weight(model, arch, progress):
             shape_checkpoint = tuple(new_state_dict[k].shape)
             if shape_model != shape_checkpoint:
                 new_state_dict.pop(k)
-                # print(k)
+                print(k)
         else:
             new_state_dict.pop(k)
             print(k)
