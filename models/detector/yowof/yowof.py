@@ -9,7 +9,7 @@ from ...basic.convlstm import ConvLSTM
 
 from .loss import Criterion
 
-
+# predefined hyperparams
 DEFAULT_SCALE_CLAMP = math.log(1000.0 / 16)
 DEFAULT_EXP_CLAMP = math.log(1e8)
 
