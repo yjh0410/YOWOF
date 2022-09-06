@@ -374,7 +374,7 @@ def build_resnet_2d(model_name='resnet50', pretrained=False, res5_dilation=True)
         feat = 2048
 
     elif model_name == 'resnet101':
-        model = resnet50(pretrained, res5_dilation=res5_dilation)
+        model = resnet101(pretrained, res5_dilation=res5_dilation)
         feat = 2048
 
     elif model_name == 'resnext101':
