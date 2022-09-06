@@ -34,7 +34,7 @@ def build_model(args,
         len_clip=d_cfg['len_clip'],
         num_classes=num_classes,
         conf_thresh=conf_thresh,
-        nms_thresh=m_cfg['nms_thresh'],
+        nms_thresh=0.5,
         topk=args.topk,
         trainable=trainable,
         multi_hot=d_cfg['multi_hot']
