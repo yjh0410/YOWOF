@@ -147,7 +147,6 @@ class AVA_Evaluator(object):
         # each pred is [[x1, y1, x2, y2], cls_out, [video_idx, src]]
         for i in range(len(self.all_preds)):
             pred = self.all_preds[i]
-            print(pred)
             assert len(pred) == 3
             video_idx = int(np.round(pred[-1][0]))
             sec = int(np.round(pred[-1][1]))
@@ -237,7 +236,6 @@ class AVA_Evaluator(object):
             if iter_i % 500 == 0:
                 log_info = "[%d / %d]" % (iter_i, len(self.testset))
                 print(log_info, flush=True)
-            break
 
         mAP = self.calculate_mAP(epoch)
         print("mAP: {}".format(mAP))
