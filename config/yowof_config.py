@@ -19,10 +19,6 @@ yowof_config = {
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
-        # post process
-        'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
-        'nms_thresh': 0.5,
         # batch size
         'batch_size': 8,
         'accumulate': 16,
@@ -36,7 +32,7 @@ yowof_config = {
         'alpha': 0.25,
         'gamma': 2.0,
         'loss_cls_weight': 1.0,
-        'loss_reg_weight': 2.0,
+        'loss_reg_weight': 1.0,
         # anchor size
         'anchor_size': [[16, 16],
                         [32, 32],
@@ -62,10 +58,6 @@ yowof_config = {
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
-        # post process
-        'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
-        'nms_thresh': 0.5,
         # batch size
         'batch_size': 8,
         'accumulate': 16,
@@ -105,10 +97,6 @@ yowof_config = {
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
-        # post process
-        'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
-        'nms_thresh': 0.5,
         # batch size
         'batch_size': 8,
         'accumulate': 16,
@@ -148,10 +136,6 @@ yowof_config = {
         'num_cls_heads': 4,
         'num_reg_heads': 4,
         'head_depthwise': False,
-        # post process
-        'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
-        'nms_thresh': 0.5,
         # batch size
         'batch_size': 4,
         'accumulate': 32,
