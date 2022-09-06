@@ -33,7 +33,8 @@ class Criterion(object):
         self.matcher = UniformMatcher(match_times=cfg['topk'])
         # loss
         if multi_hot:
-            self.cls_loss = AVA_FocalLoss(device=device, gamma=0.5, num_classes=num_classes, reduction='none')
+            # self.cls_loss = AVA_FocalLoss(device=device, gamma=0.5, num_classes=num_classes, reduction='none')
+            self.cls_loss = Sigmoid_FocalLoss(alpha=alpha, gamma=gamma, reduction='none')
         else:
             self.cls_loss = Sigmoid_FocalLoss(alpha=alpha, gamma=gamma, reduction='none')
 
