@@ -153,8 +153,8 @@ yowof_config = {
         'conf_thresh_valid': 0.005,
         'nms_thresh': 0.5,
         # batch size
-        'batch_size': 6,
-        'accumulate': 21,
+        'batch_size': 4,
+        'accumulate': 32,
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
