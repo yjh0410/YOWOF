@@ -88,7 +88,7 @@ yowof_config = {
                         [256, 256]], # 320
     },
 
-    'yowof-r50': {
+    'yowof-r50-DC5': {
         # backbone
         'backbone': 'resnet50',
         'pretrained': True,
