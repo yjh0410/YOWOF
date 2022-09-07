@@ -275,11 +275,10 @@ class AVA_Evaluator(object):
                 # inference
                 batch_output = model(video_clip)
 
+                # process batch
+                preds_list = []
                 for bi in range(len(batch_output)):
                     out_bboxes = batch_output[bi]
-
-                    # process batch
-                    preds_list = []
 
                     # video info
                     video_idx = key_frame_info[bi][0]
