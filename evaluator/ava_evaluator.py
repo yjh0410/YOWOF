@@ -289,10 +289,9 @@ class AVA_Evaluator(object):
                     preds_list = [[bbox[:4].tolist(), bbox[4:], [video_idx, sec]] for bbox in out_bboxes]
 
             self.update_stats(preds_list)
-            if iter_i % 500 == 0:
+            if iter_i % 100 == 0:
                 log_info = "[%d / %d]" % (iter_i, len(self.testloader))
                 print(log_info, flush=True)
-            break
 
         mAP = self.calculate_mAP(epoch)
         print("mAP: {}".format(mAP))
