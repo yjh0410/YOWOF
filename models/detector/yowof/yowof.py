@@ -872,7 +872,6 @@ class YOWOF(nn.Module):
         scores = torch.sigmoid(cls_pred)  # [M, C]
 
         # threshold
-        keep = np.where(scores >= self.conf_thresh)
         i, j = (scores > self.conf_thresh).nonzero(as_tuple=False).T
 
         bboxes = bboxes[i]         # [N1, 4]
