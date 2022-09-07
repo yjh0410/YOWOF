@@ -6,6 +6,7 @@ import torch
 import json
 
 from dataset.ava import AVA_Dataset
+from utils.misc import CollateFunc
 
 from .ava_eval_helper import (
     run_evaluation,
@@ -62,6 +63,17 @@ class AVA_Evaluator(object):
         )
         self.num_classes = self.testset.num_classes
         self.all_preds = []
+
+        # dataloader
+        self.testloader = torch.utils.data.DataLoader(
+            dataset=self.testset, 
+            batch_size=8,
+            shuffle=False,
+            collate_fn=CollateFunc(), 
+            num_workers=4,
+            drop_last=False,
+            pin_memory=True
+            )
 
 
     def get_ava_mini_groundtruth(self, full_groundtruth):
@@ -191,7 +203,7 @@ class AVA_Evaluator(object):
         return results["PascalBoxes_Precision/mAP@0.5IOU"]
 
 
-    def evaluate_frame_map(self, model, epoch=1):
+    def evaluate_frame_map_stream(self, model, epoch=1):
         model.eval()
 
         # initalize model
@@ -231,6 +243,50 @@ class AVA_Evaluator(object):
 
                 # [[[x1, y1, x2, y2], cls_out, [video_idx, sec]], ...]
                 preds_list = [[bbox[:4].tolist(), bbox[4:], [video_idx, sec]] for bbox in bboxes]
+
+            self.update_stats(preds_list)
+            if iter_i % 500 == 0:
+                log_info = "[%d / %d]" % (iter_i, len(self.testset))
+                print(log_info, flush=True)
+
+        mAP = self.calculate_mAP(epoch)
+        print("mAP: {}".format(mAP))
+
+        # clear
+        del self.all_preds
+        self.all_preds = []
+
+        return mAP
+
+
+    def evaluate_frame_map(self, model, epoch=1):
+        model.eval()
+
+        # initalize model
+        model.set_inference_mode(mode='clip')
+
+        # inference
+        for iter_i, (key_frame_info, video_clip, target) in enumerate(self.testloader):
+
+            # prepare
+            video_clip = video_clip.to(self.device)
+
+            with torch.no_grad():
+                # inference
+                batch_output = model(video_clip)
+
+                for bi in range(len(batch_output)):
+                    out_bboxes = batch_output[bi]
+
+                    # process batch
+                    preds_list = []
+
+                    # video info
+                    video_idx = key_frame_info[0]
+                    sec = key_frame_info[1]
+
+                    # [[[x1, y1, x2, y2], cls_out, [video_idx, sec]], ...]
+                    preds_list = [[bbox[:4].tolist(), bbox[4:], [video_idx, sec]] for bbox in out_bboxes]
 
             self.update_stats(preds_list)
             if iter_i % 500 == 0:
