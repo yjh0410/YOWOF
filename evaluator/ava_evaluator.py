@@ -290,8 +290,9 @@ class AVA_Evaluator(object):
 
             self.update_stats(preds_list)
             if iter_i % 500 == 0:
-                log_info = "[%d / %d]" % (iter_i, len(self.testset))
+                log_info = "[%d / %d]" % (iter_i, len(self.testloader))
                 print(log_info, flush=True)
+            break
 
         mAP = self.calculate_mAP(epoch)
         print("mAP: {}".format(mAP))
