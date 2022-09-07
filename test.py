@@ -43,6 +43,8 @@ def parse_args():
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
+    parser.add_argument('-inf', '--inf_mode', default='clip', type=str, choices=['clip', 'stream'],
+                        help='inference mode: clip or stream')
 
     # dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
@@ -52,7 +54,7 @@ def parse_args():
 
 
 @torch.no_grad()
-def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
+def inference_ucf_jhmdb_stream(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
     # path to save 
     if args.save:
         save_path = os.path.join(
@@ -120,7 +122,61 @@ def inference_ucf_jhmdb(args, d_cfg, model, device, dataset, class_names=None, c
         
 
 @torch.no_grad()
-def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
+def inference_ucf_jhmdb_clip(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
+    # path to save 
+    if args.save:
+        save_path = os.path.join(
+            args.save_folder, args.dataset, 
+            args.version, 'video_clips')
+        os.makedirs(save_path, exist_ok=True)
+
+    # inference
+    for index in range(args.start_index, len(dataset)):
+        print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
+        frame_id, video_clip, target = dataset[index]
+        orig_size = target['orig_size'].tolist()  # width, height
+
+        # prepare
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
+
+        t0 = time.time()
+        # inference
+        batch_outputs = model(video_clip)
+        print("inference time ", time.time() - t0, "s")
+        
+        scores, labels, bboxes = batch_outputs[0]
+        # rescale
+        bboxes = rescale_bboxes(bboxes, orig_size)
+
+        # vis results of key-frame
+        key_frame_tensor = video_clip[0, -1, :, :, :]
+        key_frame = convert_tensor_to_cv2img(key_frame_tensor, d_cfg['pixel_mean'], d_cfg['pixel_std'])
+
+        # resize key_frame to orig size
+        key_frame = cv2.resize(key_frame, orig_size)
+
+        vis_results = vis_detection(
+            frame=key_frame,
+            scores=scores,
+            labels=labels,
+            bboxes=bboxes,
+            vis_thresh=args.vis_thresh,
+            class_names=class_names,
+            class_colors=class_colors
+            )
+
+        if args.show:
+            cv2.imshow('key-frame detection', vis_results)
+            cv2.waitKey(0)
+
+        if args.save:
+            # save result
+            cv2.imwrite(os.path.join(save_path,
+            '{:0>5}.jpg'.format(index)), vis_results)
+        
+
+@torch.no_grad()
+def inference_ava_stream(args, d_cfg, model, device, dataset, class_names=None):
     # path to save 
     if args.save:
         save_path = os.path.join(
@@ -170,6 +226,81 @@ def inference_ava(args, d_cfg, model, device, dataset, class_names=None):
 
         # visualize detection results
         for bbox in bboxes:
+            x1, y1, x2, y2 = bbox[:4]
+            cls_out = bbox[4:]
+        
+            # rescale bbox
+            x1, x2 = int(x1 * orig_size[0]), int(x2 * orig_size[0])
+            y1, y2 = int(y1 * orig_size[1]), int(y2 * orig_size[1])
+
+            cls_scores = np.array(cls_out)
+            indices = np.where(cls_scores > args.vis_thresh)
+            scores = cls_scores[indices]
+            indices = list(indices[0])
+            scores = list(scores)
+
+            cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            if len(scores) > 0:
+                blk   = np.zeros(key_frame.shape, np.uint8)
+                font  = cv2.FONT_HERSHEY_SIMPLEX
+                coord = []
+                text  = []
+                text_size = []
+                # scores, indices  = [list(a) for a in zip(*sorted(zip(scores,indices), reverse=True))] # if you want, you can sort according to confidence level
+                for _, cls_ind in enumerate(indices):
+                    text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
+                    text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.25, thickness=1)[0])
+                    coord.append((x1+3, y1+7+10*_))
+                    cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-6), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
+                key_frame = cv2.addWeighted(key_frame, 1.0, blk, 0.25, 1)
+                for t in range(len(text)):
+                    cv2.putText(key_frame, text[t], coord[t], font, 0.25, (0, 0, 0), 1)
+        
+        if args.show:
+            cv2.imshow('key-frame detection', key_frame)
+            cv2.waitKey(0)
+
+        if args.save:
+            # save result
+            cv2.imwrite(os.path.join(save_path,
+            '{:0>5}.jpg'.format(index)), key_frame)
+        
+
+@torch.no_grad()
+def inference_ava_clip(args, d_cfg, model, device, dataset, class_names=None):
+    # path to save 
+    if args.save:
+        save_path = os.path.join(
+            args.save_folder, args.dataset, 
+            args.version, 'video_clips')
+        os.makedirs(save_path, exist_ok=True)
+
+    # inference
+    for index in range(args.start_index, len(dataset)):
+        print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
+        key_frame_info, video_clip, target = dataset[index]
+        
+        orig_size = target['orig_size'].tolist()  # width, height
+
+        # prepare
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
+
+        t0 = time.time()
+        # inference
+        batch_outputs = model(video_clip)
+        print("inference time ", time.time() - t0, "s")
+        
+        out_bboxes = batch_outputs[0]
+        
+        # vis results of key-frame
+        key_frame_tensor = video_clip[0, -1, :, :, :]
+        key_frame = convert_tensor_to_cv2img(key_frame_tensor, d_cfg['pixel_mean'], d_cfg['pixel_std'])
+        # resize key_frame to orig size
+        key_frame = cv2.resize(key_frame, orig_size)
+
+        # visualize detection results
+        for bbox in out_bboxes:
             x1, y1, x2, y2 = bbox[:4]
             cls_out = bbox[4:]
         
@@ -282,26 +413,47 @@ if __name__ == '__main__':
     model = model.to(device).eval()
 
     # set inference mode
-    model.set_inference_mode(mode='stream')
+    model.set_inference_mode(mode=args.inf_mode)
 
     # run
     if args.dataset in ['ucf24', 'jhmdb21']:
-        inference_ucf_jhmdb(
-            args=args,
-            d_cfg=d_cfg,
-            model=model,
-            device=device,
-            dataset=dataset,
-            class_names=class_names,
-            class_colors=class_colors
-            )
+        if args.inf_mode == 'stream':
+            inference_ucf_jhmdb_stream(
+                args=args,
+                d_cfg=d_cfg,
+                model=model,
+                device=device,
+                dataset=dataset,
+                class_names=class_names,
+                class_colors=class_colors
+                )
+        else:
+            inference_ucf_jhmdb_clip(
+                args=args,
+                d_cfg=d_cfg,
+                model=model,
+                device=device,
+                dataset=dataset,
+                class_names=class_names,
+                class_colors=class_colors
+                )
 
     elif args.dataset in ['ava_v2.2']:
-        inference_ava(
-            d_cfg=d_cfg,
-            args=args,
-            model=model,
-            device=device,
-            dataset=dataset,
-            class_names=class_names
-            )
+        if args.inf_mode == 'stream':
+            inference_ava_stream(
+                d_cfg=d_cfg,
+                args=args,
+                model=model,
+                device=device,
+                dataset=dataset,
+                class_names=class_names
+                )
+        else:
+            inference_ava_clip(
+                d_cfg=d_cfg,
+                args=args,
+                model=model,
+                device=device,
+                dataset=dataset,
+                class_names=class_names
+                )

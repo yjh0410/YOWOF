@@ -122,7 +122,7 @@ dataset_config = {
         'multi_hot': True,  # multi hot
         # post process
         'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
+        'conf_thresh_valid': 0.1,
         'nms_thresh': 0.5,
         # optimizer
         'optimizer': 'adamw',

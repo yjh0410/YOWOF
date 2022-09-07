@@ -340,6 +340,7 @@ class YOWOF(nn.Module):
         return out_boxes
     
 
+    @torch.no_grad()
     def inference_video_clip(self, video_clips):
         # prepare
         B, T, _, H, W = video_clips.size()
@@ -386,15 +387,19 @@ class YOWOF(nn.Module):
         cls_pred, reg_pred = self.decode_output(act_pred, cls_pred, reg_pred)
 
         # post-process
-        if self.multi_hot:
-            outputs = self.post_process_multi_hot(cls_pred[0], reg_pred[0])
+        batch_outputs = []
+        for bi in range(cls_pred.shape[0]):    
+            if self.multi_hot:
+                outputs = self.post_process_multi_hot(cls_pred[bi], reg_pred[bi])
 
-        else:
-            outputs = self.post_process_one_hot(cls_pred[0], reg_pred[0])
+            else:
+                outputs = self.post_process_one_hot(cls_pred[bi], reg_pred[bi])
+            batch_outputs.append(outputs)
 
-        return outputs
+        return batch_outputs
 
 
+    @torch.no_grad()
     def inference_single_frame(self, video_clips):
         """
             video_clips: (Tensor) [B, T, 3, H, W]
@@ -458,11 +463,12 @@ class YOWOF(nn.Module):
                 self.reg_head_temp_encoder.initialization = True
 
                 # Init stage, detector process a video clip
-                outputs = self.inference_video_clip(video_clips)
+                batch_outputs = self.inference_video_clip(video_clips)
 
                 self.initialization = False
 
-                return outputs
+                # batch size shoule be 1 during stream inference mode
+                return batch_outputs[0]
             else:
                 # After init stage, detector process key frame
                 outputs = self.inference_single_frame(video_clips)
