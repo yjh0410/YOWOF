@@ -175,7 +175,7 @@ class AVA_Dataset(Dataset):
             self.sampling_rate,
             num_frames=len(self._image_paths[video_idx]),
         )
-        print(frame_idx)
+        print(sec_idx)
         print(seq)
         image_paths = [self._image_paths[video_idx][frame - 1] for frame in seq]
         keyframe_info = self._image_paths[video_idx][frame_idx - 1]
