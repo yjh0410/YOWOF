@@ -6,7 +6,6 @@ import torch
 import json
 
 from dataset.ava import AVA_Dataset
-from ..utils.misc import CollateFunc
 
 from .ava_eval_helper import (
     run_evaluation,
@@ -69,7 +68,7 @@ class AVA_Evaluator(object):
             dataset=self.testset, 
             batch_size=8,
             shuffle=False,
-            collate_fn=CollateFunc(), 
+            collate_fn=None, 
             num_workers=4,
             drop_last=False,
             pin_memory=True
