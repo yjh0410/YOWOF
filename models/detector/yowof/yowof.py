@@ -875,10 +875,8 @@ class YOWOF(nn.Module):
         i, j = (scores > self.conf_thresh).nonzero(as_tuple=False).T
 
         bboxes = bboxes[i]         # [N1, 4]
-        scores = scores[i, j]      # [N1, 1]
-        labels = j[:, None]        # [N1, 1]
-
-        print(bboxes.shape, scores.shape, labels.shape)
+        scores = scores[i, j]      # [N1,]
+        labels = j[:]              # [N1,]
         
         # to cpu
         scores = scores.cpu().numpy()
