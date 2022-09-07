@@ -144,26 +144,25 @@ class AVA_Evaluator(object):
         out_boxes = defaultdict(list)
         count = 0
 
-        # each pred is [[x1, y1, x2, y2], cls_out, [video_idx, src]]
+        # each pred is [[x1, y1, x2, y2], [score, label], [video_idx, src]]
         for i in range(len(self.all_preds)):
             pred = self.all_preds[i]
             assert len(pred) == 3
             video_idx = int(np.round(pred[-1][0]))
             sec = int(np.round(pred[-1][1]))
             box = pred[0]
-            cls_out = pred[1]
-            assert len(cls_out) == 80
+            score = pred[1][0]
+            label = pred[1][1]
 
             video = self.video_idx_to_name[video_idx]
             key = video + ',' + "%04d" % (sec)
             box = [box[1], box[0], box[3], box[2]]  # turn to y1,x1,y2,x2
 
-            for cls_idx, score in enumerate(cls_out):
-                if cls_idx + 1 in self.class_whitelist:
-                    out_scores[key].append(score)
-                    out_labels[key].append(cls_idx + 1)
-                    out_boxes[key].append(box)
-                    count += 1
+            if label + 1 in self.class_whitelist:
+                out_scores[key].append(score)
+                out_labels[key].append(label + 1)
+                out_boxes[key].append(box)
+                count += 1
 
         return out_boxes, out_labels, out_scores
 
@@ -220,7 +219,7 @@ class AVA_Evaluator(object):
 
             with torch.no_grad():
                 # inference
-                bboxes = model(video_clip)
+                scores, labels, bboxes = model(video_clip)
 
                 # process batch
                 preds_list = []
@@ -230,12 +229,14 @@ class AVA_Evaluator(object):
                 sec = key_frame_info[1]
 
                 # [[[x1, y1, x2, y2], cls_out, [video_idx, sec]], ...]
-                preds_list = [[bbox[:4].tolist(), bbox[4:], [video_idx, sec]] for bbox in bboxes]
+                preds_list = [[bboxes[i].tolist(), [scores[i], labels[i]], [video_idx, sec]] for i in len(scores)]
 
             self.update_stats(preds_list)
             if iter_i % 500 == 0:
                 log_info = "[%d / %d]" % (iter_i, len(self.testset))
                 print(log_info, flush=True)
+
+            break
 
         mAP = self.calculate_mAP(epoch)
         print("mAP: {}".format(mAP))

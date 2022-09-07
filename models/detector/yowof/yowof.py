@@ -317,27 +317,68 @@ class YOWOF(nn.Module):
         # normalize box
         bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
         
-        cls_pred = torch.sigmoid(cls_pred)
-        # conf threshold
-        scores = torch.max(cls_pred, dim=-1)[0]
-        keep = (scores > self.conf_thresh).bool()
-        cls_pred = cls_pred[keep]   # [N1, C]
-        bboxes = bboxes[keep]       # [N1, 4]
-        scores = scores[keep]       # [N1,]
+        # scores
+        scores = torch.sigmoid(cls_pred)  # [M, C]
 
-        # nms
-        bboxes = bboxes.cpu().numpy()
+        # threshold
+        keep = np.where(scores >= self.conf_thresh)
+        i, j = (scores > self.conf_thresh).nonzero(as_tuple=False).T
+
+        bboxes = bboxes[i]         # [N1, 4]
+        scores = scores[i, j]      # [N1, 1]
+        labels = j[:, None]        # [N1, 1]
+        
+        # to cpu
         scores = scores.cpu().numpy()
-        cls_pred = cls_pred.cpu().numpy()
+        labels = labels.cpu().numpy()
+        bboxes = bboxes.cpu().numpy()
+        
+        # nms
+        keep = np.zeros(len(bboxes), dtype=np.int)
+        for i in range(self.num_classes):
+            inds = np.where(labels == i)[0]
+            if len(inds) == 0:
+                continue
+            c_bboxes = bboxes[inds]
+            c_scores = scores[inds]
+            c_keep = self.nms(c_bboxes, c_scores)
+            keep[inds[c_keep]] = 1
 
-        keep = self.nms(bboxes, scores)
-        cls_pred = cls_pred[keep]
-        bboxes = bboxes[keep]
+        keep = np.where(keep > 0)
+        scores = scores[keep]         # [N1,]
+        labels = labels[keep]         # [N1,]
+        bboxes = bboxes[keep]         # [N1, 4]
+        
+        return scores, labels, bboxes
 
-        # [N2, 4 + C]
-        out_boxes = np.concatenate([bboxes, cls_pred], axis=-1)
 
-        return out_boxes
+    # def post_process_multi_hot(self, cls_pred, reg_pred):
+    #     # decode box
+    #     bboxes = self.decode_boxes(self.anchor_boxes, reg_pred)       # [M, 4]
+    #     # normalize box
+    #     bboxes = torch.clamp(bboxes / self.img_size, 0., 1.)
+        
+    #     cls_pred = torch.sigmoid(cls_pred)
+    #     # conf threshold
+    #     scores = torch.max(cls_pred, dim=-1)[0]
+    #     keep = (scores > self.conf_thresh).bool()
+    #     cls_pred = cls_pred[keep]   # [N1, C]
+    #     bboxes = bboxes[keep]       # [N1, 4]
+    #     scores = scores[keep]       # [N1,]
+
+    #     # nms
+    #     bboxes = bboxes.cpu().numpy()
+    #     scores = scores.cpu().numpy()
+    #     cls_pred = cls_pred.cpu().numpy()
+
+    #     keep = self.nms(bboxes, scores)
+    #     cls_pred = cls_pred[keep]
+    #     bboxes = bboxes[keep]
+
+    #     # [N2, 4 + C]
+    #     out_boxes = np.concatenate([bboxes, cls_pred], axis=-1)
+
+    #     return out_boxes
     
 
     def inference_video_clip(self, video_clips):
