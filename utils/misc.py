@@ -80,6 +80,7 @@ def build_dataset(device, d_cfg, args, is_train=False):
             len_clip=d_cfg['len_clip'],
             sampling_rate=d_cfg['sampling_rate'],
             transform=basetransform,
+            collate_fn=CollateFunc(),
             full_test_on_val=False,
             version='v2.2'
             )

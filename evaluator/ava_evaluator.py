@@ -266,23 +266,24 @@ class AVA_Evaluator(object):
         model.set_inference_mode(mode='clip')
 
         # inference
-        for iter_i, (key_frame_info, video_clip, target) in enumerate(self.testloader):
+        for iter_i, (batch_key_frame_info, batch_video_clip, _) in enumerate(self.testloader):
 
             # prepare
-            video_clip = video_clip.to(self.device)
+            batch_video_clip = batch_video_clip.to(self.device)
 
             with torch.no_grad():
                 # inference
-                batch_output = model(video_clip)
+                batch_output = model(batch_video_clip)
 
                 # process batch
                 preds_list = []
                 for bi in range(len(batch_output)):
                     out_bboxes = batch_output[bi]
+                    key_frame_info = batch_key_frame_info[bi]
 
                     # video info
-                    video_idx = key_frame_info[bi][0]
-                    sec = key_frame_info[bi][1]
+                    video_idx = key_frame_info[0]
+                    sec = key_frame_info[1]
 
                     for bbox in out_bboxes:
                         x1, y1, x2, y2 = bbox[:4].tolist()
