@@ -6,7 +6,7 @@ import torch
 import json
 
 from dataset.ava import AVA_Dataset
-from utils.misc import CollateFunc
+from ..utils.misc import CollateFunc
 
 from .ava_eval_helper import (
     run_evaluation,
