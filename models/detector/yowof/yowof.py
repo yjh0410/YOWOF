@@ -78,6 +78,28 @@ class YOWOF(nn.Module):
             norm_type=cfg['head_norm']
             )
 
+        # cls head temporal encoder
+        self.cls_head_temp_encoder = ConvLSTM(
+            in_dim=cfg['head_dim'],
+            hidden_dim=cfg['head_dim'],
+            kernel_size=cfg['conv_lstm_ks'],
+            dilation=cfg['conv_lstm_di'],
+            num_layers=cfg['conv_lstm_nl'],
+            return_all_layers=False,
+            inf_full_seq=trainable
+        )
+
+        # reg head temporal encoder
+        self.reg_head_temp_encoder = ConvLSTM(
+            in_dim=cfg['head_dim'],
+            hidden_dim=cfg['head_dim'],
+            kernel_size=cfg['conv_lstm_ks'],
+            dilation=cfg['conv_lstm_di'],
+            num_layers=cfg['conv_lstm_nl'],
+            return_all_layers=False,
+            inf_full_seq=trainable
+        )
+
         # pred
         self.act_pred = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
         self.cls_pred = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
@@ -118,9 +140,13 @@ class YOWOF(nn.Module):
         if mode == 'stream':
             self.stream_infernce = True
             self.temporal_encoder.inf_full_seq = False
+            self.cls_head_temp_encoder.inf_full_seq = False
+            self.reg_head_temp_encoder.inf_full_seq = False
         elif mode == 'clip':
             self.stream_infernce = False
             self.temporal_encoder.inf_full_seq = True
+            self.cls_head_temp_encoder.inf_full_seq = True
+            self.reg_head_temp_encoder.inf_full_seq = True
 
 
     def generate_anchors(self, img_size):
@@ -322,16 +348,37 @@ class YOWOF(nn.Module):
         # 2D backbone
         backbone_feats = self.backbone(video_clips)
 
-        # temporal encoder
         _, _, H, W = backbone_feats.size()
+        # [BT, C, H, W] -> [B, T, C, H, W] -> List[T, B, C, H, W]
         backbone_feats = backbone_feats.view(B, T, -1, H, W)
         backbone_feats_list = [backbone_feats[:, t, :, :, :] for t in range(T)]
-        feats, _ = self.temporal_encoder(backbone_feats_list)
-        feat = feats[-1][-1]  # the last output of the last layer
+
+        # temporal encoder
+        all_feats, _ = self.temporal_encoder(backbone_feats_list)
+        # List[L, T, B, C, H, W] -> List[T, B, C, H, W]
+        feats = all_feats[-1]
+
+        # List[T, B, C, H, W] -> [BT, C, H, W]
+        feats = torch.cat(feats)
 
         # detection head
-        cls_feats, reg_feats = self.head(feat)
+        cls_feats, reg_feats = self.head(feats)
 
+        # [BT, C, H, W] -> [B, T, C, H, W] -> List[T, B, C, H, W]
+        cls_feats = cls_feats.view(B, T, -1, H, W)
+        cls_feats_list = [cls_feats[:, t, :, :, :] for t in range(T)]
+        reg_feats = reg_feats.view(B, T, -1, H, W)
+        reg_feats_list = [reg_feats[:, t, :, :, :] for t in range(T)]
+
+        # head temporal encoder
+        all_cls_feats, _ = self.cls_head_temp_encoder(cls_feats_list)
+        all_reg_feats, _ = self.reg_head_temp_encoder(reg_feats_list)
+
+        # final output
+        cls_feats = all_cls_feats[-1][-1]
+        reg_feats = all_reg_feats[-1][-1]
+
+        # pred
         act_pred = self.act_pred(reg_feats)
         cls_pred = self.cls_pred(cls_feats)
         reg_pred = self.reg_pred(reg_feats)
@@ -359,12 +406,22 @@ class YOWOF(nn.Module):
         cur_bk_feat = self.backbone(key_frame)
 
         # temporal encoder
-        cur_feats, _ = self.temporal_encoder(cur_bk_feat)
-        feat = cur_feats[-1]
+        all_feats, _ = self.temporal_encoder(cur_bk_feat)
+        # List[T, B, C, H, W] -> [B, C, H, W]
+        feat = all_feats[-1]
 
         # detection head
         cls_feats, reg_feats = self.head(feat)
 
+        # head temporal encoder
+        all_cls_feats, _ = self.cls_head_temp_encoder(cls_feats)
+        all_reg_feats, _ = self.reg_head_temp_encoder(reg_feats)
+
+        # final output
+        cls_feats = all_cls_feats[-1]
+        reg_feats = all_reg_feats[-1]
+
+        # pred
         act_pred = self.act_pred(reg_feats)
         cls_pred = self.cls_pred(cls_feats)
         reg_pred = self.reg_pred(reg_feats)
@@ -397,6 +454,8 @@ class YOWOF(nn.Module):
             if self.initialization:
                 # check state of convlstm
                 self.temporal_encoder.initialization = True
+                self.cls_head_temp_encoder.initialization = True
+                self.reg_head_temp_encoder.initialization = True
 
                 # Init stage, detector process a video clip
                 outputs = self.inference_video_clip(video_clips)
@@ -424,16 +483,37 @@ class YOWOF(nn.Module):
             # 2D backbone
             backbone_feats = self.backbone(video_clips)
 
-            # temporal encoder
             _, _, H, W = backbone_feats.size()
+            # [BT, C, H, W] -> [B, T, C, H, W] -> List[T, B, C, H, W]
             backbone_feats = backbone_feats.view(B, T, -1, H, W)
             backbone_feats_list = [backbone_feats[:, t, :, :, :] for t in range(T)]
-            feats, _ = self.temporal_encoder(backbone_feats_list)
-            feat = feats[-1][-1]  # the last output of the last layer
+
+            # temporal encoder
+            all_feats, _ = self.temporal_encoder(backbone_feats_list)
+            # List[L, T, B, C, H, W] -> List[T, B, C, H, W]
+            feats = all_feats[-1]
+
+            # List[T, B, C, H, W] -> [BT, C, H, W]
+            feats = torch.cat(feats)
 
             # detection head
-            cls_feats, reg_feats = self.head(feat)
+            cls_feats, reg_feats = self.head(feats)
 
+            # [BT, C, H, W] -> [B, T, C, H, W] -> List[T, B, C, H, W]
+            cls_feats = cls_feats.view(B, T, -1, H, W)
+            cls_feats_list = [cls_feats[:, t, :, :, :] for t in range(T)]
+            reg_feats = reg_feats.view(B, T, -1, H, W)
+            reg_feats_list = [reg_feats[:, t, :, :, :] for t in range(T)]
+
+            # head temporal encoder
+            all_cls_feats, _ = self.cls_head_temp_encoder(cls_feats_list)
+            all_reg_feats, _ = self.reg_head_temp_encoder(reg_feats_list)
+
+            # final output
+            cls_feats = all_cls_feats[-1][-1]
+            reg_feats = all_reg_feats[-1][-1]
+
+            # pred
             act_pred = self.act_pred(reg_feats)
             cls_pred = self.cls_pred(cls_feats)
             reg_pred = self.reg_pred(reg_feats)
