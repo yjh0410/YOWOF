@@ -7,7 +7,7 @@ from evaluator.ava_evaluator import AVA_Evaluator
 
 from dataset.transforms import BaseTransform
 
-from utils.misc import load_weight
+from utils.misc import load_weight, CollateFunc
 
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
@@ -82,6 +82,7 @@ def ava_eval(device, d_cfg, model, transform):
         len_clip=d_cfg['len_clip'],
         sampling_rate=d_cfg['sampling_rate'],
         transform=transform,
+        collate_fn=CollateFunc(),
         full_test_on_val=False,
         version='v2.2')
 

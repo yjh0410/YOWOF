@@ -25,6 +25,7 @@ class AVA_Evaluator(object):
                  len_clip,
                  sampling_rate,
                  transform,
+                 collate_fn,
                  full_test_on_val=False,
                  version='v2.2'):
         self.device = device
@@ -68,7 +69,7 @@ class AVA_Evaluator(object):
             dataset=self.testset, 
             batch_size=8,
             shuffle=False,
-            collate_fn=None, 
+            collate_fn=collate_fn, 
             num_workers=4,
             drop_last=False,
             pin_memory=True
