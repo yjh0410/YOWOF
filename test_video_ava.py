@@ -287,7 +287,7 @@ if __name__ == '__main__':
 
     if args.inf_mode == 'clip':
         # run
-        detect_clip(rgs=args,
+        detect_clip(args=args,
                     d_cfg=d_cfg,
                     model=model,
                     device=device,
@@ -295,7 +295,7 @@ if __name__ == '__main__':
                     class_names=class_names)
     elif args.inf_mode == 'stream':
         # run
-        detect_stream(rgs=args,
+        detect_stream(args=args,
                       d_cfg=d_cfg,
                       model=model,
                       device=device,
