@@ -924,7 +924,7 @@ def get_mAP(gtFolder, detFolder, threshold = 0.5, savePath = None, datatset = 'u
     imgSize = (0, 0)
 
     # Create directory to save results
-    # shutil.rmtree(savePath, ignore_errors=True)  # Clear folder
+    shutil.rmtree(savePath, ignore_errors=True)  # Clear folder
     # if savePath is not None:
     #     os.makedirs(savePath)
     # Show plot during execution
