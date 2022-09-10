@@ -204,7 +204,7 @@ class UCF_JHMDB_Evaluator(object):
         total_detected = 0.0
         eps = 1e-5
 
-        epoch_size = len(self.testset)
+        epoch_size = len(self.testloader)
 
         # initalize model
         model.set_inference_mode(mode='clip')
