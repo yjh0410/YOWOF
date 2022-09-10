@@ -3,6 +3,7 @@
 *.pkl
 *.pyc
 *.txt
+results/
 __pycache__
 det_results
 .vscode
