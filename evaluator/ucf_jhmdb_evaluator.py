@@ -226,6 +226,7 @@ class UCF_JHMDB_Evaluator(object):
                     labels = batch_output[bi]
                     bboxes = batch_output[bi]
                     target = batch_target[bi]
+                    print(bboxes)
 
                     # rescale bbox
                     orig_size = target['orig_size'].tolist()
