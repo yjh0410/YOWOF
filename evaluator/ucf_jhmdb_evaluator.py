@@ -15,7 +15,7 @@ class UCF_JHMDB_Evaluator(object):
                  data_root=None,
                  dataset='ucf24',
                  model_name='yowo',
-                 img_size=224,
+                 img_size=320,
                  len_clip=1,
                  conf_thresh=0.01,
                  iou_thresh=0.5,
@@ -169,7 +169,6 @@ class UCF_JHMDB_Evaluator(object):
                 if iter_i % 1000 == 0:
                     log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
                     print(log_info, flush=True)
-                break
 
         classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
         locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
