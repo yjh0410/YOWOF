@@ -165,7 +165,8 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
                     class_colors=class_colors
                     )
             # save
-            out.write(frame)
+            frame_resized = cv2.resize(frame, save_size)
+            out.write(frame_resized)
 
             if args.show:
                 # show
