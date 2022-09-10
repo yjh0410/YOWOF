@@ -146,10 +146,11 @@ python test_video_ava.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight --
 ## Demo
 * detection action instances with UCF24 labels
 
-```Shell
-python demo.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight --video path/to/video
-```
+We provide some test videos of UCF24 in ```dataset/demo/ucf24_demo/```.
 
+```Shell
+python demo.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight --video ./dataset/demo/ucf24_demo/v_Basketball_g01_c02.mp4
+```
 
 * detection action instances with AVA labels
 
