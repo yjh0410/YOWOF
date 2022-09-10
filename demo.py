@@ -49,7 +49,7 @@ def parse_args():
     return parser.parse_args()
                     
 
-def multi_hot_vis(args, out_bboxes, orig_w, orig_h, class_names):
+def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names):
     # visualize detection results
     for bbox in out_bboxes:
         x1, y1, x2, y2 = bbox[:4]
@@ -100,7 +100,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     save_size = (640, 480)
     save_name = os.path.join(save_path, 'detection.avi')
-    fps = 15.0
+    fps = 20.0
     out = cv2.VideoWriter(save_name, fourcc, fps, save_size)
 
     # run
@@ -145,6 +145,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
                 # multi hot
                 frame = multi_hot_vis(
                     args=args,
+                    frame=frame,
                     out_bboxes=outputs,
                     orig_w=orig_w,
                     orig_h=orig_h,
