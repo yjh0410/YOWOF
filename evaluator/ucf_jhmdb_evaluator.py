@@ -222,11 +222,9 @@ class UCF_JHMDB_Evaluator(object):
                 # process batch
                 for bi in range(len(batch_output)):
                     frame_id = batch_frame_id[bi]
-                    scores = batch_output[bi]
-                    labels = batch_output[bi]
-                    bboxes = batch_output[bi]
+                    output = batch_output[bi]
                     target = batch_target[bi]
-                    print(bboxes)
+                    scores, labels, bboxes = output
 
                     # rescale bbox
                     orig_size = target['orig_size'].tolist()
