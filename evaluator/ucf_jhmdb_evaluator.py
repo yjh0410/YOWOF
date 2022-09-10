@@ -103,21 +103,10 @@ class UCF_JHMDB_Evaluator(object):
                     current_dir = os.path.join('results', 'ucf_detections',  self.model_name, 'detections_' + str(epoch))
                     os.makedirs(current_dir, exist_ok=True)
 
-                    # if not os.path.exists('results/ucf_detections/'):
-                    #     os.mkdir('results/ucf_detections/')
-                    # if not os.path.exists('results/ucf_detections/'+self.model_name):
-                    #     os.mkdir('results/ucf_detections/'+self.model_name)
-                    # if not os.path.exists(current_dir):
-                    #     os.mkdir(current_dir)
                 else:
                     detection_path = os.path.join('results', 'jhmdb_detections',  self.model_name, 'detections_' + str(epoch), frame_id)
                     current_dir = os.path.join('results', 'jhmdb_detections',  self.model_name, 'detections_' + str(epoch))
-                    if not os.path.exists('results/jhmdb_detections/'):
-                        os.mkdir('results/jhmdb_detections/')
-                    if not os.path.exists('results/jhmdb_detections/'+self.model_name):
-                        os.mkdir('results/jhmdb_detections/'+self.model_name)
-                    if not os.path.exists(current_dir):
-                        os.mkdir(current_dir)
+                    os.makedirs(current_dir, exist_ok=True)
 
                 with open(detection_path, 'w+') as f_detect:
                     for score, label, bbox in zip(scores, labels, bboxes):
@@ -180,7 +169,6 @@ class UCF_JHMDB_Evaluator(object):
                 if iter_i % 1000 == 0:
                     log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
                     print(log_info, flush=True)
-                # break
 
         classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
         locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
@@ -204,11 +192,11 @@ class UCF_JHMDB_Evaluator(object):
         else:
             result_path = self.dt_folder
 
-        print('calculating Frame mAP ...')
-        metric_list = get_mAP(self.gt_folder, result_path, self.iou_thresh,
-                              self.save_path, self.dataset, show_pr_curve)
-        for metric in metric_list:
-            print(metric)
+        # print('calculating Frame mAP ...')
+        # metric_list = get_mAP(self.gt_folder, result_path, self.iou_thresh,
+        #                       self.save_path, self.dataset, show_pr_curve)
+        # for metric in metric_list:
+        #     print(metric)
 
 
 
