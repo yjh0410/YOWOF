@@ -124,8 +124,6 @@ python test.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --inf_mod
 ```
 
 ## Evaluate YOWOF
-### Evaluate yowof-r18 on UCF24
-
 * on UCF24
 
 ```Shell
@@ -138,15 +136,22 @@ python eval.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight
 python eval.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight
 ```
 
+## Detect AVA video
+
+```Shell
+python test_video_ava.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight --video ava/video/name
+```
+
+
 ## Demo
-* detection action instance with UCF24 labels
+* detection action instances with UCF24 labels
 
 ```Shell
 python demo.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight --video path/to/video
 ```
 
 
-* detection action instance with AVA labels
+* detection action instances with AVA labels
 
 ```Shell
 python demo.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --video path/to/video
