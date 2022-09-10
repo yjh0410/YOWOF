@@ -31,7 +31,7 @@ def parse_args():
                         help='build yowof')
     parser.add_argument('--weight', default=None,
                         type=str, help='Trained state_dict file path to open')
-    parser.add_argument('--topk', default=40, type=int,
+    parser.add_argument('--topk', default=50, type=int,
                         help='NMS threshold')
 
     # dataset
