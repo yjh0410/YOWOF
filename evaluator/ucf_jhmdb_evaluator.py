@@ -20,7 +20,6 @@ class UCF_JHMDB_Evaluator(object):
                  conf_thresh=0.01,
                  iou_thresh=0.5,
                  transform=None,
-                 collate_fn=None,
                  redo=False,
                  gt_folder=None,
                  dt_folder=None,
@@ -49,17 +48,6 @@ class UCF_JHMDB_Evaluator(object):
             len_clip=len_clip,
             sampling_rate=1)
         self.num_classes = self.testset.num_classes
-
-        # dataloader
-        self.testloader = torch.utils.data.DataLoader(
-            dataset=self.testset, 
-            batch_size=8,
-            shuffle=False,
-            collate_fn=collate_fn, 
-            num_workers=4,
-            drop_last=False,
-            pin_memory=True
-            )
 
 
     @torch.no_grad()
