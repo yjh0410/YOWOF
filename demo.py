@@ -8,6 +8,7 @@ from PIL import Image
 
 from dataset.transforms import BaseTransform
 from utils.misc import load_weight
+from utils.box_ops import rescale_bboxes
 from utils.vis_tools import vis_detection
 from config import build_dataset_config, build_model_config
 from models.detector import build_model
@@ -108,6 +109,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
         ret, frame = video.read()
         
         if ret:
+            # 
             # to PIL image
             frame_pil = Image.fromarray(frame.astype(np.uint8))
 
@@ -150,6 +152,9 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
                     )
             elif args.dataset in ['ucf24']:
                 scores, labels, bboxes = outputs
+                # rescale
+                bboxes = rescale_bboxes(bboxes, [orig_w, orig_h])
+                # onr hot
                 frame = vis_detection(
                     frame=frame,
                     scores=scores,
