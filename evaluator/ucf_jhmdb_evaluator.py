@@ -210,7 +210,7 @@ class UCF_JHMDB_Evaluator(object):
         model.set_inference_mode(mode='clip')
 
         # inference
-        for iter_i, (batch_frame_id, batch_video_clip, batch_target) in enumerate(self.testset):
+        for iter_i, (batch_frame_id, batch_video_clip, batch_target) in enumerate(self.testloader):
 
             # prepare
             batch_video_clip = batch_video_clip.to(self.device) # [B, T, 3, H, W], B=1
