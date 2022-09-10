@@ -63,6 +63,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         conf_thresh=0.01,
         iou_thresh=0.5,
         transform=transform,
+        collate_fn=CollateFunc(),
         redo=args.redo,
         gt_folder=args.gt_folder,
         dt_folder=args.dt_folder,
