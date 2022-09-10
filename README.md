@@ -42,9 +42,112 @@ Link: https://pan.baidu.com/s/1HSDqKFWhx_vF_9x6-Hb8jA
 
 Password: tcjd 
 
+# Visualization
+Coming soon ...
+
+## AVA
+You can use instructions from [here](https://github.com/yjh0410/AVA_Dataset) to prepare **AVA** dataset.
 
 # Experiment
-## UCF24
-|    Model    |   Size   |    FPS    |    FLOPs    |   mAP    |    Cls Accu    |    Recall    |    Weight    |
-|-------------|----------|-----------|-------------|----------|----------------|--------------|--------------|
-|  YOWOF-R18  |   320    |     220   |    5.4 B    |   80.2   |      94.5      |      95.7    |       -      |
+* Frame-mAP@0.5 IoU on UCF24
+
+|    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Cls Accu  |  Recall  |  Weight  |
+|-------------|---------|-----------|---------|--------|------------|----------|----------|
+|  YOWOF-R18  |    8    |     220   |  - B  |    |        |      |    -     |
+|  YOWOF-R18  |   16    |     220   |  5.4 B  |  81.3  |   94.3     |    96.0  | [github]() |
+|  YOWOF-R18  |   32    |     220   |  - B  |    |        |      |    -     |
+
+
+* Frame-mAP@0.5 IoU on AVA_v2.2
+
+|    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Weight  |
+|-------------|---------|-----------|---------|--------|----------|
+|  YOWOF-R18  |    8    |     220   |  - B    |        |    -     |
+|  YOWOF-R18  |   16    |     220   |  - B    |        |    -     |
+|  YOWOF-R18  |   32    |     220   |  - B    |        |    -     |
+|  YOWOF-R50  |    8    |     125   |  - B    |        |    -     |
+|  YOWOF-R50  |   16    |     125   |  11.4 B |  20.4  | [github]() |
+|  YOWOF-R50  |   32    |     125   |  - B    |        |    -     |
+
+## Train YOWOF
+### Train yowof-r18 on UCF24
+
+```Shell
+python train.py --cuda -d ucf24 -v yowof-r18 --num_workers 4 --eval_epoch 1 --eval
+```
+
+or you can just run the script:
+
+```Shell
+sh train_ucf.sh
+```
+
+### Train yowof-r50 on AVA_v2.2
+
+```Shell
+python train.py --cuda -d ava_v2.2 -v yowof-r50 --num_workers 4 --eval_epoch 1 --eval
+```
+
+or you can just run the script:
+
+```Shell
+sh train_ava.sh
+```
+
+## Test YOWOF
+### Test yowof-r18 on UCF24
+
+* run yowof with *clip* inference mode
+
+```Shell
+python test.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight --inf_mode clip --show
+```
+
+* run yowof with *stream* inference mode
+
+```Shell
+python test.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight --inf_mode stream --show
+```
+
+### Test yowof-r50 on AVA_v2.2
+
+* run yowof with *clip* inference mode
+
+```Shell
+python test.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --inf_mode clip --show
+```
+
+* run yowof with *stream* inference mode
+
+```Shell
+python test.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --inf_mode stream --show
+```
+
+## Evaluate YOWOF
+### Evaluate yowof-r18 on UCF24
+
+* on UCF24
+
+```Shell
+python eval.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight
+```
+
+* on AVA_v2.2
+
+```Shell
+python eval.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight
+```
+
+## Demo
+* detection action instance with UCF24 labels
+
+```Shell
+python demo.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight --video path/to/video
+```
+
+
+* detection action instance with AVA labels
+
+```Shell
+python demo.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --video path/to/video
+```
