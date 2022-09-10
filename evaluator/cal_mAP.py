@@ -838,7 +838,7 @@ def getBoundingBoxes(directory,
     os.chdir(directory)
     files = glob.glob("*.txt")
     files.sort()
-    print(files)
+
     # Read GT detections from txt file
     # Each line of the files in the groundtruths folder represents a ground truth bounding box
     # (bounding boxes that a detector should detect)
@@ -924,7 +924,7 @@ def get_mAP(gtFolder, detFolder, threshold = 0.5, savePath = None, datatset = 'u
     imgSize = (0, 0)
 
     # Create directory to save results
-    shutil.rmtree(savePath, ignore_errors=True)  # Clear folder
+    # shutil.rmtree(savePath, ignore_errors=True)  # Clear folder
     # if savePath is not None:
     #     os.makedirs(savePath)
     # Show plot during execution
