@@ -7,6 +7,7 @@ from torch.autograd import Variable
 
 from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from dataset.ava import AVA_Dataset
+from dataset.ava_pose import AVA_Pose_Dataset
 from dataset.transforms import Augmentation, BaseTransform
 
 from evaluator.ucf_jhmdb_evaluator import UCF_JHMDB_Evaluator
@@ -60,6 +61,31 @@ def build_dataset(device, d_cfg, args, is_train=False):
             transform=basetransform
         )
 
+    elif args.dataset == 'ava_v2.1':
+        # dataset
+        dataset = AVA_Dataset(
+            cfg=d_cfg,
+            is_train=True,
+            img_size=d_cfg['train_size'],
+            transform=augmentation,
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
+        )
+        num_classes = 80
+
+        # evaluator
+        evaluator = AVA_Evaluator(
+            device=device,
+            d_cfg=d_cfg,
+            img_size=d_cfg['test_size'],
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate'],
+            transform=basetransform,
+            collate_fn=CollateFunc(),
+            full_test_on_val=False,
+            version='v2.1'
+            )
+
     elif args.dataset == 'ava_v2.2':
         # dataset
         dataset = AVA_Dataset(
@@ -85,8 +111,33 @@ def build_dataset(device, d_cfg, args, is_train=False):
             version='v2.2'
             )
 
+    elif args.dataset == 'ava_pose':
+        # dataset
+        dataset = AVA_Pose_Dataset(
+            cfg=d_cfg,
+            is_train=True,
+            img_size=d_cfg['train_size'],
+            transform=augmentation,
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
+        )
+        num_classes = 14
+
+        # evaluator
+        evaluator = AVA_Evaluator(
+            device=device,
+            d_cfg=d_cfg,
+            img_size=d_cfg['test_size'],
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate'],
+            transform=basetransform,
+            collate_fn=CollateFunc(),
+            full_test_on_val=False,
+            version='pose'
+            )
+
     else:
-        print('unknow dataset !! Only support ucf24 & jhmdb21 & ava_v2.2 !!')
+        print('unknow dataset !!')
         exit(0)
 
     print('==============================')

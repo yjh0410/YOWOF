@@ -159,5 +159,69 @@ dataset_config = {
                     'push (another person)', 'sing to (e.g., self, a person, a group)', 'take (an object) from (a person)',             # 76-78
                     'talk to (e.g., self, a person, a group)', 'watch (a person)'                                                       # 79-80
                 ),        
+    },
+
+    'ava_pose':{
+        # dataset
+        'data_root': '/mnt/share/sda1/dataset/STAD/AVA_Dataset',
+        'frames_dir': 'frames/',
+        'frame_list': 'frame_lists/',
+        'annotation_dir': 'annotations/',
+        'train_gt_box_list': 'ava_v2.2/ava_train_v2.2.csv',
+        'val_gt_box_list': 'ava_v2.2/ava_val_v2.2.csv',
+        'train_exclusion_file': 'ava_v2.2/ava_train_excluded_timestamps_v2.2.csv',
+        'val_exclusion_file': 'ava_v2.2/ava_val_excluded_timestamps_v2.2.csv',
+        'labelmap_file': 'ava_v2.2/ava_action_list_v2.2_for_activitynet_2019.pbtxt', # 'ava_v2.2/ava_action_list_v2.2.pbtxt',
+        'class_ratio_file': 'config/ava_categories_ratio.json',
+        'backup_dir': 'results/',
+        # input size
+        'train_size': 320,
+        'test_size': 320,
+        # transform
+        'pixel_mean': [0.485, 0.456, 0.406],
+        'pixel_std': [0.229, 0.224, 0.225],
+        'jitter': 0.2,
+        'hue': 0.1,
+        'saturation': 1.5,
+        'exposure': 1.5,
+        'sampling_rate': 1,
+        'len_clip': 16,
+        # cls label
+        'multi_hot': True,  # multi hot
+        # post process
+        'conf_thresh': 0.3,
+        'conf_thresh_valid': 0.1,
+        'nms_thresh': 0.5,
+        # optimizer
+        'optimizer': 'adamw',
+        'momentum': 0.9,
+        'weight_decay': 1e-4,
+        'max_epoch': 10,
+        'lr_epoch': [3, 4, 5, 6],
+        'base_lr': 1e-4,
+        'lr_decay_ratio': 0.5,
+        # warmup strategy
+        'warmup': 'linear',
+        'warmup_factor': 0.00066667,
+        'wp_iter': 500,
+        # class names
+        'valid_num_classes': 14,
+        'label_map': (
+                    'bend/bow(at the waist)',
+                    'crawl',
+                    'crouch/kneel',
+                    'dance',
+                    'fall down',
+                    'get up',
+                    'jump/leap',
+                    'lie/sleep',
+                    'martial art',
+                    'run/jog',
+                    'sit',
+                    'stand',
+                    'swim',
+                    'walk'
+                ),        
     }
+
 }

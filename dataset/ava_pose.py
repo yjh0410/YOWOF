@@ -297,7 +297,6 @@ if __name__ == '__main__':
             y1 = int(y1 * H)
             x2 = int(x2 * W)
             y2 = int(y2 * H)
-            print(label)
             key_frame = cv2.rectangle(key_frame, (x1, y1), (x2, y2), (255, 0, 0))
 
         # cv2 show

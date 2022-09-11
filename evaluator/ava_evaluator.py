@@ -6,6 +6,7 @@ import torch
 import json
 
 from dataset.ava import AVA_Dataset
+from dataset.ava_pose import AVA_Pose_Dataset
 
 from .ava_eval_helper import (
     run_evaluation,
@@ -30,6 +31,9 @@ class AVA_Evaluator(object):
                  version='v2.2'):
         self.device = device
         self.full_ava_test = full_test_on_val
+        self.version = version
+
+        # data
         self.data_root = d_cfg['data_root']
         self.backup_dir = d_cfg['backup_dir']
         self.annotation_dir = os.path.join(d_cfg['data_root'], d_cfg['annotation_dir'])
@@ -45,6 +49,9 @@ class AVA_Evaluator(object):
         self.full_groundtruth = read_csv(self.gt_box_list, self.class_whitelist)
         self.mini_groundtruth = self.get_ava_mini_groundtruth(self.full_groundtruth)
         _, self.video_idx_to_name = self.load_image_lists(self.frames_dir, self.frame_list, is_train=False)
+
+        print(self.class_whitelist)
+        exit()
 
         # create output_json file
         os.makedirs(self.backup_dir, exist_ok=True)
