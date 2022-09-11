@@ -20,7 +20,7 @@ class AVA_Dataset(Dataset):
     def __init__(self,
                  cfg,
                  is_train=False,
-                 img_size=224,
+                 img_size=320,
                  transform=None,
                  len_clip=16,
                  sampling_rate=1):
