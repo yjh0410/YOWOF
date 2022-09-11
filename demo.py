@@ -113,9 +113,11 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
         ret, frame = video.read()
         
         if ret:
-            # 
+            # to RGB
+            frame_rgb = frame[..., (2, 1, 0)]
+
             # to PIL image
-            frame_pil = Image.fromarray(frame.astype(np.uint8))
+            frame_pil = Image.fromarray(frame_rgb.astype(np.uint8))
 
             # prepare
             if len(video_clip) <= 0:
@@ -174,7 +176,8 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
             out.write(frame_resized)
 
             if args.gif:
-                image_list.append(frame_resized)
+                frame_resized_rgb = frame_resized[..., (2, 1, 0)]
+                image_list.append(frame_resized_rgb)
 
             if args.show:
                 # show
