@@ -25,7 +25,7 @@ class AVA_Pose_Dataset(Dataset):
                  len_clip=16,
                  sampling_rate=1):
         self._downsample = 4
-        self.num_classes = 80
+        self.num_classes = 14
         self.data_root = cfg['data_root']
         self.frames_dir = os.path.join(cfg['data_root'], cfg['frames_dir'])
         self.frame_list = os.path.join(cfg['data_root'], cfg['frame_list'])
@@ -191,7 +191,7 @@ class AVA_Pose_Dataset(Dataset):
         for box_labels in clip_label_list:
             bbox = box_labels[0]
             label = box_labels[1]
-            multi_hot_label = np.zeros(1 + self.num_classes)
+            multi_hot_label = np.zeros(1 + 80)
             multi_hot_label[..., label] = 1.0
 
             # keep pose label
@@ -204,7 +204,7 @@ class AVA_Pose_Dataset(Dataset):
         # renormalize bbox
         boxes[..., [0, 2]] *= ow
         boxes[..., [1, 3]] *= oh
-        labels = np.array(labels).reshape(-1, self.num_classes)
+        labels = np.array(labels).reshape(-1, 14)
 
         # target: [N, 4 + C]
         target = np.concatenate([boxes, labels], axis=-1)
