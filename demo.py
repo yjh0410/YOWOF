@@ -190,7 +190,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
 
     # generate GIF
     if args.gif:
-        save_name = os.path.join(save_path, 'detect.git')
+        save_name = os.path.join(save_path, 'detect.gif')
         imageio.mimsave(save_name, image_list, fps=fps)
 
 
