@@ -10,7 +10,7 @@ yowof_config = {
         'stride': 32,
         # temporal encoder
         'conv_lstm_ks': 3,
-        'conv_lstm_nl': 1,
+        'conv_lstm_nl': 5,
         'conv_lstm_di': 1,
         # head
         'head_dim': 256,
