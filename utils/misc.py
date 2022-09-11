@@ -240,12 +240,12 @@ class AVA_FocalLoss(object):
         self.gamma = gamma
         self.num_classes = num_classes
         self.reduction = reduction
-        self.class_weight = torch.zeros(80).to(device)
+        self.class_weight = torch.zeros(self.num_classes).to(device)
         self._init_class_weight()
 
 
     def _init_class_weight(self):
-        for i in range(1, 81):
+        for i in range(1, self.num_classes+1):
             self.class_weight[i - 1] = 1 - self.class_ratio[str(i)]
 
 

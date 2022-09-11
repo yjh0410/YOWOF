@@ -279,30 +279,27 @@ if __name__ == '__main__':
     mean = trans_config['pixel_mean']
     for i in range(len(train_dataset)):
         video_info, video_clip, target = train_dataset[i]
-        if i % 1000 == 0:
-            print('[{}] / [{}]'.format(i, len(train_dataset)))
+        print(video_info)
         
-        # key_frame = video_clip[-1]
+        key_frame = video_clip[-1]
 
-        # key_frame = key_frame.permute(1, 2, 0).numpy()
-        # key_frame = ((key_frame * std + mean) * 255).astype(np.uint8)
-        # H, W, C = key_frame.shape
+        key_frame = key_frame.permute(1, 2, 0).numpy()
+        key_frame = ((key_frame * std + mean) * 255).astype(np.uint8)
+        H, W, C = key_frame.shape
 
-        # key_frame = key_frame.copy()
+        key_frame = key_frame.copy()
         bboxes = target['boxes']
         labels = target['labels']
 
         for box, label in zip(bboxes, labels):
-            # x1, y1, x2, y2 = box
-            # x1 = int(x1 * W)
-            # y1 = int(y1 * H)
-            # x2 = int(x2 * W)
-            # y2 = int(y2 * H)
-            if label.sum().item() > 1:
-                print(label)
-        #     key_frame = cv2.rectangle(key_frame, (x1, y1), (x2, y2), (255, 0, 0))
+            x1, y1, x2, y2 = box
+            x1 = int(x1 * W)
+            y1 = int(y1 * H)
+            x2 = int(x2 * W)
+            y2 = int(y2 * H)
+            key_frame = cv2.rectangle(key_frame, (x1, y1), (x2, y2), (255, 0, 0))
 
-        # # cv2 show
-        # cv2.imshow('key frame', key_frame[..., (2, 1, 0)])
-        # cv2.waitKey(0)
+        # cv2 show
+        cv2.imshow('key frame', key_frame[..., (2, 1, 0)])
+        cv2.waitKey(0)
         

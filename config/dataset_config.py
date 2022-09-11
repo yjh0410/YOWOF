@@ -187,7 +187,7 @@ dataset_config = {
         'sampling_rate': 1,
         'len_clip': 16,
         # cls label
-        'multi_hot': False,  # multi hot
+        'multi_hot': True,  # multi hot
         # post process
         'conf_thresh': 0.3,
         'conf_thresh_valid': 0.1,
