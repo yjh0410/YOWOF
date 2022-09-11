@@ -4,6 +4,7 @@ import os
 import time
 import numpy as np
 import torch
+import imageio
 from PIL import Image
 
 from dataset.transforms import BaseTransform
@@ -31,6 +32,8 @@ def parse_args():
                         help='threshold for visualization')
     parser.add_argument('--video', default='9Y_l9NsnYE0.mp4', type=str,
                         help='AVA video name.')
+    parser.add_argument('--gif', action='store_true', default=False, 
+                        help='generate gif.')
 
     # class label config
     parser.add_argument('-d', '--dataset', default='ava_v2.2',
@@ -105,6 +108,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
 
     # run
     video_clip = []
+    image_list = []
     while(True):
         ret, frame = video.read()
         
@@ -169,6 +173,9 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
             frame_resized = cv2.resize(frame, save_size)
             out.write(frame_resized)
 
+            if args.gif:
+                image_list.append(frame_resized)
+
             if args.show:
                 # show
                 cv2.imshow('key-frame detection', frame)
@@ -180,6 +187,11 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
     video.release()
     out.release()
     cv2.destroyAllWindows()
+
+    # generate GIF
+    if args.gif:
+        save_name = os.path.join(save_path, 'detect.git')
+        imageio.mimsave(save_name, image_list, fps=fps)
 
 
 if __name__ == '__main__':
