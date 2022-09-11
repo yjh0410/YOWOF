@@ -7,6 +7,7 @@ import torch
 
 from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from dataset.ava import AVA_Dataset
+from dataset.ava_pose import AVA_Pose_Dataset
 from dataset.transforms import BaseTransform
 
 from utils.misc import load_weight
@@ -377,6 +378,18 @@ if __name__ == '__main__':
 
     elif args.dataset == 'ava_v2.2':
         dataset = AVA_Dataset(
+            cfg=d_cfg,
+            is_train=False,
+            img_size=d_cfg['test_size'],
+            transform=basetransform,
+            len_clip=d_cfg['len_clip'],
+            sampling_rate=d_cfg['sampling_rate']
+        )
+        class_names = d_cfg['label_map']
+        num_classes = dataset.num_classes
+
+    elif args.dataset == 'ava_pose':
+        dataset = AVA_Pose_Dataset(
             cfg=d_cfg,
             is_train=False,
             img_size=d_cfg['test_size'],
