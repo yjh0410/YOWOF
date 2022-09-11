@@ -280,7 +280,7 @@ if __name__ == '__main__':
     for i in range(len(train_dataset)):
         video_info, video_clip, target = train_dataset[i]
         if i % 1000 == 0:
-            print('[] / []'.format(i, len(train_dataset)))
+            print('[{}] / [{}]'.format(i, len(train_dataset)))
         
         # key_frame = video_clip[-1]
 
