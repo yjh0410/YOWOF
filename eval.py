@@ -103,7 +103,7 @@ if __name__ == '__main__':
         version = 'v2.2'
 
     elif args.dataset == 'ava_pose':
-        num_classes = 14
+        num_classes = 80
         version = 'pose'
 
     else:
