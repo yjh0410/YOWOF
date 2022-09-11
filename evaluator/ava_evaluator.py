@@ -50,7 +50,7 @@ class AVA_Evaluator(object):
         self.mini_groundtruth = self.get_ava_mini_groundtruth(self.full_groundtruth)
         _, self.video_idx_to_name = self.load_image_lists(self.frames_dir, self.frame_list, is_train=False)
 
-        print(self.class_whitelist[:14])
+        print(set(list(self.class_whitelist[:14])))
         exit()
 
         # create output_json file
