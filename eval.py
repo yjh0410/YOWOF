@@ -74,7 +74,7 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         evaluator.evaluate_accu_recall(model)
 
 
-def ava_eval(device, d_cfg, model, transform):
+def ava_eval(device, d_cfg, model, transform, version='v2.2'):
     evaluator = AVA_Evaluator(
         device=device,
         d_cfg=d_cfg,
@@ -84,7 +84,7 @@ def ava_eval(device, d_cfg, model, transform):
         transform=transform,
         collate_fn=CollateFunc(),
         full_test_on_val=False,
-        version='v2.2')
+        version=version)
 
     evaluator.evaluate_frame_map(model)
 
@@ -100,7 +100,12 @@ if __name__ == '__main__':
 
     elif args.dataset == 'ava_v2.2':
         num_classes = 80
-    
+        version = 'v2.2'
+
+    elif args.dataset == 'ava_pose':
+        num_classes = 14
+        version = 'pose'
+
     else:
         print('unknow dataset.')
         exit(0)
@@ -152,10 +157,11 @@ if __name__ == '__main__':
             model=model,
             transform=basetransform
             )
-    elif args.dataset == 'ava_v2.2':
+    elif args.dataset in ['ava_v2.2', 'ava_pose']:
         ava_eval(
             device=device,
             d_cfg=d_cfg,
             model=model,
-            transform=basetransform
+            transform=basetransform,
+            version=version
             )
