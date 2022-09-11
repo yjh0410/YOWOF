@@ -53,21 +53,23 @@ You can use instructions from [here](https://github.com/yjh0410/AVA_Dataset) to 
 
 |    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Cls Accu  |  Recall  |  Weight  |
 |-------------|---------|-----------|---------|--------|------------|----------|----------|
-|  YOWOF-R18  |    8    |     220   |  - B  |    |        |      |    -     |
-|  YOWOF-R18  |   16    |     220   |  5.4 B  |  81.3  |   94.3     |    96.0  | [github]() |
-|  YOWOF-R18  |   32    |     220   |  - B  |    |        |      |    -     |
+|  YOWOF-R18  |    8    |     220   |         |        |            |          |    -     |
+|  YOWOF-R18  |   16    |     220   |         |        |            |          | [github]() |
+|  YOWOF-R18  |   32    |     220   |         |        |            |          |    -     |
 
 
 * Frame-mAP@0.5 IoU on AVA_v2.2
 
-|    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Weight  |
-|-------------|---------|-----------|---------|--------|----------|
-|  YOWOF-R18  |    8    |     220   |  - B    |        |    -     |
-|  YOWOF-R18  |   16    |     220   |  - B    |        |    -     |
-|  YOWOF-R18  |   32    |     220   |  - B    |        |    -     |
-|  YOWOF-R50  |    8    |     125   |  - B    |        |    -     |
-|  YOWOF-R50  |   16    |     125   |  11.4 B |  20.4  | [github]() |
-|  YOWOF-R50  |   32    |     125   |  - B    |        |    -     |
+|     Model     |   Clip  |    FPS    |  FLOPs  |  mAP   |  Weight  |
+|---------------|---------|-----------|---------|--------|----------|
+|   YOWOF-R18   |    8    |    220    |         |        |    -     |
+|   YOWOF-R18   |   16    |    220    |         |        |    -     |
+|   YOWOF-R18   |   32    |    220    |         |        |    -     |
+|   YOWOF-R50   |    8    |    125    |         |        |    -     |
+|   YOWOF-R50   |   16    |    125    |         |        | [github]() |
+|   YOWOF-R50   |   32    |    125    |         |        |    -     |
+| YOWOF-R50-DC5 |         |           |         |        |    -     |
+|  YOWOF-RX101  |         |           |         |        |    -     |
 
 ## Train YOWOF
 ### Train yowof-r18 on UCF24
