@@ -50,9 +50,10 @@ class AVA_Evaluator(object):
         self.mini_groundtruth = self.get_ava_mini_groundtruth(self.full_groundtruth)
         _, self.video_idx_to_name = self.load_image_lists(self.frames_dir, self.frame_list, is_train=False)
 
-        print(self.categories)
-        print(set(list(self.class_whitelist)[:14]))
-        exit()
+        if version == 'pose':
+            # ava pose
+            self.class_whitelist = set(list(self.class_whitelist)[:14])
+            self.categories = self.categories[:14]
 
         # create output_json file
         os.makedirs(self.backup_dir, exist_ok=True)
