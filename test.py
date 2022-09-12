@@ -199,10 +199,9 @@ def inference_ucf_jhmdb_semi_stream(args, d_cfg, model, device, dataset, class_n
 
         t0 = time.time()
         # inference
-        batch_outputs = model(video_clip)
+        scores, labels, bboxes = model(video_clip)
         print("inference time ", time.time() - t0, "s")
         
-        scores, labels, bboxes = batch_outputs[0]
         # rescale
         bboxes = rescale_bboxes(bboxes, orig_size)
 

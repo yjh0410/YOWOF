@@ -393,16 +393,13 @@ class YOWOF(nn.Module):
         cls_pred, reg_pred = self.decode_output(act_pred, cls_pred, reg_pred)
 
         # post-process
-        batch_outputs = []
-        for bi in range(cls_pred.shape[0]):    
-            if self.multi_hot:
-                outputs = self.post_process_multi_hot(cls_pred[bi], reg_pred[bi])
+        if self.multi_hot:
+            outputs = self.post_process_multi_hot(cls_pred[0], reg_pred[0])
 
-            else:
-                outputs = self.post_process_one_hot(cls_pred[bi], reg_pred[bi])
-            batch_outputs.append(outputs)
+        else:
+            outputs = self.post_process_one_hot(cls_pred[0], reg_pred[0])
 
-        return batch_outputs
+        return outputs
 
 
     @torch.no_grad()
