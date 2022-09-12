@@ -497,8 +497,18 @@ if __name__ == '__main__':
                 class_names=class_names,
                 class_colors=class_colors
                 )
-        else:
+        elif args.inf_mode == 'clip':
             inference_ucf_jhmdb_clip(
+                args=args,
+                d_cfg=d_cfg,
+                model=model,
+                device=device,
+                dataset=dataset,
+                class_names=class_names,
+                class_colors=class_colors
+                )
+        elif args.inf_mode == 'semi_stream':
+            inference_ucf_jhmdb_semi_stream(
                 args=args,
                 d_cfg=d_cfg,
                 model=model,
