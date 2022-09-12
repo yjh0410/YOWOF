@@ -46,7 +46,7 @@ def parse_args():
                         help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
-    parser.add_argument('-inf', '--inf_mode', default='clip', type=str, choices=['clip', 'stream'],
+    parser.add_argument('-inf', '--inf_mode', default='clip', type=str, choices=['clip', 'semi_stream', 'stream'],
                         help='inference mode: clip or stream')
 
     return parser.parse_args()
