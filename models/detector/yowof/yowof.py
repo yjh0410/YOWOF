@@ -115,20 +115,20 @@ class YOWOF(nn.Module):
 
 
     def set_inference_mode(self, mode='stream'):
-        if mode == 'stream':
-            self.inf_mode = 'stream'
-            self.initialization = True
-            self.temporal_encoder.inf_full_seq = False
-
-        elif mode == 'clip':
+        if mode == 'clip':
             self.inf_mode = 'clip'
             self.initialization = False
             self.temporal_encoder.inf_full_seq = True
 
+        elif mode == 'stream':
+            self.inf_mode = 'stream'
+            self.initialization = True
+            self.temporal_encoder.inf_full_seq = False
+
         elif mode == 'semi_stream':
             self.inf_mode = 'semi_stream'
             self.initialization = True
-            self.temporal_encoder.inf_full_seq = False
+            self.temporal_encoder.inf_full_seq = True
 
 
     def generate_anchors(self, img_size):
