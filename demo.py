@@ -143,7 +143,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
 
             if args.inf_mode == 'clip':
                 outputs = outputs[0]
-            elif args.inf_mode == 'stream':
+            elif args.inf_mode in ['stream', 'semi_stream']:
                 outputs = outputs
             
             # vis detection results
@@ -246,9 +246,6 @@ if __name__ == '__main__':
 
     # inference mode
     model.set_inference_mode(args.inf_mode)
-    if args.inf_mode == 'stream':
-        # init model
-        model.initialization = True
 
     # run
     detect(args=args,
