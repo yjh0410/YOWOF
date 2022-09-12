@@ -43,7 +43,7 @@ class YOWOF(nn.Module):
         self.num_anchors = len(anchor_size)
         self.anchor_size = torch.as_tensor(anchor_size)
         
-        self.stream_infernce = False
+        # init
         self.initialization = False
 
         # ------------------ Anchor Box --------------------
