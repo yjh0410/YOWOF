@@ -116,12 +116,19 @@ class YOWOF(nn.Module):
 
     def set_inference_mode(self, mode='stream'):
         if mode == 'stream':
-            self.stream_infernce = True
+            self.inf_mode = 'stream'
+            self.initialization = True
             self.temporal_encoder.inf_full_seq = False
 
         elif mode == 'clip':
-            self.stream_infernce = False
+            self.inf_mode = 'clip'
+            self.initialization = False
             self.temporal_encoder.inf_full_seq = True
+
+        elif mode == 'semi_stream':
+            self.inf_mode = 'semi_stream'
+            self.initialization = True
+            self.temporal_encoder.inf_full_seq = False
 
 
     def generate_anchors(self, img_size):
@@ -316,7 +323,7 @@ class YOWOF(nn.Module):
     
 
     @torch.no_grad()
-    def inference_video_clip(self, video_clips):
+    def inference_clip(self, video_clips):
         # prepare
         B, T, _, H, W = video_clips.size()
         video_clips = video_clips.reshape(B*T, 3, H, W)
@@ -354,11 +361,52 @@ class YOWOF(nn.Module):
                 outputs = self.post_process_one_hot(cls_pred[bi], reg_pred[bi])
             batch_outputs.append(outputs)
 
+        return backbone_feats_list, batch_outputs
+
+
+    @torch.no_grad()
+    def inference_semi_stream(self, video_clips):
+        # prepare
+        key_frame = video_clips[:, -1, :, :, :]
+
+        # 2D backbone
+        bk_feat = self.backbone(key_frame)
+        self.clip_feats.append(bk_feat)
+        del self.clip_feats[0]
+
+        # List[T, B, C, H, W]
+        backbone_feats_list = self.clip_feats
+
+        # temporal encoder
+        all_feats, _ = self.temporal_encoder(backbone_feats_list)
+        # List[L, T, B, C, H, W] -> List[T, B, C, H, W] -> [B, C, H, W]
+        feats = all_feats[-1][-1]
+
+        # detection head
+        cls_feats, reg_feats = self.head(feats)
+
+        # pred
+        act_pred = self.act_pred(reg_feats)
+        cls_pred = self.cls_pred(cls_feats)
+        reg_pred = self.reg_pred(reg_feats)
+
+        cls_pred, reg_pred = self.decode_output(act_pred, cls_pred, reg_pred)
+
+        # post-process
+        batch_outputs = []
+        for bi in range(cls_pred.shape[0]):    
+            if self.multi_hot:
+                outputs = self.post_process_multi_hot(cls_pred[bi], reg_pred[bi])
+
+            else:
+                outputs = self.post_process_one_hot(cls_pred[bi], reg_pred[bi])
+            batch_outputs.append(outputs)
+
         return batch_outputs
 
 
     @torch.no_grad()
-    def inference_single_frame(self, video_clips):
+    def inference_stream(self, video_clips):
         """
             video_clips: (Tensor) [B, T, 3, H, W]
         """
@@ -396,22 +444,18 @@ class YOWOF(nn.Module):
     @torch.no_grad()
     def inference(self, video_clips):
         # Init inference, model processes a video clip
-        if not self.stream_infernce:
-            outputs = self.inference_video_clip(video_clips)
+        if self.inf_mode == 'clip':
+            _, outputs = self.inference_clip(video_clips)
 
             return outputs
             
-        else:
-            self.scores_list = []
-            self.bboxes_list = []
-            self.labels_list = []
-
+        elif self.inf_mode == 'stream':
             if self.initialization:
                 # check state of convlstm
                 self.temporal_encoder.initialization = True
 
                 # Init stage, detector process a video clip
-                batch_outputs = self.inference_video_clip(video_clips)
+                _, batch_outputs = self.inference_clip(video_clips)
 
                 self.initialization = False
 
@@ -419,7 +463,25 @@ class YOWOF(nn.Module):
                 return batch_outputs[0]
             else:
                 # After init stage, detector process key frame
-                outputs = self.inference_single_frame(video_clips)
+                outputs = self.inference_stream(video_clips)
+
+                return outputs
+
+        elif self.inf_mode == 'semi_stream':
+            if self.initialization:
+                # Init stage, detector process a video clip
+                clip_feats, batch_outputs = self.inference_clip(video_clips)
+
+                self.initialization = False
+
+                # backbone feature cache
+                self.clip_feats = clip_feats
+
+                # batch size shoule be 1 during stream inference mode
+                return batch_outputs[0]
+            else:
+                # After init stage, detector process key frame
+                outputs = self.inference_semi_stream(video_clips)
 
                 return outputs
 

@@ -44,8 +44,8 @@ def parse_args():
                         type=str, help='Trained state_dict file path to open')
     parser.add_argument('--topk', default=40, type=int,
                         help='NMS threshold')
-    parser.add_argument('-inf', '--inf_mode', default='clip', type=str, choices=['clip', 'stream'],
-                        help='inference mode: clip or stream')
+    parser.add_argument('-inf', '--inf_mode', default='clip', type=str, choices=['clip', 'stream', 'semi_stream'],
+                        help='inference mode')
 
     # dataset
     parser.add_argument('-d', '--dataset', default='ucf24',
@@ -130,6 +130,63 @@ def inference_ucf_jhmdb_clip(args, d_cfg, model, device, dataset, class_names=No
             args.save_folder, args.dataset, 
             args.version, 'video_clips')
         os.makedirs(save_path, exist_ok=True)
+
+    # inference
+    for index in range(args.start_index, len(dataset)):
+        print('Video clip {:d}/{:d}....'.format(index+1, len(dataset)))
+        frame_id, video_clip, target = dataset[index]
+        orig_size = target['orig_size'].tolist()  # width, height
+
+        # prepare
+        video_clip = video_clip.unsqueeze(0).to(device) # [B, T, 3, H, W], B=1
+
+        t0 = time.time()
+        # inference
+        batch_outputs = model(video_clip)
+        print("inference time ", time.time() - t0, "s")
+        
+        scores, labels, bboxes = batch_outputs[0]
+        # rescale
+        bboxes = rescale_bboxes(bboxes, orig_size)
+
+        # vis results of key-frame
+        key_frame_tensor = video_clip[0, -1, :, :, :]
+        key_frame = convert_tensor_to_cv2img(key_frame_tensor, d_cfg['pixel_mean'], d_cfg['pixel_std'])
+
+        # resize key_frame to orig size
+        key_frame = cv2.resize(key_frame, orig_size)
+
+        vis_results = vis_detection(
+            frame=key_frame,
+            scores=scores,
+            labels=labels,
+            bboxes=bboxes,
+            vis_thresh=args.vis_thresh,
+            class_names=class_names,
+            class_colors=class_colors
+            )
+
+        if args.show:
+            cv2.imshow('key-frame detection', vis_results)
+            cv2.waitKey(0)
+
+        if args.save:
+            # save result
+            cv2.imwrite(os.path.join(save_path,
+            '{:0>5}.jpg'.format(index)), vis_results)
+        
+
+@torch.no_grad()
+def inference_ucf_jhmdb_semi_stream(args, d_cfg, model, device, dataset, class_names=None, class_colors=None):
+    # path to save 
+    if args.save:
+        save_path = os.path.join(
+            args.save_folder, args.dataset, 
+            args.version, 'video_clips')
+        os.makedirs(save_path, exist_ok=True)
+
+    # initalize model
+    model.initialization = True
 
     # inference
     for index in range(args.start_index, len(dataset)):
