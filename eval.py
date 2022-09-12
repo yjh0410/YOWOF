@@ -139,9 +139,6 @@ if __name__ == '__main__':
     # to eval
     model = model.to(device).eval()
 
-    # set inference mode
-    model.set_inference_mode(mode='stream')
-
     # transform
     basetransform = BaseTransform(
         img_size=d_cfg['test_size'],

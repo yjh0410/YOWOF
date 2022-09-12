@@ -65,7 +65,6 @@ class UCF_JHMDB_Evaluator(object):
         epoch_size = len(self.testset)
 
         # initalize model
-        model.initialization = True
         model.set_inference_mode(mode='stream')
 
         # inference
