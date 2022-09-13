@@ -63,6 +63,7 @@ class YOWOF(nn.Module):
             in_dim=bk_dim,
             hidden_dim=cfg['head_dim'],
             kernel_size=cfg['conv_lstm_ks'],
+            padding=cfg['conv_lstm_pd'],
             dilation=cfg['conv_lstm_di'],
             num_layers=cfg['conv_lstm_nl'],
             return_all_layers=False,

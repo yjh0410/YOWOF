@@ -3,11 +3,12 @@ import torch.nn as nn
 
 
 class ConvLSTMCell(nn.Module):
-    def __init__(self, in_dim, hidden_dim, kernel_size, dilation=1, bias=True):
+    def __init__(self, in_dim, hidden_dim, kernel_size, padding=0, dilation=1, bias=True):
         super().__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
         self.kernel_size = kernel_size
+        self.padding = padding
         self.dilation = dilation
         self.bias = bias
 
@@ -15,7 +16,7 @@ class ConvLSTMCell(nn.Module):
             in_dim + hidden_dim,
             4 * hidden_dim,
             kernel_size=kernel_size,
-            padding=dilation,
+            padding=padding,
             dilation=dilation,
             bias=bias)
 
@@ -52,13 +53,14 @@ class ConvLSTMCell(nn.Module):
 
 
 class ConvLSTM(nn.Module):
-    def __init__(self, in_dim, hidden_dim, kernel_size, dilation, num_layers,
+    def __init__(self, in_dim, hidden_dim, kernel_size, padding, dilation, num_layers,
                  bias=True, return_all_layers=False, inf_full_seq=True,
                  ):
         super().__init__()
         self.in_dim = in_dim
         self.hidden_dims = [hidden_dim] * num_layers
         self.kernel_size = kernel_size
+        self.padding = padding
         self.dilation = dilation
         self.num_layers = num_layers
         self.bias = bias
@@ -80,6 +82,7 @@ class ConvLSTM(nn.Module):
                     in_dim=cur_in_dim,
                     hidden_dim=self.hidden_dims[i],
                     kernel_size=kernel_size,
+                    padding=padding,
                     dilation=dilation,
                     bias=self.bias)
                     )
