@@ -9,8 +9,8 @@ yowof_config = {
         'res5_dilation': False,
         'stride': 32,
         # temporal encoder
-        'conv_lstm_ks': 3,
-        'conv_lstm_pd': 1,
+        'conv_lstm_ks': 7,
+        'conv_lstm_pd': 3,
         'conv_lstm_di': 1,
         'conv_lstm_nl': 1,
         # head
