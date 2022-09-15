@@ -52,7 +52,7 @@ yowof_config = {
         'conv_lstm_ks': 3,
         'conv_lstm_pd': 1,
         'conv_lstm_di': 1,
-        'conv_lstm_nl': 1,
+        'conv_lstm_nl': 2,
         # head
         'head_dim': 256,
         'head_norm': 'BN',

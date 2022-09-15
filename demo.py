@@ -176,8 +176,9 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
             out.write(frame_resized)
 
             if args.gif:
-                frame_resized_rgb = frame_resized[..., (2, 1, 0)]
-                image_list.append(frame_resized_rgb)
+                gif_resized = cv2.resize(frame, (320, 240))
+                gif_resized_rgb = gif_resized[..., (2, 1, 0)]
+                image_list.append(gif_resized_rgb)
 
             if args.show:
                 # show
