@@ -21,32 +21,40 @@ pip install -r requirements.txt
 You can download **UCF24** and **JHMDB21** from the following links:
 
 ## Google Drive
-For UCF24:
+## UCF101-24:
+* Google drive
 
 Link: https://drive.google.com/file/d/1Dwh90pRi7uGkH5qLRjQIFiEmMJrAog5J/view?usp=sharing
 
-For JHMDB21: 
-
-Link: https://drive.google.com/file/d/15nAIGrWPD4eH3y5OTWHiUbjwsr-9VFKT/view?usp=sharing
-
-## BaiduYunDisk
-For UCF24:
+* BaiduYun Disk
 
 Link: https://pan.baidu.com/s/11GZvbV0oAzBhNDVKXsVGKg
 
 Password: hmu6 
 
-For JHMDB21: 
+## JHMDB21: 
+* Google drive
+
+Link: https://drive.google.com/file/d/15nAIGrWPD4eH3y5OTWHiUbjwsr-9VFKT/view?usp=sharing
+
+* BaiduYun Disk
 
 Link: https://pan.baidu.com/s/1HSDqKFWhx_vF_9x6-Hb8jA 
 
 Password: tcjd 
 
-# Visualization
-Coming soon ...
-
 ## AVA
 You can use instructions from [here](https://github.com/yjh0410/AVA_Dataset) to prepare **AVA** dataset.
+
+# Visualization
+* UCF101-24
+
+Coming soon ...
+
+* AVA
+
+Coming soon ...
+
 
 # Experiment
 * Frame-mAP@0.5 IoU on UCF24
