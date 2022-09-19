@@ -61,21 +61,21 @@ Coming soon ...
 
 |    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Cls Accu  |  Recall  |   Weight   |   log   |
 |-------------|---------|-----------|---------|--------|------------|----------|------------|---------|
-|  YOWOF-R18  |    8    |     225   |  4.9 B  |  80.7  |    93.2    |   95.7   | [github]() | [github]() |
-|  YOWOF-R18  |   16    |     225   |  4.9 B  |  82.4  |    94.4    |   96.1   | [github](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [github](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
-|  YOWOF-R18  |   32    |     225   |  4.9 B  |        |            |          | [github]() | [github]() |
+|  YOWOF-R18  |    8    |     225   |  4.9 B  |  80.7  |    93.2    |   95.7   | [ckpt]() | [log]() |
+|  YOWOF-R18  |   16    |     225   |  4.9 B  |  82.4  |    94.4    |   96.1   | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
+|  YOWOF-R18  |   32    |     225   |  4.9 B  |        |            |          | [ckpt]() | [log]() |
 
 
 * Frame-mAP@0.5 IoU on AVA_v2.2
 
 |     Model     |   Clip  |    FPS    |  FLOPs  |  mAP   |   Weight   |   log   |
 |---------------|---------|-----------|---------|--------|------------|---------|
-|   YOWOF-R18   |   16    |    220    |         |        | [github]() | [github]() |
-|   YOWOF-R18   |   32    |    220    |         |        | [github]() | [github]() |
-|   YOWOF-R50   |   16    |    125    |         |        | [github]() | [github]() |
-|   YOWOF-R50   |   32    |    125    |         |        | [github]() | [github]() |
-| YOWOF-R50-DC5 |   16    |           |         |        | [github]() | [github]() |
-|  YOWOF-RX101  |   16    |           |         |        | [github]() | [github]() |
+|   YOWOF-R18   |   16    |    220    |         |        | [ckpt]() | [log]() |
+|   YOWOF-R18   |   32    |    220    |         |        | [ckpt]() | [log]() |
+|   YOWOF-R50   |   16    |    125    |         |        | [ckpt]() | [log]() |
+|   YOWOF-R50   |   32    |    125    |         |        | [ckpt]() | [log]() |
+| YOWOF-R50-DC5 |   16    |           |         |        | [ckpt]() | [log]() |
+|  YOWOF-RX101  |   16    |           |         |        | [ckpt]() | [log]() |
 
 ## Train YOWOF
 ### Train yowof-r18 on UCF24
