@@ -51,25 +51,23 @@ You can use instructions from [here](https://github.com/yjh0410/AVA_Dataset) to 
 # Experiment
 * Frame-mAP@0.5 IoU on UCF24
 
-|    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Cls Accu  |  Recall  |  Weight  |
-|-------------|---------|-----------|---------|--------|------------|----------|----------|
-|  YOWOF-R18  |    8    |     220   |         |        |            |          |    -     |
-|  YOWOF-R18  |   16    |     220   |         |        |            |          | [github]() |
-|  YOWOF-R18  |   32    |     220   |         |        |            |          |    -     |
+|    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Cls Accu  |  Recall  |   Weight   |   log   |
+|-------------|---------|-----------|---------|--------|------------|----------|------------|---------|
+|  YOWOF-R18  |    8    |     225   |  4.9 B  |  80.7  |    93.2    |   95.7   | [github]() | [github]() |
+|  YOWOF-R18  |   16    |     225   |  4.9 B  |  82.4  |    94.4    |   96.1   | [github](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [github](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
+|  YOWOF-R18  |   32    |     225   |  4.9 B  |        |            |          | [github]() | [github]() |
 
 
 * Frame-mAP@0.5 IoU on AVA_v2.2
 
-|     Model     |   Clip  |    FPS    |  FLOPs  |  mAP   |  Weight  |
-|---------------|---------|-----------|---------|--------|----------|
-|   YOWOF-R18   |    8    |    220    |         |        |    -     |
-|   YOWOF-R18   |   16    |    220    |         |        |    -     |
-|   YOWOF-R18   |   32    |    220    |         |        |    -     |
-|   YOWOF-R50   |    8    |    125    |         |        |    -     |
-|   YOWOF-R50   |   16    |    125    |         |        | [github]() |
-|   YOWOF-R50   |   32    |    125    |         |        |    -     |
-| YOWOF-R50-DC5 |         |           |         |        |    -     |
-|  YOWOF-RX101  |         |           |         |        |    -     |
+|     Model     |   Clip  |    FPS    |  FLOPs  |  mAP   |   Weight   |   log   |
+|---------------|---------|-----------|---------|--------|------------|---------|
+|   YOWOF-R18   |   16    |    220    |         |        | [github]() | [github]() |
+|   YOWOF-R18   |   32    |    220    |         |        | [github]() | [github]() |
+|   YOWOF-R50   |   16    |    125    |         |        | [github]() | [github]() |
+|   YOWOF-R50   |   32    |    125    |         |        | [github]() | [github]() |
+| YOWOF-R50-DC5 |   16    |           |         |        | [github]() | [github]() |
+|  YOWOF-RX101  |   16    |           |         |        | [github]() | [github]() |
 
 ## Train YOWOF
 ### Train yowof-r18 on UCF24
@@ -132,18 +130,50 @@ python test.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --inf_mod
 python eval.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight
 ```
 
+Our SOTA results on UCF24:
+```Shell
+AP: 78.15% (1)
+AP: 97.13% (10)
+AP: 84.41% (11)
+AP: 63.61% (12)
+AP: 72.00% (13)
+AP: 91.29% (14)
+AP: 86.57% (15)
+AP: 91.28% (16)
+AP: 76.65% (17)
+AP: 94.29% (18)
+AP: 96.24% (19)
+AP: 45.84% (2)
+AP: 96.02% (20)
+AP: 83.92% (21)
+AP: 79.63% (22)
+AP: 54.22% (23)
+AP: 90.16% (24)
+AP: 85.96% (3)
+AP: 79.05% (4)
+AP: 68.01% (5)
+AP: 95.18% (6)
+AP: 92.14% (7)
+AP: 89.02% (8)
+AP: 86.96% (9)
+mAP: 82.41%
+```
+
 * on AVA_v2.2
 
 ```Shell
 python eval.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight
 ```
 
+Our SOTA results on AVA_v2.2:
+```Shell
+Coming soon ...
+```
 ## Detect AVA video
 
 ```Shell
 python test_video_ava.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight --video ava/video/name
 ```
-
 
 ## Demo
 * detection action instances with UCF24 labels
