@@ -62,9 +62,11 @@ Coming soon ...
 |    Model    |   Clip  |    FPS    |  FLOPs  |  mAP   |  Cls Accu  |  Recall  |   Weight   |   log   |
 |-------------|---------|-----------|---------|--------|------------|----------|------------|---------|
 |  YOWOF-R18  |    8    |     225   |  4.9 B  |  80.7  |    93.2    |   95.7   | [ckpt]() | [log]() |
-|  YOWOF-R18  |   16    |     225   |  4.9 B  |  82.4  |    94.4    |   96.1   | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
-|  YOWOF-R18  |   32    |     225   |  4.9 B  |        |            |          | [ckpt]() | [log]() |
+|  YOWOF-R18  |   16    |     225   |  4.9 B  |  81.0  |    94.0    |   96.0   | [ckpt]() | [log]() |
+|  YOWOF-R18  |   16    |     225   |  4.9 B  |  82.4* |    94.4    |   96.1   | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
+|  YOWOF-R18  |   32    |     225   |  4.9 B  |  81.5  |    94.6    |   96.3   | [ckpt]() | [log]() |
 
+\* indicates that we are temporarily unable to reproduce this result, although we provide the ```ckpt``` file. 
 
 * Frame-mAP@0.5 IoU on AVA_v2.2
 
