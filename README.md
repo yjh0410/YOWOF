@@ -71,7 +71,7 @@ Coming soon ...
 |---------------|---------|-----------|---------|--------|--------|------------|---------|
 |   YOWOF-R18   |   16    |    220    |         |        |        | [ckpt]() | [log]() |
 |   YOWOF-R18   |   32    |    220    |         |        |        | [ckpt]() | [log]() |
-|   YOWOF-R50   |   16    |    125    |  11.1 B | 50.5 M |  20.7  | [ckpt]() | [log]() |
+|   YOWOF-R50   |   16    |    125    |  11.1 B | 50.5 M |  20.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r50_epoch_8_20.7.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R50-AVA_v2.2.txt) |
 |   YOWOF-R50   |   32    |    125    |         |        |        | [ckpt]() | [log]() |
 | YOWOF-R50-DC5 |   16    |           |         |        |        | [ckpt]() | [log]() |
 |  YOWOF-RX101  |   16    |           |         |        |        | [ckpt]() | [log]() |
