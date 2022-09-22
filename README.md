@@ -70,9 +70,7 @@ Coming soon ...
 |     Model     |   Clip  |    FPS    |  FLOPs  | Params |  mAP   |   Weight   |   log   |
 |---------------|---------|-----------|---------|--------|--------|------------|---------|
 |   YOWOF-R18   |   16    |    220    |         |        |        | [ckpt]() | [log]() |
-|   YOWOF-R18   |   32    |    220    |         |        |        | [ckpt]() | [log]() |
 |   YOWOF-R50   |   16    |    125    |  11.1 B | 50.5 M |  20.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r50_epoch_8_20.7.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R50-AVA_v2.2.txt) |
-|   YOWOF-R50   |   32    |    125    |         |        |        | [ckpt]() | [log]() |
 | YOWOF-R50-DC5 |   16    |           |         |        |        | [ckpt]() | [log]() |
 |  YOWOF-RX101  |   16    |           |         |        |        | [ckpt]() | [log]() |
 
@@ -137,7 +135,7 @@ python test.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --inf_mod
 python eval.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight
 ```
 
-Our SOTA results on UCF24:
+Our SOTA result achieved by ```YOWOF-R18``` on UCF24:
 ```Shell
 AP: 78.15% (1)
 AP: 97.13% (10)
@@ -172,9 +170,69 @@ mAP: 82.41%
 python eval.py --cuda -d ucf24 -v yowof-r50 --weight path/to/weight
 ```
 
-Our SOTA results on AVA_v2.2:
+Our SOTA result achieved by ```YOWOF-R50``` on AVA_v2.2:
 ```Shell
-Coming soon ...
+  'AP@0.5IOU/answer phone': 0.701,
+  'AP@0.5IOU/bend/bow (at the waist)': 0.358,
+  'AP@0.5IOU/carry/hold (an object)': 0.496,
+  'AP@0.5IOU/climb (e.g., a mountain)': 0.007,
+  'AP@0.5IOU/close (e.g., a door, a box)': 0.087,
+  'AP@0.5IOU/crouch/kneel': 0.178,
+  'AP@0.5IOU/cut': 0.026,
+  'AP@0.5IOU/dance': 0.295,
+  'AP@0.5IOU/dress/put on clothing': 0.006,
+  'AP@0.5IOU/drink': 0.223,
+  'P@0.5IOU/drive (e.g., a car, a truck)': 0.531,
+  'AP@0.5IOU/eat': 0.209,
+  'AP@0.5IOU/enter': 0.0345,
+  'AP@0.5IOU/fall down': 0.098,
+  'AP@0.5IOU/fight/hit (a person)': 0.348,
+  'AP@0.5IOU/get up': 0.092,
+  'AP@0.5IOU/give/serve (an object) to (a person)': 0.057,
+  'AP@0.5IOU/grab (a person)': 0.046,
+  'AP@0.5IOU/hand clap': 0.019,
+  'AP@0.5IOU/hand shake': 0.014,
+  'AP@0.5IOU/hand wave': 0.004,
+  'AP@0.5IOU/hit (an object)': 0.006,
+  'AP@0.5IOU/hug (a person)': 0.217,
+  'AP@0.5IOU/jump/leap': 0.093,
+  'AP@0.5IOU/kiss (a person)': 0.398,
+  'AP@0.5IOU/lie/sleep': 0.581,
+  'AP@0.5IOU/lift (a person)': 0.027,
+  'AP@0.5IOU/lift/pick up': 0.021,
+  'AP@0.5IOU/listen (e.g., to music)': 0.014,
+  'AP@0.5IOU/listen to (a person)': 0.565,
+  'AP@0.5IOU/martial art': 0.329,
+  'AP@0.5IOU/open (e.g., a window, a car door)': 0.133,
+  'AP@0.5IOU/play musical instrument': 0.282,
+  'AP@0.5IOU/point to (an object)': 0.001,
+  'AP@0.5IOU/pull (an object)': 0.022,
+  'AP@0.5IOU/push (an object)': 0.016,
+  'AP@0.5IOU/push (another person)': 0.087,
+  'AP@0.5IOU/put down': 0.030,
+  'AP@0.5IOU/read': 0.270,
+  'AP@0.5IOU/ride (e.g., a bike, a car, a horse)': 0.251,
+  'AP@0.5IOU/run/jog': 0.283,
+  'AP@0.5IOU/sail boat': 0.250,
+  'AP@0.5IOU/shoot': 0.005,
+  'AP@0.5IOU/sing to (e.g., self, a person, a group)': 0.104,
+  'AP@0.5IOU/sit': 0.790,
+  'AP@0.5IOU/smoke': 0.040,
+  'AP@0.5IOU/stand': 0.778,
+  'AP@0.5IOU/swim': 0.227,
+  'AP@0.5IOU/take (an object) from (a person)': 0.047,
+  'AP@0.5IOU/take a photo': 0.060,
+  'AP@0.5IOU/talk to (e.g., self, a person, a group)': 0.688,
+  'AP@0.5IOU/text on/look at a cellphone': 0.061,
+  'AP@0.5IOU/throw': 0.007,
+  'AP@0.5IOU/touch (an object)': 0.388,
+  'AP@0.5IOU/turn (e.g., a screwdriver)': 0.014,
+  'AP@0.5IOU/walk': 0.542,
+  'AP@0.5IOU/watch (a person)': 0.663,
+  'AP@0.5IOU/watch (e.g., TV)': 0.177,
+  'AP@0.5IOU/work on a computer': 0.099,
+  'AP@0.5IOU/write': 0.041,
+  'mAP@0.5IOU': 0.207}
 ```
 ## Detect AVA video
 
