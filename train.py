@@ -13,6 +13,7 @@ import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.cuda.amp as amp
+from torch.optim.lr_scheduler import MultiStepLR
 
 from utils import distributed_utils
 from utils.com_flops_params import FLOPs_and_Params
@@ -145,6 +146,21 @@ def train():
         model = DDP(model, device_ids=[args.gpu])
         model_without_ddp = model.module
 
+    # optimizer
+    base_lr = d_cfg['base_lr']
+    optimizer, start_epoch = build_optimizer(d_cfg, model_without_ddp, base_lr, args.resume)
+
+    # lr scheduler
+    lr_scheduler = MultiStepLR(optimizer=optimizer, milestones=d_cfg['lr_epoch'], gamma=d_cfg['lr_decay_ratio'])
+
+    # warmup scheduler
+    warmup_scheduler = build_warmup(cfg=d_cfg, base_lr=base_lr)
+
+    # training configuration
+    max_epoch = d_cfg['max_epoch']
+    epoch_size = len(dataloader)
+    warmup = True
+
     # Compute FLOPs and Params
     if distributed_utils.is_main_process():
         model_copy = deepcopy(model_without_ddp)
@@ -155,37 +171,6 @@ def train():
             device=device)
         del model_copy
         
-    # optimizer
-    base_lr = d_cfg['base_lr']
-    optimizer, start_epoch = build_optimizer(
-        model=model_without_ddp,
-        base_lr=base_lr,
-        name=d_cfg['optimizer'],
-        momentum=d_cfg['momentum'],
-        weight_decay=d_cfg['weight_decay'],
-        resume=args.resume
-        )
-
-    # lr scheduler
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer=optimizer,
-        milestones=d_cfg['lr_epoch'],
-        gamma=d_cfg['lr_decay_ratio']
-        )
-
-    # warmup scheduler
-    warmup_scheduler = build_warmup(
-        name=d_cfg['warmup'],
-        base_lr=base_lr,
-        wp_iter=d_cfg['wp_iter'],
-        warmup_factor=d_cfg['warmup_factor']
-        )
-
-    # training configuration
-    max_epoch = d_cfg['max_epoch']
-    epoch_size = len(dataloader)
-    warmup = True
-
 
     t0 = time.time()
     for epoch in range(start_epoch, max_epoch):
