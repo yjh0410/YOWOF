@@ -120,8 +120,8 @@ def train():
     dataset, evaluator, num_classes = build_dataset(device, d_cfg, args, is_train=True)
 
     # dataloader
-    batch_size = m_cfg['batch_size'] // distributed_utils.get_world_size()
-    dataloader = build_dataloader(args, dataset, batch_size, CollateFunc(), is_train=True)
+    each_gpu_batch_size = m_cfg['batch_size'] // distributed_utils.get_world_size()
+    dataloader = build_dataloader(args, dataset, each_gpu_batch_size, CollateFunc(), is_train=True)
 
     # build model
     net = build_model(args=args,
