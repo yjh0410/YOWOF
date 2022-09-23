@@ -101,8 +101,8 @@ yowof_config = {
         'num_reg_heads': 4,
         'head_depthwise': False,
         # batch size
-        'batch_size': 8,
-        'accumulate': 16,
+        'batch_size': 6,
+        'accumulate': 20,
         # matcher
         'matcher': 'uniform_matcher',
         'topk': 4,
