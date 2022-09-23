@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 
 from ...backbone import build_backbone
-from ...head.decoupled_head import DecoupledHead
-from ...basic.convlstm import ConvLSTM
+from ...basic.convlstm import build_convlstm
+from ...head.decoupled_head import build_head
 
 from .loss import Criterion
 
@@ -51,35 +51,16 @@ class YOWOF(nn.Module):
         self.anchor_boxes = self.generate_anchors(img_size)
 
         # ------------------ Network ---------------------
-        # 2D backbone
-        self.backbone, bk_dim = build_backbone(
-            model_name=cfg['backbone'], 
-            pretrained=cfg['pretrained'] and trainable,
-            res5_dilation=cfg['res5_dilation']
-            )
+        ## 2D backbone
+        self.backbone, bk_dim = build_backbone(cfg, pretrained=trainable)
 
-        # Temporal Encoder
-        self.temporal_encoder = ConvLSTM(
-            in_dim=bk_dim,
-            hidden_dim=cfg['head_dim'],
-            kernel_size=cfg['conv_lstm_ks'],
-            padding=cfg['conv_lstm_pd'],
-            dilation=cfg['conv_lstm_di'],
-            num_layers=cfg['conv_lstm_nl'],
-            return_all_layers=False,
-            inf_full_seq=trainable
-        )
+        ## Temporal Encoder
+        self.temporal_encoder = build_convlstm(cfg, bk_dim)
 
-        # head
-        self.head = DecoupledHead(
-            head_dim=cfg['head_dim'],
-            num_cls_heads=cfg['num_cls_heads'],
-            num_reg_heads=cfg['num_reg_heads'],
-            act_type=cfg['head_act'],
-            norm_type=cfg['head_norm']
-            )
+        ## head
+        self.head = build_head(cfg)
 
-        # pred
+        ## pred
         self.act_pred = nn.Conv2d(cfg['head_dim'], 1 * self.num_anchors, kernel_size=3, padding=1)
         self.cls_pred = nn.Conv2d(cfg['head_dim'], self.num_classes * self.num_anchors, kernel_size=3, padding=1)
         self.reg_pred = nn.Conv2d(cfg['head_dim'], 4 * self.num_anchors, kernel_size=3, padding=1)

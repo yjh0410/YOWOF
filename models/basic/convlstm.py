@@ -190,6 +190,22 @@ class ConvLSTM(nn.Module):
             return layer_output_list, last_state_list
 
 
+# build ConvLSTM
+def build_convlstm(cfg, in_dim, trainable):
+    model = ConvLSTM(
+        in_dim=in_dim,
+        hidden_dim=cfg['head_dim'],
+        kernel_size=cfg['conv_lstm_ks'],
+        padding=cfg['conv_lstm_pd'],
+        dilation=cfg['conv_lstm_di'],
+        num_layers=cfg['conv_lstm_nl'],
+        return_all_layers=False,
+        inf_full_seq=True
+    )
+
+    return model
+
+
 if __name__ == '__main__':
     feats = [torch.randn(2, 16, 10, 10) for _ in range(8)]
 

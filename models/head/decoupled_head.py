@@ -53,3 +53,16 @@ class DecoupledHead(nn.Module):
         reg_feats = self.reg_feats(x)
 
         return cls_feats, reg_feats
+
+
+# build head
+def build_head(cfg):
+    head = DecoupledHead(
+        head_dim=cfg['head_dim'],
+        num_cls_heads=cfg['num_cls_heads'],
+        num_reg_heads=cfg['num_reg_heads'],
+        act_type=cfg['head_act'],
+        norm_type=cfg['head_norm']
+        )
+
+    return head
