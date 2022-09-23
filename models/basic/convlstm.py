@@ -191,7 +191,7 @@ class ConvLSTM(nn.Module):
 
 
 # build ConvLSTM
-def build_convlstm(cfg, in_dim, trainable):
+def build_convlstm(cfg, in_dim):
     model = ConvLSTM(
         in_dim=in_dim,
         hidden_dim=cfg['head_dim'],
