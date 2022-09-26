@@ -373,7 +373,7 @@ def inference_ava_clip(args, d_cfg, model, device, dataset, class_names=None):
 
             if len(scores) > 0:
                 blk   = np.zeros(key_frame.shape, np.uint8)
-                font  = cv2.FONT_HERSHEY_SIMPLEX
+                font  = cv2.LINE_AA
                 coord = []
                 text  = []
                 text_size = []
