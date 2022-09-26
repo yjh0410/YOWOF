@@ -60,7 +60,7 @@ def inference_ucf_jhmdb_stream(args, d_cfg, model, device, dataset, class_names=
     if args.save:
         save_path = os.path.join(
             args.save_folder, args.dataset, 
-            args.version, 'video_clips')
+            args.version, 'video_stream')
         os.makedirs(save_path, exist_ok=True)
 
     # initalize model
@@ -238,7 +238,7 @@ def inference_ava_stream(args, d_cfg, model, device, dataset, class_names=None):
     if args.save:
         save_path = os.path.join(
             args.save_folder, args.dataset, 
-            args.version, 'video_clips')
+            args.version, 'video_stream')
         os.makedirs(save_path, exist_ok=True)
 
     # initalize model
