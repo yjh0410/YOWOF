@@ -212,20 +212,20 @@ def detect_stream(args, d_cfg, model, device, transform, class_names):
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
                 if len(scores) > 0:
-                    blk   = np.zeros(frame.shape, np.uint8)
-                    font  = cv2.FONT_HERSHEY_SIMPLEX
+                    blk   = np.zeros(key_frame.shape, np.uint8)
+                    font  = cv2.LINE_AA
                     coord = []
                     text  = []
                     text_size = []
-
+                    # scores, indices  = [list(a) for a in zip(*sorted(zip(scores,indices), reverse=True))] # if you want, you can sort according to confidence level
                     for _, cls_ind in enumerate(indices):
                         text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
-                        text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.25, thickness=1)[0])
-                        coord.append((x1+3, y1+7+10*_))
-                        cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-6), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
-                    frame = cv2.addWeighted(frame, 1.0, blk, 0.25, 1)
+                        text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.5, thickness=1)[0])
+                        coord.append((x1+3, y1+14+20*_))
+                        cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-12), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
+                    key_frame = cv2.addWeighted(key_frame, 1.0, blk, 0.5, 1)
                     for t in range(len(text)):
-                        cv2.putText(frame, text[t], coord[t], font, 0.25, (0, 0, 0), 1)
+                        cv2.putText(key_frame, text[t], coord[t], font, 0.5, (0, 0, 0), 2)
 
             # save
             out.write(frame)
