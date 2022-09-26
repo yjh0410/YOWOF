@@ -385,7 +385,7 @@ def inference_ava_clip(args, d_cfg, model, device, dataset, class_names=None):
                     cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-12), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
                 key_frame = cv2.addWeighted(key_frame, 1.0, blk, 0.5, 1)
                 for t in range(len(text)):
-                    cv2.putText(key_frame, text[t], coord[t], font, 0.5, (0, 0, 0), 1)
+                    cv2.putText(key_frame, text[t], coord[t], font, 0.5, (0, 0, 0), 2)
         
         if args.show:
             cv2.imshow('key-frame detection', key_frame)
