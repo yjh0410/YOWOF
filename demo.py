@@ -69,7 +69,7 @@ def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names):
         scores = list(scores)
 
         if len(scores) > 0:
-            
+            # draw bbox
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
             blk   = np.zeros(frame.shape, np.uint8)
@@ -80,12 +80,12 @@ def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names):
 
             for _, cls_ind in enumerate(indices):
                 text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
-                text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.25, thickness=1)[0])
-                coord.append((x1+3, y1+7+10*_))
-                cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-6), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
-            frame = cv2.addWeighted(frame, 1.0, blk, 0.25, 1)
+                text_size.append(cv2.getTextSize(text[-1], font, fontScale=0.5, thickness=1)[0])
+                coord.append((x1+3, y1+14+20*_))
+                cv2.rectangle(blk, (coord[-1][0]-1, coord[-1][1]-12), (coord[-1][0]+text_size[-1][0]+1, coord[-1][1]+text_size[-1][1]-4), (0, 255, 0), cv2.FILLED)
+            key_frame = cv2.addWeighted(key_frame, 1.0, blk, 0.5, 1)
             for t in range(len(text)):
-                cv2.putText(frame, text[t], coord[t], font, 0.25, (0, 0, 0), 1)
+                cv2.putText(key_frame, text[t], coord[t], font, 0.5, (0, 0, 0), 1)
     
     return frame
 

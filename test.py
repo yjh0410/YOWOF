@@ -294,14 +294,16 @@ def inference_ava_stream(args, d_cfg, model, device, dataset, class_names=None):
             indices = list(indices[0])
             scores = list(scores)
 
-            cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
             if len(scores) > 0:
+                # draw bbox
+                cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
                 blk   = np.zeros(key_frame.shape, np.uint8)
                 font  = cv2.LINE_AA
                 coord = []
                 text  = []
                 text_size = []
+
                 # scores, indices  = [list(a) for a in zip(*sorted(zip(scores,indices), reverse=True))] # if you want, you can sort according to confidence level
                 for _, cls_ind in enumerate(indices):
                     text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
@@ -369,9 +371,10 @@ def inference_ava_clip(args, d_cfg, model, device, dataset, class_names=None):
             indices = list(indices[0])
             scores = list(scores)
 
-            cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
             if len(scores) > 0:
+                # draw bbox
+                cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
                 blk   = np.zeros(key_frame.shape, np.uint8)
                 font  = cv2.LINE_AA
                 coord = []
@@ -445,14 +448,16 @@ def inference_ava_semi_stream(args, d_cfg, model, device, dataset, class_names=N
             indices = list(indices[0])
             scores = list(scores)
 
-            cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
             if len(scores) > 0:
+                # draw bbox
+                cv2.rectangle(key_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
                 blk   = np.zeros(key_frame.shape, np.uint8)
                 font  = cv2.LINE_AA
                 coord = []
                 text  = []
                 text_size = []
+                
                 # scores, indices  = [list(a) for a in zip(*sorted(zip(scores,indices), reverse=True))] # if you want, you can sort according to confidence level
                 for _, cls_ind in enumerate(indices):
                     text.append("[{:.2f}] ".format(scores[_]) + str(class_names[cls_ind]))
