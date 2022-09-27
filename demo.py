@@ -68,9 +68,10 @@ def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names):
         indices = list(indices[0])
         scores = list(scores)
 
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
         if len(scores) > 0:
+            
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
             blk   = np.zeros(frame.shape, np.uint8)
             font  = cv2.FONT_HERSHEY_SIMPLEX
             coord = []
