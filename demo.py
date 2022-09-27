@@ -56,7 +56,7 @@ def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names):
     # visualize detection results
     for bbox in out_bboxes:
         x1, y1, x2, y2 = bbox[:4]
-        cls_out = bbox[4:]
+        cls_out = bbox[4:4+14]
     
         # rescale bbox
         x1, x2 = int(x1 * orig_w), int(x2 * orig_w)
