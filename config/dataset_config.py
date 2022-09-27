@@ -22,8 +22,9 @@ dataset_config = {
         'multi_hot': False,  # one hot
         # post process
         'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
         'nms_thresh': 0.3,
+        'conf_thresh_val': 0.005,
+        'nms_thresh_val': 0.5,
         # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
