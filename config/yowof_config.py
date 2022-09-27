@@ -90,8 +90,8 @@ yowof_config = {
         'stride': 16,
         # temporal encoder
         'conv_lstm_ks': 3,
-        'conv_lstm_pd': 1,
-        'conv_lstm_di': 1,
+        'conv_lstm_pd': 2,
+        'conv_lstm_di': 2,
         'conv_lstm_nl': 1,
         # head
         'head_dim': 256,
@@ -105,8 +105,8 @@ yowof_config = {
         'accumulate': 16,
         # matcher
         'matcher': 'uniform_matcher',
-        'topk': 4,
-        'iou_t': 0.15,
+        'topk': 8,
+        'iou_t': 0.1,
         'igt': 0.7,
         'ctr_clamp': 32,
         # loss
