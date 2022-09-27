@@ -161,7 +161,7 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
                 scores, labels, bboxes = outputs
                 # rescale
                 bboxes = rescale_bboxes(bboxes, [orig_w, orig_h])
-                # onr hot
+                # one hot
                 frame = vis_detection(
                     frame=frame,
                     scores=scores,

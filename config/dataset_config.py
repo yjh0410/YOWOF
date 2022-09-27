@@ -23,7 +23,7 @@ dataset_config = {
         # post process
         'conf_thresh': 0.3,
         'conf_thresh_valid': 0.005,
-        'nms_thresh': 0.5,
+        'nms_thresh': 0.3,
         # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
