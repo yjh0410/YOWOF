@@ -38,6 +38,8 @@ def parse_args():
     # class label config
     parser.add_argument('-d', '--dataset', default='ava_v2.2',
                         help='ava_v2.2')
+    parser.add_argument('--pose', action='store_true', default=False, 
+                        help='show 14 action pose of AVA.')
 
     # model
     parser.add_argument('-v', '--version', default='yowof-r18', type=str,
@@ -52,11 +54,16 @@ def parse_args():
     return parser.parse_args()
                     
 
-def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names):
+def multi_hot_vis(args, frame, out_bboxes, orig_w, orig_h, class_names, act_pose=False):
     # visualize detection results
     for bbox in out_bboxes:
         x1, y1, x2, y2 = bbox[:4]
-        cls_out = bbox[4:4+14]
+        if act_pose:
+            # only show 14 poses of AVA.
+            cls_out = bbox[4:4+14]
+        else:
+            # show all actions of AVA.
+            cls_out = bbox[4:]
     
         # rescale bbox
         x1, x2 = int(x1 * orig_w), int(x2 * orig_w)
@@ -156,7 +163,8 @@ def detect(args, d_cfg, model, device, transform, class_names, class_colors):
                     out_bboxes=outputs,
                     orig_w=orig_w,
                     orig_h=orig_h,
-                    class_names=class_names
+                    class_names=class_names,
+                    act_pose=args.pose
                     )
             elif args.dataset in ['ucf24']:
                 scores, labels, bboxes = outputs

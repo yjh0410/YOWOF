@@ -69,8 +69,9 @@ dataset_config = {
         'multi_hot': False,  # one hot
         # post process
         'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.005,
-        'nms_thresh': 0.5,
+        'nms_thresh': 0.2,
+        'conf_thresh_val': 0.005,
+        'nms_thresh_val': 0.5,
         # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
@@ -125,8 +126,9 @@ dataset_config = {
         'multi_hot': True,  # multi hot
         # post process
         'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.1,
-        'nms_thresh': 0.5,
+        'nms_thresh': 0.2,
+        'conf_thresh_val': 0.1,
+        'nms_thresh_val': 0.5,
         # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
@@ -191,8 +193,9 @@ dataset_config = {
         'multi_hot': True,  # multi hot
         # post process
         'conf_thresh': 0.3,
-        'conf_thresh_valid': 0.1,
-        'nms_thresh': 0.5,
+        'nms_thresh': 0.2,
+        'conf_thresh_val': 0.1,
+        'nms_thresh_val': 0.5,
         # optimizer
         'optimizer': 'adamw',
         'momentum': 0.9,
