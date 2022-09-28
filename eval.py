@@ -44,7 +44,9 @@ def parse_args():
     parser.add_argument('--dt_folder', default=None,
                         type=str, help='path to detection dir')
     parser.add_argument('--cal_mAP', action='store_true', default=False, 
-                        help='calculate_mAP.')
+                        help='calculate frame mAP.')
+    parser.add_argument('--cal_video_mAP', action='store_true', default=False, 
+                        help='calculate video mAP.')
     parser.add_argument('--redo', action='store_true', default=False, 
                         help='re-make inference on testset.')
 
@@ -70,8 +72,8 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
 
     if args.cal_mAP:
         evaluator.evaluate_frame_map(model, show_pr_curve=True)
-    else:
-        evaluator.evaluate_accu_recall(model)
+    if args.cal_video_mAP:
+        evaluator.evaluate_video_map(model)
 
 
 def ava_eval(device, d_cfg, model, transform, version='v2.2'):

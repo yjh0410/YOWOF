@@ -4,6 +4,7 @@
 import os
 import random
 import numpy as np
+import glob
 
 import torch
 from torch.utils.data import Dataset
@@ -38,6 +39,7 @@ class UCF_JHMDB_Dataset(Dataset):
         with open(os.path.join(data_root, self.split_list), 'r') as file:
             self.file_names = file.readlines()
         self.num_samples  = len(self.file_names)
+        self.path_to_video = None
 
         if dataset == 'ucf24':
             self.num_classes = 24
@@ -130,6 +132,7 @@ class UCF_JHMDB_Dataset(Dataset):
         }
 
         return frame_id, video_clip, target
+
 
 
 if __name__ == '__main__':
