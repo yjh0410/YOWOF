@@ -59,11 +59,11 @@ Coming soon ...
 # Experiment
 * Frame-mAP@0.5 IoU on UCF24
 
-|    Model    |   Clip  |    FPS    |  GFLOPs |  mAP   |  Cls Accu  |  Recall  |   Weight   |   log   |
-|-------------|---------|-----------|---------|--------|------------|----------|------------|---------|
-|  YOWOF-R18  |    8    |     225   |   4.9   |  80.7  |    93.4    |   95.6   | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_4_93.4_95.6_80.7.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K-8.txt) |
-|  YOWOF-R18  |   16    |     225   |   4.9   |  82.4  |    94.4    |   96.1   | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
-|  YOWOF-R18  |   32    |     225   |   4.9   |  81.5  |    94.6    |   96.3   | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_2_94.6_96.3_81.5.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K-32.txt) |
+|    Model    |   Clip  |    FPS    |  GFLOPs |  mAP   |   Weight   |   log   |
+|-------------|---------|-----------|---------|--------|------------|---------|
+|  YOWOF-R18  |    8    |     225   |   4.9   |  80.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_4_93.4_95.6_80.7.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K-8.txt) |
+|  YOWOF-R18  |   16    |     225   |   4.9   |  82.4  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
+|  YOWOF-R18  |   32    |     225   |   4.9   |  81.5  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_2_94.6_96.3_81.5.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K-32.txt) |
 
 * Frame-mAP@0.5 IoU on AVA_v2.2
 
