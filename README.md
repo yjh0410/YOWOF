@@ -272,7 +272,7 @@ Our SOTA result achieved by ```YOWOF-R50``` on AVA_v2.2:
   'AP@0.5IOU/watch (e.g., TV)': 0.177,
   'AP@0.5IOU/work on a computer': 0.099,
   'AP@0.5IOU/write': 0.041,
-  'mAP@0.5IOU': 0.207}
+  'mAP@0.5IOU': 0.207
 ```
 ## Detect AVA video
 
