@@ -134,8 +134,7 @@ python eval.py \
         -d ucf24 \
         -v yowof-r18 \
         --weight path/to/weight \
-        --gt_folder ./evaluator/groundtruths_ucf_jhmdb/groundtruths_ucf/ \
-        --cal_mAP
+        --cal_frame_mAP
 ```
 
 Our ```Frame-mAP@0.5IoU``` achieved by ```YOWOF-R18``` on UCF24:
@@ -174,7 +173,6 @@ python eval.py \
         -d ucf24 \
         -v yowof-r18 \
         --weight path/to/weight \
-        --gt_folder ./evaluator/groundtruths_ucf_jhmdb/groundtruths_ucf/ \
         --cal_video_mAP
 ```
 
