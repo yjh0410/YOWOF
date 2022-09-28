@@ -9,7 +9,7 @@ from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from utils.box_ops import rescale_bboxes
 from utils.box_ops import rescale_bboxes
 
-from .cal_mAP import get_mAP
+from .cal_frame_mAP import evaluate_frameAP
 from .cal_video_mAP import evaluate_videoAP
 
 
@@ -119,7 +119,7 @@ class UCF_JHMDB_Evaluator(object):
                     print(log_info, flush=True)
 
         print('calculating Frame mAP ...')
-        metric_list = get_mAP(self.gt_folder, current_dir, self.iou_thresh,
+        metric_list = evaluate_frameAP(self.gt_folder, current_dir, self.iou_thresh,
                               self.save_path, self.dataset, show_pr_curve)
         for metric in metric_list:
             print(metric)
