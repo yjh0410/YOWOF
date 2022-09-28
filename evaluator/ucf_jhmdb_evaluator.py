@@ -194,8 +194,10 @@ class UCF_JHMDB_Evaluator(object):
                 video_split = line.split('/')
                 video_class = video_split[0]
                 video_file = video_split[1]
-                img_split = image_path.split('\\')  # ex. [..., 'Basketball', 'v_Basketball_g08_c01', '00070.txt']
-                print(img_split)
+                # for windows:
+                # img_split = image_path.split('\\')  # ex. [..., 'Basketball', 'v_Basketball_g08_c01', '00070.txt']
+                # for linux
+                img_split = image_path.split('/')  # ex. [..., 'Basketball', 'v_Basketball_g08_c01', '00070.txt']
 
                 # image name
                 img_id = int(img_split[-1][:5])
