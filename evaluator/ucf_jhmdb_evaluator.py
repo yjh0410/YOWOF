@@ -51,17 +51,7 @@ class UCF_JHMDB_Evaluator(object):
 
 
     @torch.no_grad()
-    def evaluate_accu_recall(self, model, epoch=1):
-        # number of groundtruth
-        total_num_gts = 0
-        proposals   = 0.0
-        correct     = 0.0
-        fscore = 0.0
-
-        correct_classification = 0.0
-        total_detected = 0.0
-        eps = 1e-5
-
+    def evaluate_frame_map(self, model, epoch=1, show_pr_curve=False):
         epoch_size = len(self.testset)
 
         # initalize model
@@ -122,82 +112,14 @@ class UCF_JHMDB_Evaluator(object):
                 if iter_i % 1000 == 0:
                     log_info = "[%d / %d]" % (iter_i, epoch_size)
                     print(log_info, flush=True)
-                break
-
-        #         tgt_bboxes = target['boxes'].numpy()
-        #         tgt_labels = target['labels'].numpy()
-        #         ow, oh = target['orig_size'].tolist()
-        #         num_gts = tgt_bboxes.shape[0]
-
-        #         # count number of total groundtruth
-        #         total_num_gts += num_gts
-
-        #         pred_list = [] # LIST OF CONFIDENT BOX INDICES
-        #         for i in range(len(scores)):
-        #             score = scores[i]
-        #             if score > self.conf_thresh:
-        #                 proposals += 1
-        #                 pred_list.append(i)
-
-        #         for i in range(num_gts):
-        #             tgt_bbox = tgt_bboxes[i]
-        #             tgt_label = tgt_labels[i]
-        #             # rescale groundtruth bbox
-        #             tgt_bbox[[0, 2]] *= ow
-        #             tgt_bbox[[1, 3]] *= oh
-
-        #             tgt_x1, tgt_y1, tgt_x2, tgt_y2 = tgt_bbox
-        #             box_gt = [tgt_x1, tgt_y1, tgt_x2, tgt_y2, 1.0, 1.0, tgt_label]
-        #             best_iou = 0
-        #             best_j = -1
-
-        #             for j in pred_list: # ITERATE THROUGH ONLY CONFIDENT BOXES
-        #                 iou = bbox_iou(box_gt, bboxes[j], x1y1x2y2=True)
-        #                 if iou > best_iou:
-        #                     best_j = j
-        #                     best_iou = iou
-
-        #             if best_iou > self.iou_thresh:
-        #                 total_detected += 1
-        #                 # print(labels[best_j], tgt_label)
-        #                 if int(labels[best_j]) == int(tgt_label):
-        #                     correct_classification += 1
-
-        #             if best_iou > self.iou_thresh and int(labels[best_j]) == int(tgt_label):
-        #                 correct += 1
-
-        #         precision = 1.0 * correct / (proposals + eps)
-        #         recall = 1.0 * correct / (total_num_gts + eps)
-        #         fscore = 2.0 * precision * recall / (precision + recall + eps)
-
-        #         if iter_i % 1000 == 0:
-        #             log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
-        #             print(log_info, flush=True)
-
-        # classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
-        # locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
-
-        # print("Classification accuracy: %.3f" % classification_accuracy)
-        # print("Locolization recall: %.3f" % locolization_recall)
-
-        return current_dir
-
-
-    @torch.no_grad()
-    def evaluate_frame_map(self, model, epoch=1, show_pr_curve=False):
-        if self.redo:
-            current_dir = self.evaluate_accu_recall(model, epoch)
-
-            result_path = current_dir
-        else:
-            result_path = self.dt_folder
 
         print('calculating Frame mAP ...')
-        metric_list = get_mAP(self.gt_folder, result_path, self.iou_thresh,
+        metric_list = get_mAP(self.gt_folder, current_dir, self.iou_thresh,
                               self.save_path, self.dataset, show_pr_curve)
         for metric in metric_list:
             print(metric)
 
+        return current_dir
 
 
 if __name__ == "__main__":
