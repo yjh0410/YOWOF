@@ -240,6 +240,6 @@ def evaluate_videoAP(gt_videos, all_boxes, num_classes, iou_thresh = 0.2, bTempo
         gt = [g[1:] for g in gt_videos_format if g[0]==cls_ind]
         pred_cls = [p[1:] for p in pred_videos_format if p[0]==cls_ind]
         ap = video_ap_one_class(gt, pred_cls, iou_thresh, bTemporal)
-        ap_all.append(ap)
+        ap_all.append(round(ap, 2))
 
     return ap_all

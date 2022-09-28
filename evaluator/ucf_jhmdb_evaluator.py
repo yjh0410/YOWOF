@@ -176,7 +176,7 @@ class UCF_JHMDB_Evaluator(object):
 
         # inference
         print('inference ...')
-        for i, line in enumerate(lines):
+        for i, line in enumerate(lines[:1]):
             line = line.rstrip()
             print('Video: [%d / %d] - %s' % (i, len(lines), line))
             # initalize model
