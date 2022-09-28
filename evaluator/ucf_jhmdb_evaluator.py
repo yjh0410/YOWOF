@@ -178,7 +178,8 @@ class UCF_JHMDB_Evaluator(object):
         print('inference ...')
         for i, line in enumerate(lines):
             line = line.rstrip()
-            print('Video: [%d / %d] - %s' % (i, len(lines), line))
+            if i % 50 == 0:
+                print('Video: [%d / %d] - %s' % (i, len(lines), line))
             # initalize model
             model.set_inference_mode(mode='stream')
 
