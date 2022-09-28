@@ -256,10 +256,9 @@ class UCF_JHMDB_Evaluator(object):
         iou_list = [0.05, 0.1, 0.2, 0.3, 0.5, 0.75]
         print('calculating video mAP ...')
         for iou_th in iou_list:
-            print('iou is: ', iou_th)
             per_ap = evaluate_videoAP(gt_videos, detected_boxes, self.num_classes, iou_th, True)
             video_mAP = sum(per_ap) / len(per_ap)
-            print('V-mAP @ {} IoU:')
+            print('V-mAP @ {} IoU:'.format(iou_th))
             print('--Per AP: ', per_ap)
             print('--mAP: ', video_mAP)
 
