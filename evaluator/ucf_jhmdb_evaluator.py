@@ -9,7 +9,6 @@ from dataset.ucf_jhmdb import UCF_JHMDB_Dataset
 from utils.box_ops import rescale_bboxes
 from utils.box_ops import rescale_bboxes
 
-from .utils import bbox_iou
 from .cal_mAP import get_mAP
 from .cal_video_mAP import evaluate_videoAP
 
