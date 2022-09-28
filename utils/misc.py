@@ -59,7 +59,8 @@ def build_dataset(device, d_cfg, args, is_train=False):
             len_clip=d_cfg['len_clip'],
             conf_thresh=0.01,
             iou_thresh=0.5,
-            transform=basetransform
+            transform=basetransform,
+            gt_folder=d_cfg['gt_folder']
         )
 
     elif args.dataset == 'ava_v2.1':

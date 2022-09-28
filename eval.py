@@ -41,14 +41,10 @@ def parse_args():
     # eval
     parser.add_argument('--gt_folder', default='./evaluator/groundtruth_ucf_jhmdb/groundtruth_ucf/',
                         type=str, help='path to grouondtruth of ucf & jhmdb')
-    parser.add_argument('--dt_folder', default=None,
-                        type=str, help='path to detection dir')
-    parser.add_argument('--cal_mAP', action='store_true', default=False, 
+    parser.add_argument('--cal_frame_mAP', action='store_true', default=False, 
                         help='calculate frame mAP.')
     parser.add_argument('--cal_video_mAP', action='store_true', default=False, 
                         help='calculate video mAP.')
-    parser.add_argument('--redo', action='store_true', default=False, 
-                        help='re-make inference on testset.')
 
 
     return parser.parse_args()
@@ -65,12 +61,10 @@ def ucf_jhmdb_eval(device, args, d_cfg, model, transform):
         conf_thresh=0.01,
         iou_thresh=0.5,
         transform=transform,
-        redo=args.redo,
-        gt_folder=args.gt_folder,
-        dt_folder=args.dt_folder,
+        gt_folder=d_cfg['gt_folder'],
         save_path=args.save_path)
 
-    if args.cal_mAP:
+    if args.cal_frame_mAP:
         evaluator.evaluate_frame_map(model, show_pr_curve=True)
     if args.cal_video_mAP:
         evaluator.evaluate_video_map(model)

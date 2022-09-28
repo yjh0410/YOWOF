@@ -6,6 +6,7 @@ dataset_config = {
         # dataset
         'data_root': '/mnt/share/ssd2/dataset/STAD/ucf24',
         # 'data_root': 'D:/python_work/spatial-temporal_action_detection/dataset/ucf24',
+        'gt_folder': './evaluator/groundtruth_ucf_jhmdb/groundtruth_ucf/',
         # input size
         'train_size': 320,
         'test_size': 320,

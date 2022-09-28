@@ -19,15 +19,13 @@ class UCF_JHMDB_Evaluator(object):
                  device=None,
                  data_root=None,
                  dataset='ucf24',
-                 model_name='yowo',
+                 model_name='yowof-r18',
                  img_size=320,
                  len_clip=1,
                  conf_thresh=0.01,
                  iou_thresh=0.5,
                  transform=None,
-                 redo=False,
                  gt_folder=None,
-                 dt_folder=None,
                  save_path=None):
         self.device = device
         self.data_root = data_root
@@ -42,9 +40,7 @@ class UCF_JHMDB_Evaluator(object):
         self.gt_file = os.path.join(data_root, 'splitfiles/finalAnnots.mat')
         self.testlist = os.path.join(data_root, 'splitfiles/testlist01.txt')
 
-        self.redo = redo
         self.gt_folder = gt_folder
-        self.dt_folder = dt_folder
         self.save_path = save_path
 
         # dataset
@@ -61,6 +57,7 @@ class UCF_JHMDB_Evaluator(object):
 
     @torch.no_grad()
     def evaluate_frame_map(self, model, epoch=1, show_pr_curve=False):
+        print("Metric: Frame mAP")
         epoch_size = len(self.testset)
 
         # initalize model
@@ -133,6 +130,7 @@ class UCF_JHMDB_Evaluator(object):
 
     @torch.no_grad()
     def evaluate_video_map(self, model, epoch=1):
+        print("Metric: Video mAP")
         video_testlist = []
         with open(self.testlist, 'r') as file:
             lines = file.readlines()
