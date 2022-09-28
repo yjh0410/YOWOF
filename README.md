@@ -57,21 +57,19 @@ Coming soon ...
 
 
 # Experiment
-* Frame-mAP@0.5 IoU on UCF24
+* Frame-mAP@0.5IoU & Video-mAP@0.5IoU on UCF24
 
-|    Model    |   Clip  |    FPS    |  GFLOPs |  mAP   |   Weight   |   log   |
-|-------------|---------|-----------|---------|--------|------------|---------|
-|  YOWOF-R18  |    8    |     225   |   4.9   |  80.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_4_93.4_95.6_80.7.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K-8.txt) |
-|  YOWOF-R18  |   16    |     225   |   4.9   |  82.4  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K16-UCF24.txt) |
-|  YOWOF-R18  |   32    |     225   |   4.9   |  81.5  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_2_94.6_96.3_81.5.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-K-32.txt) |
+|    Model    |   Clip  |    FPS    |  GFLOPs |  F-mAP |  V-mAP |   Weight   |
+|-------------|---------|-----------|---------|--------|--------|------------|
+|  YOWOF-R18  |   16    |     225   |   4.9   |  82.4  |  49.1  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_5_94.4_96.1_82.4.pth) |
 
 * Frame-mAP@0.5 IoU on AVA_v2.2
 
-|     Model     |   Clip  |    FPS    |  GFLOPs | Params |  mAP   |   Weight   |   log   |
-|---------------|---------|-----------|---------|--------|--------|------------|---------|
-|   YOWOF-R18   |   16    |    220    |   5.0   | 23.9 M |  18.1  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_8_18.1.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R18-AVA_v2.2.txt) |
-|   YOWOF-R50   |   16    |    125    |   11.1  | 50.5 M |  20.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r50_epoch_8_20.7.pth) | [log](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/YOWOF-R50-AVA_v2.2.txt) |
-|  YOWOF-RX101  |   16    |           |   19.0  | 69.1 M |        | [ckpt]() | [log]() |
+|     Model     |   Clip  |    FPS    |  GFLOPs | Params |  mAP   |   Weight   |
+|---------------|---------|-----------|---------|--------|--------|------------|
+|   YOWOF-R18   |   16    |    220    |   5.0   | 23.9 M |  18.1  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_8_18.1.pth) |
+|   YOWOF-R50   |   16    |    125    |   11.1  | 50.5 M |  20.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r50_epoch_8_20.7.pth) |
+|  YOWOF-RX101  |   16    |           |   19.0  | 69.1 M |        | [ckpt]() |
 
 ## Train YOWOF
 ### Train yowof-r18 on UCF24
@@ -129,12 +127,18 @@ python test.py --cuda -d ava_v2.2 -v yowof-r50 --weight path/to/weight --inf_mod
 
 ## Evaluate YOWOF
 * on UCF24
-
 ```Shell
-python eval.py --cuda -d ucf24 -v yowof-r18 --weight path/to/weight
+# frame mAP
+python eval.py \
+        --cuda \
+        -d ucf24 \
+        -v yowof-r18 \
+        --weight path/to/weight \
+        --gt_folder ./evaluator/groundtruths_ucf_jhmdb/groundtruths_ucf/ \
+        --cal_mAP
 ```
 
-Our SOTA result achieved by ```YOWOF-R18``` on UCF24:
+Our ```Frame-mAP@0.5IoU``` achieved by ```YOWOF-R18``` on UCF24:
 ```Shell
 AP: 78.15% (1)
 AP: 97.13% (10)
@@ -163,6 +167,45 @@ AP: 86.96% (9)
 mAP: 82.41%
 ```
 
+```Shell
+# video mAP
+python eval.py \
+        --cuda \
+        -d ucf24 \
+        -v yowof-r18 \
+        --weight path/to/weight \
+        --gt_folder ./evaluator/groundtruths_ucf_jhmdb/groundtruths_ucf/ \
+        --cal_video_mAP
+```
+
+Our ```Video-mAP@0.5IoU``` achieved by ```YOWOF-R18``` on UCF24:
+
+```Shell
+-------------------------------
+V-mAP @ 0.05 IoU:
+--Per AP:  [87.71, 93.6, 68.66, 96.26, 79.63, 100.0, 82.72, 100.0, 93.36, 96.08, 44.8, 91.01, 91.87, 99.76, 23.33, 98.87, 90.87, 96.55, 91.46, 65.01, 72.97, 49.67, 86.4, 87.96]
+--mAP:  82.86
+-------------------------------
+V-mAP @ 0.1 IoU:
+--Per AP:  [87.71, 91.01, 68.66, 93.73, 79.63, 100.0, 82.72, 100.0, 93.36, 96.08, 44.8, 87.62, 91.87, 99.76, 23.33, 98.87, 90.87, 96.55, 91.46, 63.46, 70.97, 49.67, 57.29, 87.96]
+--mAP:  81.14
+-------------------------------
+V-mAP @ 0.2 IoU:
+--Per AP:  [58.88, 84.02, 64.38, 78.9, 38.04, 100.0, 82.72, 100.0, 82.5, 96.08, 44.8, 84.75, 91.87, 99.76, 22.2, 98.87, 90.87, 96.55, 91.46, 61.48, 49.51, 48.3, 32.85, 87.96]
+--mAP:  74.45
+-------------------------------
+V-mAP @ 0.3 IoU:
+--Per AP:  [8.66, 28.1, 64.38, 69.77, 12.2, 84.79, 77.96, 100.0, 82.5, 92.68, 44.8, 72.98, 75.96, 99.76, 16.23, 98.87, 90.87, 96.55, 91.46, 51.32, 30.98, 43.29, 3.24, 80.77]
+--mAP:  63.25
+-------------------------------
+V-mAP @ 0.5 IoU:
+--Per AP:  [0.0, 1.75, 53.12, 35.56, 0.66, 40.99, 62.67, 90.6, 49.47, 89.94, 44.8, 57.89, 48.27, 99.76, 4.81, 98.87, 85.47, 89.53, 87.81, 44.64, 0.45, 20.97, 0.0, 69.87]
+--mAP:  49.08
+-------------------------------
+V-mAP @ 0.75 IoU:
+--Per AP:  [0.0, 0.0, 22.6, 0.0, 0.0, 1.11, 27.9, 64.31, 11.68, 42.35, 21.51, 34.02, 0.8, 40.54, 0.92, 80.21, 44.81, 19.75, 80.34, 18.34, 0.0, 0.92, 0.0, 35.32]
+--mAP:  22.81
+```
 * on AVA_v2.2
 
 ```Shell
