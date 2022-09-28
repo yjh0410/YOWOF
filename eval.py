@@ -39,8 +39,6 @@ def parse_args():
                         help='ucf24, jhmdb21, ava_v2.2.')
 
     # eval
-    parser.add_argument('--gt_folder', default='./evaluator/groundtruth_ucf_jhmdb/groundtruth_ucf/',
-                        type=str, help='path to grouondtruth of ucf & jhmdb')
     parser.add_argument('--cal_frame_mAP', action='store_true', default=False, 
                         help='calculate frame mAP.')
     parser.add_argument('--cal_video_mAP', action='store_true', default=False, 
