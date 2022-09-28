@@ -119,73 +119,74 @@ class UCF_JHMDB_Evaluator(object):
                             str(cls_id) + ' ' + str(score) + ' ' \
                                 + str(x1) + ' ' + str(y1) + ' ' + str(x2) + ' ' + str(y2) + '\n')
 
-                tgt_bboxes = target['boxes'].numpy()
-                tgt_labels = target['labels'].numpy()
-                ow, oh = target['orig_size'].tolist()
-                num_gts = tgt_bboxes.shape[0]
-
-                # count number of total groundtruth
-                total_num_gts += num_gts
-
-                pred_list = [] # LIST OF CONFIDENT BOX INDICES
-                for i in range(len(scores)):
-                    score = scores[i]
-                    if score > self.conf_thresh:
-                        proposals += 1
-                        pred_list.append(i)
-
-                for i in range(num_gts):
-                    tgt_bbox = tgt_bboxes[i]
-                    tgt_label = tgt_labels[i]
-                    # rescale groundtruth bbox
-                    tgt_bbox[[0, 2]] *= ow
-                    tgt_bbox[[1, 3]] *= oh
-
-                    tgt_x1, tgt_y1, tgt_x2, tgt_y2 = tgt_bbox
-                    box_gt = [tgt_x1, tgt_y1, tgt_x2, tgt_y2, 1.0, 1.0, tgt_label]
-                    best_iou = 0
-                    best_j = -1
-
-                    for j in pred_list: # ITERATE THROUGH ONLY CONFIDENT BOXES
-                        iou = bbox_iou(box_gt, bboxes[j], x1y1x2y2=True)
-                        if iou > best_iou:
-                            best_j = j
-                            best_iou = iou
-
-                    if best_iou > self.iou_thresh:
-                        total_detected += 1
-                        # print(labels[best_j], tgt_label)
-                        if int(labels[best_j]) == int(tgt_label):
-                            correct_classification += 1
-
-                    if best_iou > self.iou_thresh and int(labels[best_j]) == int(tgt_label):
-                        correct += 1
-
-                precision = 1.0 * correct / (proposals + eps)
-                recall = 1.0 * correct / (total_num_gts + eps)
-                fscore = 2.0 * precision * recall / (precision + recall + eps)
-
                 if iter_i % 1000 == 0:
-                    log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
+                    log_info = "[%d / %d]" % (iter_i, epoch_size)
                     print(log_info, flush=True)
+                break
 
-        classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
-        locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
+        #         tgt_bboxes = target['boxes'].numpy()
+        #         tgt_labels = target['labels'].numpy()
+        #         ow, oh = target['orig_size'].tolist()
+        #         num_gts = tgt_bboxes.shape[0]
 
-        print("Classification accuracy: %.3f" % classification_accuracy)
-        print("Locolization recall: %.3f" % locolization_recall)
+        #         # count number of total groundtruth
+        #         total_num_gts += num_gts
 
-        return classification_accuracy, locolization_recall, current_dir
+        #         pred_list = [] # LIST OF CONFIDENT BOX INDICES
+        #         for i in range(len(scores)):
+        #             score = scores[i]
+        #             if score > self.conf_thresh:
+        #                 proposals += 1
+        #                 pred_list.append(i)
+
+        #         for i in range(num_gts):
+        #             tgt_bbox = tgt_bboxes[i]
+        #             tgt_label = tgt_labels[i]
+        #             # rescale groundtruth bbox
+        #             tgt_bbox[[0, 2]] *= ow
+        #             tgt_bbox[[1, 3]] *= oh
+
+        #             tgt_x1, tgt_y1, tgt_x2, tgt_y2 = tgt_bbox
+        #             box_gt = [tgt_x1, tgt_y1, tgt_x2, tgt_y2, 1.0, 1.0, tgt_label]
+        #             best_iou = 0
+        #             best_j = -1
+
+        #             for j in pred_list: # ITERATE THROUGH ONLY CONFIDENT BOXES
+        #                 iou = bbox_iou(box_gt, bboxes[j], x1y1x2y2=True)
+        #                 if iou > best_iou:
+        #                     best_j = j
+        #                     best_iou = iou
+
+        #             if best_iou > self.iou_thresh:
+        #                 total_detected += 1
+        #                 # print(labels[best_j], tgt_label)
+        #                 if int(labels[best_j]) == int(tgt_label):
+        #                     correct_classification += 1
+
+        #             if best_iou > self.iou_thresh and int(labels[best_j]) == int(tgt_label):
+        #                 correct += 1
+
+        #         precision = 1.0 * correct / (proposals + eps)
+        #         recall = 1.0 * correct / (total_num_gts + eps)
+        #         fscore = 2.0 * precision * recall / (precision + recall + eps)
+
+        #         if iter_i % 1000 == 0:
+        #             log_info = "[%d / %d] precision: %f, recall: %f, fscore: %f" % (iter_i, epoch_size, precision, recall, fscore)
+        #             print(log_info, flush=True)
+
+        # classification_accuracy = 1.0 * correct_classification / (total_detected + eps)
+        # locolization_recall = 1.0 * total_detected / (total_num_gts + eps)
+
+        # print("Classification accuracy: %.3f" % classification_accuracy)
+        # print("Locolization recall: %.3f" % locolization_recall)
+
+        return current_dir
 
 
     @torch.no_grad()
     def evaluate_frame_map(self, model, epoch=1, show_pr_curve=False):
         if self.redo:
-            (
-                classification_accuracy,
-                locolization_recall,
-                current_dir
-            ) = self.evaluate_accu_recall(model, epoch)
+            current_dir = self.evaluate_accu_recall(model, epoch)
 
             result_path = current_dir
         else:
