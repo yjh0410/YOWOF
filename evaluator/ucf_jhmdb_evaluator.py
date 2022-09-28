@@ -174,14 +174,18 @@ class UCF_JHMDB_Evaluator(object):
                 v_annotation['tubes'] = np.array(all_gt_boxes)
                 gt_videos[video_name] = v_annotation
 
+        # set inference mode
+        model.set_inference_mode(mode='stream')
+
         # inference
         print('inference ...')
         for i, line in enumerate(lines):
             line = line.rstrip()
             if i % 50 == 0:
                 print('Video: [%d / %d] - %s' % (i, len(lines), line))
+            
             # initalize model
-            model.set_inference_mode(mode='stream')
+            model.initialization = True
 
             # load a video clip
             img_folder = os.path.join(self.data_root, 'rgb-images', line)
