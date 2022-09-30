@@ -17,6 +17,46 @@ model_urls = {
 }
 
 
+# Frozen BN
+class FrozenBatchNorm2d(torch.nn.Module):
+    """
+    BatchNorm2d where the batch statistics and the affine parameters are fixed.
+    Copy-paste from torchvision.misc.ops with added eps before rqsrt,
+    without which any other models than torchvision.models.resnet[18,34,50,101]
+    produce nans.
+    """
+
+    def __init__(self, n):
+        super(FrozenBatchNorm2d, self).__init__()
+        self.register_buffer("weight", torch.ones(n))
+        self.register_buffer("bias", torch.zeros(n))
+        self.register_buffer("running_mean", torch.zeros(n))
+        self.register_buffer("running_var", torch.ones(n))
+
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
+                              missing_keys, unexpected_keys, error_msgs):
+        num_batches_tracked_key = prefix + 'num_batches_tracked'
+        if num_batches_tracked_key in state_dict:
+            del state_dict[num_batches_tracked_key]
+
+        super(FrozenBatchNorm2d, self)._load_from_state_dict(
+            state_dict, prefix, local_metadata, strict,
+            missing_keys, unexpected_keys, error_msgs)
+
+    def forward(self, x):
+        # move reshapes to the beginning
+        # to make it fuser-friendly
+        w = self.weight.reshape(1, -1, 1, 1)
+        b = self.bias.reshape(1, -1, 1, 1)
+        rv = self.running_var.reshape(1, -1, 1, 1)
+        rm = self.running_mean.reshape(1, -1, 1, 1)
+        eps = 1e-5
+        scale = w * (rv + eps).rsqrt()
+        bias = b - rm * scale
+        return x * scale + bias
+
+
+# ResNet
 def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -153,8 +193,12 @@ class ResNet(nn.Module):
         res5_dilation=False
     ) -> None:
         super(ResNet, self).__init__()
-        if norm_layer is None:
+        if norm_layer == 'BN':
+            self.norm_type = 'BN'
             norm_layer = nn.BatchNorm2d
+        elif norm_layer == 'FrozenBN':
+            self.norm_type = 'FrozenBN'
+            norm_layer = FrozenBatchNorm2d
         self._norm_layer = norm_layer
 
         self.inplanes = 64
@@ -269,23 +313,32 @@ def load_weight(model, arch, progress):
     # values from checkpoint
     values = []
     for k in checkpoint_state_dict.keys():
+        # For this ResNet, there is no 'cls_head', different from the ResNet of MMAction,
+        # so we ignore these keys
         if k == 'cls_head.fc_cls.weight' or k == 'cls_head.fc_cls.bias':
+            print(k)
             continue
+
+        if model.norm_type == 'FrozenBN':
+            # if resnet uses FrozenBN layer, these is no 'num_batches_tracked' of
+            # norm layer, so we ignore these keys
+            if 'num_batches_tracked' in k:
+                continue
+
         values.append(checkpoint_state_dict[k])
-        
+    
     # reformat checkpoint_state_dict:
     new_state_dict = {}
     for i, k in enumerate(model_state_dict.keys()):
         new_state_dict[k] = values[i]
 
-    # model state dict
-    model_state_dict = model.state_dict()
     # check
     for k in list(new_state_dict.keys()):
         if k in model_state_dict:
             shape_model = tuple(model_state_dict[k].shape)
             shape_checkpoint = tuple(new_state_dict[k].shape)
             if shape_model != shape_checkpoint:
+                print(shape_model, shape_checkpoint)
                 new_state_dict.pop(k)
                 print(k)
         else:
@@ -363,21 +416,21 @@ def resnext101_32x4d(pretrained: bool = False, progress: bool = True, **kwargs: 
 
 
 # build 2D resnet
-def build_resnet_2d(model_name='resnet50', pretrained=False, res5_dilation=True):
+def build_resnet_2d(model_name='resnet50', pretrained=False, norm_layer='BN', res5_dilation=True):
     if model_name == 'resnet18':
-        model = resnet18(pretrained, res5_dilation=res5_dilation)
+        model = resnet18(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
         feat = 512
 
     elif model_name == 'resnet50':
-        model = resnet50(pretrained, res5_dilation=res5_dilation)
+        model = resnet50(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
         feat = 2048
 
     elif model_name == 'resnet101':
-        model = resnet101(pretrained, res5_dilation=res5_dilation)
+        model = resnet101(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
         feat = 2048
 
     elif model_name == 'resnext101':
-        model = resnext101_32x4d(pretrained, res5_dilation=res5_dilation)
+        model = resnext101_32x4d(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
         feat = 2048
 
     return model, feat
@@ -386,18 +439,28 @@ def build_resnet_2d(model_name='resnet50', pretrained=False, res5_dilation=True)
 if __name__ == '__main__':
     import time
 
-    model, feat_dim = build_resnet_2d(model_name='resnext101', pretrained=True, res5_dilation=False)
-    print(feat_dim)
+    # cuda
     if torch.cuda.is_available():
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
+
+    # build resnet
+    model, feat_dim = build_resnet_2d(
+        model_name='resnext101',
+        pretrained=True,
+        norm_layer='FrozenBN',
+        res5_dilation=False
+        )
     model = model.to(device)
 
-    x = torch.randn(1, 3, 320, 320).to(device)
+    # test
+    x = torch.ones(1, 3, 64, 64).to(device)
     for i in range(1):
         # star time
         t0 = time.time()
         y = model(x)
         print(y.size())
         print('time', time.time() - t0)
+
+    print(y[0, :15, 0, 0])
