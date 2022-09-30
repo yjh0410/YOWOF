@@ -7,6 +7,7 @@ yowof_config = {
         'backbone': 'resnet18',
         'pretrained': True,
         'res5_dilation': False,
+        'norm_layer': 'BN',
         'stride': 32,
         # temporal encoder
         'conv_lstm_ks': 3,
@@ -47,6 +48,7 @@ yowof_config = {
         'backbone': 'resnet50',
         'pretrained': True,
         'res5_dilation': False,
+        'norm_layer': 'BN',
         'stride': 32,
         # temporal encoder
         'conv_lstm_ks': 3,
@@ -87,6 +89,7 @@ yowof_config = {
         'backbone': 'resnext101',
         'pretrained': True,
         'res5_dilation': False,
+        'norm_layer': 'FrozenBN',
         'stride': 32,
         # temporal encoder
         'conv_lstm_ks': 3,
