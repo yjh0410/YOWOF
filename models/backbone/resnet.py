@@ -7,13 +7,12 @@ from torch.hub import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional
 
 
-__all__ = ['ResNet', 'resnet18', 'resnet50', 'resnet101']
+__all__ = ['ResNet', 'resnet18', 'resnet50']
 
 
 model_urls = {
     'resnet18': 'https://download.openmmlab.com/mmaction/recognition/tsn/hvu/action/tsn_r18_1x1x8_100e_hvu_action_rgb_20201027-011b282b.pth',
     'resnet50': 'https://download.openmmlab.com/mmaction/recognition/tsn/tsn_r50_video_1x1x8_100e_kinetics600_rgb/tsn_r50_video_1x1x8_100e_kinetics600_rgb_20201015-4db3c461.pth',
-    'resnext101_32x4d': 'https://download.openmmlab.com/mmaction/recognition/tsn/custom_backbones/tsn_rn101_32x4d_320p_1x1x3_100e_kinetics400_rgb-16a8b561.pth'
 }
 
 
@@ -390,31 +389,6 @@ def resnet50(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> 
                    **kwargs)
 
 
-def resnet101(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> ResNet:
-    r"""ResNet-101 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
-    """
-    return _resnet('resnet101', Bottleneck, [3, 4, 23, 3], pretrained, progress,
-                   **kwargs)
-
-
-def resnext101_32x4d(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> ResNet:
-    r"""ResNeXt-101 32x8d model from
-    `"Aggregated Residual Transformation for Deep Neural Networks" <https://arxiv.org/pdf/1611.05431.pdf>`_.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
-    """
-    kwargs['groups'] = 32
-    kwargs['width_per_group'] = 4
-    return _resnet('resnext101_32x4d', Bottleneck, [3, 4, 23, 3],
-                   pretrained, progress, **kwargs)
-
-
 # build 2D resnet
 def build_resnet_2d(model_name='resnet50', pretrained=False, norm_layer='BN', res5_dilation=True):
     if model_name == 'resnet18':
@@ -423,14 +397,6 @@ def build_resnet_2d(model_name='resnet50', pretrained=False, norm_layer='BN', re
 
     elif model_name == 'resnet50':
         model = resnet50(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
-        feat = 2048
-
-    elif model_name == 'resnet101':
-        model = resnet101(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
-        feat = 2048
-
-    elif model_name == 'resnext101':
-        model = resnext101_32x4d(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
         feat = 2048
 
     return model, feat
@@ -447,9 +413,9 @@ if __name__ == '__main__':
 
     # build resnet
     model, feat_dim = build_resnet_2d(
-        model_name='resnext101',
+        model_name='resnet18',
         pretrained=True,
-        norm_layer='FrozenBN',
+        norm_layer='BN',
         res5_dilation=False
         )
     model = model.to(device)

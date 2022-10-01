@@ -69,7 +69,6 @@ Coming soon ...
 |---------------|---------|-----------|---------|--------|--------|------------|
 |   YOWOF-R18   |   16    |    220    |   5.0   | 23.9 M |  18.1  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r18_epoch_8_18.1.pth) |
 |   YOWOF-R50   |   16    |    125    |   11.1  | 50.5 M |  20.7  | [ckpt](https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/yowof-r50_epoch_8_20.7.pth) |
-|  YOWOF-RX101  |   16    |           |   19.0  | 69.1 M |        | [ckpt]() |
 
 ## Train YOWOF
 ### Train yowof-r18 on UCF24
