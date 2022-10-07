@@ -277,25 +277,26 @@ if __name__ == '__main__':
         video_info, video_clip, target = train_dataset[i]
         print(video_info)
         
-        key_frame = video_clip[-1]
+        for j in range(len(video_clip)):
+            frame = video_clip[j]
 
-        key_frame = key_frame.permute(1, 2, 0).numpy()
-        key_frame = ((key_frame * std + mean) * 255).astype(np.uint8)
-        H, W, C = key_frame.shape
+            frame = frame.permute(1, 2, 0).numpy()
+            frame = ((frame * std + mean) * 255).astype(np.uint8)
+            H, W, C = frame.shape
 
-        key_frame = key_frame.copy()
-        bboxes = target['boxes']
-        labels = target['labels']
+            frame = frame.copy()
+            bboxes = target['boxes']
+            labels = target['labels']
 
-        for box, cls_id in zip(bboxes, labels):
-            x1, y1, x2, y2 = box
-            x1 = int(x1 * W)
-            y1 = int(y1 * H)
-            x2 = int(x2 * W)
-            y2 = int(y2 * H)
-            key_frame = cv2.rectangle(key_frame, (x1, y1), (x2, y2), (255, 0, 0))
+            for box, cls_id in zip(bboxes, labels):
+                x1, y1, x2, y2 = box
+                x1 = int(x1 * W)
+                y1 = int(y1 * H)
+                x2 = int(x2 * W)
+                y2 = int(y2 * H)
+                frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0))
 
-        # cv2 show
-        cv2.imshow('key frame', key_frame[..., (2, 1, 0)])
-        cv2.waitKey(0)
+            # cv2 show
+            cv2.imshow('key frame', frame[..., (2, 1, 0)])
+            cv2.waitKey(0)
         
