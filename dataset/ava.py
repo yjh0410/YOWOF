@@ -110,13 +110,13 @@ class AVA_Dataset(Dataset):
         return len(self._keyframe_indices)
 
 
-    def get_sequence_inds(self, frame_idx, seq_len, sample_rate, num_frames):
+    def get_sequence(self, center_idx, half_len, sample_rate, num_frames):
         """
         Sample frames among the corresponding clip.
 
         Args:
-            frame_idx (int): current frame idx for current clip
-            seq_len (int): hclip length
+            center_idx (int): center frame idx for current clip
+            half_len (int): half of the clip length
             sample_rate (int): sampling rate for sampling frames inside of the clip
             num_frames (int): number of expected sampled frames
 
@@ -124,9 +124,7 @@ class AVA_Dataset(Dataset):
             seq (list): list of indexes of sampled frames in this clip.
         """
         # seq = list(range(center_idx - half_len, center_idx + half_len, sample_rate))
-        start_idx = frame_idx - seq_len + 1*sample_rate
-        end_idx = frame_idx + 1*sample_rate
-        seq = list(range(start_idx, end_idx, sample_rate))
+        seq = list(range(center_idx - half_len*2 + 1*sample_rate, center_idx+1*sample_rate, sample_rate))
         
         for seq_idx in range(len(seq)):
             if seq[seq_idx] < 0:
@@ -160,45 +158,6 @@ class AVA_Dataset(Dataset):
         return frame_idx, video_clip, target
 
 
-    def prepare_video_clip(self, video_idx, frame_idx, seq_inds, clip_label_list):
-        image_paths = [self._image_paths[video_idx][frame_id - 1] for frame_id in seq_inds]
-        # load a video clip
-        frame_ids = []
-        video_clip = []
-        target_clip = []
-        for img_path in image_paths:
-            # load a frame
-            frame = Image.open(img_path).convert('RGB')
-            ow, oh = frame.width, frame.height
-
-            # load a target
-            boxes = []
-            labels = []
-            for box_labels in clip_label_list:
-                bbox = box_labels[0]
-                label = box_labels[1]
-                multi_hot_label = np.zeros(1 + self.num_classes)
-                multi_hot_label[..., label] = 1.0
-
-                boxes.append(bbox)
-                labels.append(multi_hot_label[..., 1:].tolist())
-
-            boxes = np.array(boxes).reshape(-1, 4)
-            # renormalize bbox
-            boxes[..., [0, 2]] *= ow
-            boxes[..., [1, 3]] *= oh
-            labels = np.array(labels).reshape(-1, self.num_classes)
-
-            # target: [N, 4 + C]
-            target = np.concatenate([boxes, labels], axis=-1)
-
-            frame_ids.append(frame_idx)
-            video_clip.append(frame)
-            target_clip.append(target)
-
-            return video_clip, target_clip, frame_ids, [ow, oh]
-
-
     def pull_item(self, idx):
         # Get the frame idxs for current clip. We can use it as center or latest
         video_idx, sec_idx, sec, frame_idx = self._keyframe_indices[idx]
@@ -209,38 +168,57 @@ class AVA_Dataset(Dataset):
         assert len(clip_label_list) <= self._max_objs
 
         # get a sequence
-        seq_inds = self.get_sequence_inds(
+        seq = self.get_sequence(
             frame_idx,
-            self.seq_len,
+            self.seq_len // 2,
             self.sampling_rate,
             num_frames=len(self._image_paths[video_idx]),
         )
+        image_paths = [self._image_paths[video_idx][frame - 1] for frame in seq]
+        keyframe_info = self._image_paths[video_idx][frame_idx - 1]
 
-        (
-            video_clip,
-            target_clip,
-            frame_ids,
-            orig_size
-        ) = self.prepare_video_clip(video_idx, frame_idx, seq_inds, clip_label_list)
+        # load a video clip
+        video_clip = []
+        for img_path in image_paths:
+            frame = Image.open(img_path).convert('RGB')
+            video_clip.append(frame)
+        ow, oh = frame.width, frame.height
+
+        # Get boxes and labels for current clip.
+        boxes = []
+        labels = []
+        for box_labels in clip_label_list:
+            bbox = box_labels[0]
+            label = box_labels[1]
+            multi_hot_label = np.zeros(1 + self.num_classes)
+            multi_hot_label[..., label] = 1.0
+
+            boxes.append(bbox)
+            labels.append(multi_hot_label[..., 1:].tolist())
+
+        boxes = np.array(boxes).reshape(-1, 4)
+        # renormalize bbox
+        boxes[..., [0, 2]] *= ow
+        boxes[..., [1, 3]] *= oh
+        labels = np.array(labels).reshape(-1, self.num_classes)
+
+        # target: [N, 4 + C]
+        target = np.concatenate([boxes, labels], axis=-1)
 
         # transform
-        video_clip, target_clip = self.transform(video_clip, target_clip)
+        video_clip, target = self.transform(video_clip, target)
         # List [T, 3, H, W] -> [T, 3, H, W]
         video_clip = torch.stack(video_clip)
 
-        # reformat target clip
-        target_clip_reorg = []
-        for target in target_clip:
-            target = target.reshape(-1, 4+self.num_classes)
-            boxes = target[:, :4]
-            labels = target[:, 4:]
-            target = {'boxes': torch.as_tensor(boxes).float(),          # [N, 4]
-                      'labels': torch.as_tensor(labels).long() - 1,     # [N,]
-                      'orig_size': torch.as_tensor(orig_size)
-                      }
-            target_clip_reorg.append(target)
+        # reformat target
+        target = {
+            'boxes': target[:, :4].float(),  # [N, 4]
+            'labels': target[:, 4:].long(),  # [N, C]
+            'orig_size': torch.as_tensor([ow, oh])
+        }
 
-        return frame_ids, video_clip, target_clip_reorg
+        return [video_idx, sec], video_clip, target
+
 
 
 if __name__ == '__main__':
@@ -296,28 +274,28 @@ if __name__ == '__main__':
     std = trans_config['pixel_std']
     mean = trans_config['pixel_mean']
     for i in range(len(train_dataset)):
-        video_info, video_clip, target_clip = train_dataset[i]
-        for j in range(len(video_clip)):
-            frame = video_clip[j]
-            target = target_clip[j]
+        video_info, video_clip, target = train_dataset[i]
+        print(video_info)
+        
+        key_frame = video_clip[-1]
 
-            frame = frame.permute(1, 2, 0).numpy()
-            frame = ((frame * std + mean) * 255).astype(np.uint8)
-            H, W, C = frame.shape
+        key_frame = key_frame.permute(1, 2, 0).numpy()
+        key_frame = ((key_frame * std + mean) * 255).astype(np.uint8)
+        H, W, C = key_frame.shape
 
-            frame = frame.copy()
-            bboxes = target['boxes']
-            labels = target['labels']
+        key_frame = key_frame.copy()
+        bboxes = target['boxes']
+        labels = target['labels']
 
-            for box, cls_id in zip(bboxes, labels):
-                x1, y1, x2, y2 = box
-                x1 = int(x1 * W)
-                y1 = int(y1 * H)
-                x2 = int(x2 * W)
-                y2 = int(y2 * H)
-                frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0))
+        for box, cls_id in zip(bboxes, labels):
+            x1, y1, x2, y2 = box
+            x1 = int(x1 * W)
+            y1 = int(y1 * H)
+            x2 = int(x2 * W)
+            y2 = int(y2 * H)
+            key_frame = cv2.rectangle(key_frame, (x1, y1), (x2, y2), (255, 0, 0))
 
-            # cv2 show
-            cv2.imshow('cur frame', frame[..., (2, 1, 0)])
-            cv2.waitKey(0)
+        # cv2 show
+        cv2.imshow('key frame', key_frame[..., (2, 1, 0)])
+        cv2.waitKey(0)
         
