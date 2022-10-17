@@ -163,6 +163,7 @@ class BaseTransform(object):
 
         # normalize target
         if target is not None:
+            print(target)
             if normalize:
                 target[..., [0, 2]] /= ow
                 target[..., [1, 3]] /= oh
