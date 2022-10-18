@@ -1,7 +1,13 @@
 # YOWOF
 You Only Watch One Frame (YOWOF) for Online Spatio-Temporal Action Detection
 
+The whole pipeline of YOWOF：
+
 ![image](./img_files/yowof.png)
+
+Online inference of YOWOF：
+
+![image](./img_files/online_inference.png)
 
 # Requirements
 - We recommend you to use Anaconda to create a conda environment:
