@@ -26,9 +26,7 @@ pip install -r requirements.txt
 ```
 
 # Dataset
-You can download **UCF24** and **JHMDB21** from the following links:
 
-## Google Drive
 ## UCF101-24:
 * Google drive
 
@@ -39,17 +37,6 @@ Link: https://drive.google.com/file/d/1Dwh90pRi7uGkH5qLRjQIFiEmMJrAog5J/view?usp
 Link: https://pan.baidu.com/s/11GZvbV0oAzBhNDVKXsVGKg
 
 Password: hmu6 
-
-## JHMDB21: 
-* Google drive
-
-Link: https://drive.google.com/file/d/15nAIGrWPD4eH3y5OTWHiUbjwsr-9VFKT/view?usp=sharing
-
-* BaiduYun Disk
-
-Link: https://pan.baidu.com/s/1HSDqKFWhx_vF_9x6-Hb8jA 
-
-Password: tcjd 
 
 ## AVA
 You can use instructions from [here](https://github.com/yjh0410/AVA_Dataset) to prepare **AVA** dataset.
