@@ -9,6 +9,8 @@ Online inference of YOWOF：
 
 ![image](./img_files/online_inference.png)
 
+Paper: coming soon ... [under review]
+
 # Requirements
 - We recommend you to use Anaconda to create a conda environment:
 ```Shell
