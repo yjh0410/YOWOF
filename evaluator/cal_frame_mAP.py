@@ -591,15 +591,15 @@ class Evaluator:
                             nprec.append(max([mpre[int(id)] for id in idxEq]))
                     plt.plot(nrec, nprec, 'or', label='11-point interpolated precision')
             plt.plot(recall, precision, label='Precision')
-            plt.xlabel('recall', fontdict={'fontsize': 15})
-            plt.ylabel('precision', fontdict={'fontsize': 15})
+            plt.xlabel('recall', fontdict={'fontsize': 20})
+            plt.ylabel('precision', fontdict={'fontsize': 20})
             if showAP:
                 ap_str = "{0:.2f}%".format(average_precision * 100)
                 # ap_str = "{0:.4f}%".format(average_precision * 100)
                 plt.title('Precision x Recall curve \nClass: %s, AP: %s' % (str(classId), ap_str), fontdict={'fontsize': 20})
             else:
                 plt.title('Precision x Recall curve \nClass: %s' % str(classId), fontdict={'fontsize': 20})
-            plt.legend(shadow=True, fontsize=15)
+            plt.legend(shadow=True, fontsize=10)
             plt.grid()
 
             if savePath is not None:
