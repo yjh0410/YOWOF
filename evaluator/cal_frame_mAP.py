@@ -591,8 +591,8 @@ class Evaluator:
                             nprec.append(max([mpre[int(id)] for id in idxEq]))
                     plt.plot(nrec, nprec, 'or', label='11-point interpolated precision')
             plt.plot(recall, precision, label='Precision')
-            plt.xlabel('recall', fontdict={'fontsize': 20})
-            plt.ylabel('precision', fontdict={'fontsize': 20})
+            plt.xlabel('recall', fontdict={'fontsize': 22})
+            plt.ylabel('precision', fontdict={'fontsize': 22})
             plt.tick_params(labelsize=15)
             if showAP:
                 ap_str = "{0:.2f}%".format(average_precision * 100)
