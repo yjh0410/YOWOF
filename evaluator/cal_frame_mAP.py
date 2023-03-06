@@ -609,7 +609,7 @@ class Evaluator:
                 os.makedirs(savePath_, exist_ok=True)
 
                 # save fig
-                plt.savefig(os.path.join(savePath_, classId + '.png'))
+                plt.savefig(os.path.join(savePath_, classId + '.png'), bbox_inches='tight')
 
             if showGraphic is True:
                 plt.show()
