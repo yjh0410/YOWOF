@@ -593,13 +593,14 @@ class Evaluator:
             plt.plot(recall, precision, label='Precision')
             plt.xlabel('recall', fontdict={'fontsize': 20})
             plt.ylabel('precision', fontdict={'fontsize': 20})
+            plt.tick_params(labelsize=15)
             if showAP:
                 ap_str = "{0:.2f}%".format(average_precision * 100)
                 # ap_str = "{0:.4f}%".format(average_precision * 100)
                 plt.title('Precision x Recall curve \nClass: %s, AP: %s' % (str(classId), ap_str), fontdict={'fontsize': 20})
             else:
                 plt.title('Precision x Recall curve \nClass: %s' % str(classId), fontdict={'fontsize': 20})
-            plt.legend(shadow=True, fontsize=10)
+            plt.legend(shadow=True, fontsize=13)
             plt.grid()
 
             if savePath is not None:
