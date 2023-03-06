@@ -596,7 +596,7 @@ class Evaluator:
             if showAP:
                 ap_str = "{0:.2f}%".format(average_precision * 100)
                 # ap_str = "{0:.4f}%".format(average_precision * 100)
-                plt.title('Precision x Recall curve \nClass: %s, AP: %s' % (str(classId), ap_str))
+                plt.title('Precision x Recall curve \nClass: %s, AP: %s' % (str(classId), ap_str), fontdict={'fontsize': 17})
             else:
                 plt.title('Precision x Recall curve \nClass: %s' % str(classId))
             plt.legend(shadow=True)
