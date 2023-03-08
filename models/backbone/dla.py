@@ -304,56 +304,13 @@ class DLA(nn.Module):
         return c5
 
 
-def dla34(pretrained=False, **kwargs):  # DLA-34
+def dla34(**kwargs):  # DLA-34
     model = DLA(
         levels=[1, 1, 1, 2, 2, 1],
         channels=[16, 32, 64, 128, 256, 512],
         block=DlaBasic
     )
-    if pretrained:
-        print('loading pre-trained dla34 ...')
-        model.load_state_dict(model_zoo.load_url(model_urls['dla34']), strict=False)
 
-    return model
-
-
-def dla60(pretrained=False, **kwargs):  # DLA-60
-    model = DLA(
-        levels=(1, 1, 1, 2, 3, 1),
-        channels=(16, 32, 128, 256, 512, 1024),
-    )
-    if pretrained:
-        print('loading pre-trained dla60 ...')
-        model.load_state_dict(model_zoo.load_url(model_urls['dla60']), strict=False)
-
-    return model
-
-
-def dla102(pretrained=False, **kwargs):  # DLA-102
-    model = DLA(
-        levels=[1, 1, 1, 3, 4, 1],
-        channels=[16, 32, 128, 256, 512, 1024],
-        block=DlaBottleneck,
-        shortcut_root=True
-    )
-    if pretrained:
-        print('loading pre-trained dla102 ...')
-        model.load_state_dict(model_zoo.load_url(model_urls['dla102']), strict=False)
-    
-    return model
-
-
-def dla169(pretrained=False, **kwargs):  # DLA-169
-    model = DLA(
-        levels=[1, 1, 2, 3, 5, 1],
-        channels=[16, 32, 128, 256, 512, 1024],
-        block=DlaBottleneck,
-        shortcut_root=True
-    )
-    if pretrained:
-        print('loading pre-trained dla169 ...')
-        model.load_state_dict(model_zoo.load_url(model_urls['dla169']), strict=False)
-    
     return model
 
 
@@ -362,6 +319,44 @@ def build_dla(model_name='dla34', pretrained=False):
     if model_name == 'dla34':
         model = dla34(pretrained)
         feat = 512
+
+    if pretrained:
+        # state_dict = load_state_dict_from_url(model_urls[arch],
+        #                                       progress=progress)
+
+        # checkpoint state dict
+        checkpoint_state_dict = torch.load("ccdet_vgg16_512_35.1.pth", map_location='cpu')
+
+        # model state dict
+        model_state_dict = model.state_dict()
+
+        # values from checkpoint
+        values = []
+        for k in checkpoint_state_dict.keys():
+            if "backbone" in k:
+                values.append(checkpoint_state_dict[k])
+
+        # reformat checkpoint_state_dict:
+        new_state_dict = {}
+        for i, k in enumerate(model_state_dict.keys()):
+            new_state_dict[k] = values[i]
+
+    # check
+    for k in list(new_state_dict.keys()):
+        if k in model_state_dict:
+            shape_model = tuple(model_state_dict[k].shape)
+            shape_checkpoint = tuple(new_state_dict[k].shape)
+            if shape_model != shape_checkpoint:
+                print(shape_model, shape_checkpoint)
+                new_state_dict.pop(k)
+                print(k)
+        else:
+            new_state_dict.pop(k)
+            print(k)
+
+    model.load_state_dict(new_state_dict)
+
+    torch.save({'model': model.state_dict()}, "vgg16_coco.pth")                      
 
     return model, feat
 

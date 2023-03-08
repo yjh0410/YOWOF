@@ -8,14 +8,7 @@ __all__ = ['vgg16']
 
 
 model_urls = {
-    'vgg11': 'https://download.pytorch.org/models/vgg11-8a719046.pth',
-    'vgg13': 'https://download.pytorch.org/models/vgg13-19584684.pth',
-    'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth',
-    'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth',
-    'vgg11_bn': 'https://download.pytorch.org/models/vgg11_bn-6002323d.pth',
-    'vgg13_bn': 'https://download.pytorch.org/models/vgg13_bn-abd245e5.pth',
-    'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth',
-    'vgg19_bn': 'https://download.pytorch.org/models/vgg19_bn-c79401a0.pth',
+    'vgg16': 'https://github.com/yjh0410/YOWOF/releases/download/yowof-weight/vgg16_coco.pth',
 }
 
 
@@ -96,9 +89,30 @@ def _vgg(arch: str, cfg: str, batch_norm: bool, pretrained: bool, progress: bool
         kwargs['init_weights'] = False
     model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm), **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
-        model.load_state_dict(state_dict, strict=False)
+        print('Load pretrained weight for backbone {}'.format(model_urls[arch]))
+        # checkpoint state dict
+        checkpoint = load_state_dict_from_url(
+            model_urls[arch],
+            progress=progress
+            )
+        checkpoint_state_dict = checkpoint.pop('model')
+
+        # model state dict
+        model_state_dict = model.state_dict()
+
+        # check
+        for k in list(checkpoint_state_dict.keys()):
+            if k in model_state_dict:
+                shape_model = tuple(model_state_dict[k].shape)
+                shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
+                if shape_model != shape_checkpoint:
+                    checkpoint_state_dict.pop(k)
+            else:
+                checkpoint_state_dict.pop(k)
+                print(k)
+
+        model.load_state_dict(checkpoint_state_dict)
+
     return model
 
 
@@ -110,6 +124,36 @@ def vgg16(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> VGG
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _vgg('vgg16', 'D', False, pretrained, progress, **kwargs)
+
+
+# load pretrained weight
+def load_weight(model, model_name):
+    # load weight
+    print('Load pretrained weight {}'.format(model_name))
+    url = model_urls[model_name]
+    if url is not None:
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url=url, map_location="cpu", check_hash=True)
+        # checkpoint state dict
+        checkpoint_state_dict = checkpoint.pop("model")
+        # model state dict
+        model_state_dict = model.state_dict()
+        # check
+        for k in list(checkpoint_state_dict.keys()):
+            if k in model_state_dict:
+                shape_model = tuple(model_state_dict[k].shape)
+                shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
+                if shape_model != shape_checkpoint:
+                    checkpoint_state_dict.pop(k)
+            else:
+                checkpoint_state_dict.pop(k)
+                print(k)
+
+        model.load_state_dict(checkpoint_state_dict)
+    else:
+        print('No pretrained for {}'.format(model_name))
+
+    return model
 
 
 # build dla
@@ -131,7 +175,7 @@ if __name__ == '__main__':
         device = torch.device("cpu")
 
     # build resnet
-    model, feat_dim = build_vgg('vgg16')
+    model, feat_dim = build_vgg('vgg16', pretrained=True)
     model = model.to(device)
 
     # test

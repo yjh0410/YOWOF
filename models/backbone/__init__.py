@@ -16,10 +16,10 @@ def build_backbone(cfg, pretrained=False):
             res5_dilation=cfg['res5_dilation'])
 
     elif cfg['backbone'] in ['dla34', 'dla60']:
-        model, feat_dim = build_dla(model_name=cfg['backbone'])
+        model, feat_dim = build_dla(model_name=cfg['backbone'], pretrained=cfg['pretrained'])
 
     elif cfg['backbone'] in ['vgg16']:
-        model, feat_dim = build_vgg(model_name=cfg['backbone'])
+        model, feat_dim = build_vgg(model_name=cfg['backbone'], pretrained=cfg['pretrained'])
 
     else:
         print('Unknown Backbone ...')
