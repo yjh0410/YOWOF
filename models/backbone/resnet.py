@@ -389,8 +389,8 @@ def resnet50(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> 
                    **kwargs)
 
 
-# build 2D resnet
-def build_resnet_2d(model_name='resnet50', pretrained=False, norm_layer='BN', res5_dilation=True):
+# build resnet
+def build_resnet(model_name='resnet50', pretrained=False, norm_layer='BN', res5_dilation=True):
     if model_name == 'resnet18':
         model = resnet18(pretrained, norm_layer=norm_layer, res5_dilation=res5_dilation)
         feat = 512
@@ -412,7 +412,7 @@ if __name__ == '__main__':
         device = torch.device("cpu")
 
     # build resnet
-    model, feat_dim = build_resnet_2d(
+    model, feat_dim = build_resnet(
         model_name='resnet18',
         pretrained=True,
         norm_layer='BN',
@@ -428,5 +428,3 @@ if __name__ == '__main__':
         y = model(x)
         print(y.size())
         print('time', time.time() - t0)
-
-    print(y[0, :15, 0, 0])
