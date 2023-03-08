@@ -15,7 +15,7 @@ def build_backbone(cfg, pretrained=False):
             norm_layer=cfg['norm_layer'],
             res5_dilation=cfg['res5_dilation'])
 
-    elif cfg['backbone'] in ['dla34', 'dla60']:
+    elif cfg['backbone'] in ['dla34']:
         model, feat_dim = build_dla(model_name=cfg['backbone'], pretrained=cfg['pretrained'])
 
     elif cfg['backbone'] in ['vgg16']:

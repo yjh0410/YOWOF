@@ -126,36 +126,6 @@ def vgg16(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> VGG
     return _vgg('vgg16', 'D', False, pretrained, progress, **kwargs)
 
 
-# load pretrained weight
-def load_weight(model, model_name):
-    # load weight
-    print('Load pretrained weight {}'.format(model_name))
-    url = model_urls[model_name]
-    if url is not None:
-        checkpoint = torch.hub.load_state_dict_from_url(
-            url=url, map_location="cpu", check_hash=True)
-        # checkpoint state dict
-        checkpoint_state_dict = checkpoint.pop("model")
-        # model state dict
-        model_state_dict = model.state_dict()
-        # check
-        for k in list(checkpoint_state_dict.keys()):
-            if k in model_state_dict:
-                shape_model = tuple(model_state_dict[k].shape)
-                shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
-                if shape_model != shape_checkpoint:
-                    checkpoint_state_dict.pop(k)
-            else:
-                checkpoint_state_dict.pop(k)
-                print(k)
-
-        model.load_state_dict(checkpoint_state_dict)
-    else:
-        print('No pretrained for {}'.format(model_name))
-
-    return model
-
-
 # build dla
 def build_vgg(model_name='vgg16', pretrained=False):
     if model_name == 'vgg16':
